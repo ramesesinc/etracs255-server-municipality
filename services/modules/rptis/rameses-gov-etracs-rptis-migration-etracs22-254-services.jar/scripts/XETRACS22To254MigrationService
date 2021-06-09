@@ -1,0 +1,500 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import java.rmi.server.UID;
+import com.rameses.util.*;
+
+class XETRACS22To254MigrationService 
+{
+	@ActiveDB('faas')	
+	def faasEm
+
+	@ActiveDB('realproperty')
+	def rpEm
+
+	@ActiveDB('rpu')
+	def rpuEm
+
+	@ActiveDB('etracs254rpt')
+	def em254
+
+	@ActiveDB(value='etracs22rpt', em='etracs22')
+	def em22 
+
+	@Service('DateService')
+	def dtSvc 
+
+	@Service()
+	def self 
+
+	def LGUID = '207'
+
+
+
+	@ProxyMethod
+	public def migrateStructureMaterials() {
+		def slist = em22.getStructures();
+
+		slist.each{item ->
+			item.materials = em22.serializer.read(item.materials);
+			item.materials.material.each{x->
+				def entity = [:]
+				entity.structure_objid = item.objid
+				entity.material_objid = x.objid
+				try{
+					sm.insertStructureMaterial(entity)
+				}
+				catch(e){
+					//ignore
+				}
+			}
+		}
+		return 'done';
+	}
+
+	@ProxyMethod
+	public def migrateLandAdjustmentTypeClassification() {
+		def slist = em22.getLandAdjustment();
+
+		slist.each{item ->
+			item.classifications = em22.serializer.read(item.classifications);
+			item.classifications.each{x->
+				em3.sqlContext.createNamedExecutor('landrysetting:insertLandAdjustmentTypeClassification')
+		            .setParameter('landrysettingid', item.landrysettingid)
+		            .setParameter('landadjustmenttypeid', item.objid)
+		            .setParameter('classification_objid', x.propertyid)
+		            .execute()
+			}
+		}
+		return 'done';
+	}
+
+	@ProxyMethod
+	public def migrateBldgAssessLevel() {
+		def slist = em22.getBldgAssessLevel();
+
+		slist.each{item ->
+			item.ranges = em22.serializer.read(item.ranges);
+			item.ranges.each{x->
+				def range = [:]
+				range.objid = 'BR-' + new java.rmi.server.UID()
+				range.bldgassesslevelid = item.objid
+				range.bldgrysettingid = item.bldgrysettingid
+				range.mvfrom = x.mvfrom
+				range.mvto = x.mvto
+				range.rate = x.rate
+				emain.validate("bldgrysetting:range", range)    
+        		emain.save("bldgrysetting:range", range) 
+			}
+		}
+		return 'done';
+	}
+
+	@ProxyMethod
+	public def migrateBldgTypeDepreciation() {
+		def slist = em22.getBldgTypeDepreciation();
+
+		slist.each{item ->
+			item.depreciations = em22.serializer.read(item.depreciations);
+			item.depreciations.each{x->
+				def it = [:]
+                it.objid            = 'BD' + new java.rmi.server.UID()
+                it.bldgrysettingid  = item.bldgrysettingid
+                it.bldgtypeid       = item.objid
+                it.agefrom			= x.agefrom
+                it.ageto			= x.ageto
+                it.rate 			= x.rate
+				emain.validate("bldgrysetting:depreciation", it)    
+        		emain.save("bldgrysetting:depreciation", it) 
+			}
+		}
+		return 'done';
+	}
+
+	@ProxyMethod
+	public def migratePlantTreeAssessLevel() {
+		def slist = em22.getPlantTreeAssessLevel();
+
+		slist.each{item ->
+			item.assesslevels = em22.serializer.read(item.assesslevels);
+			item.assesslevels.each{x->
+				def it = [:]
+				it.previd  = x.previd 
+            	it.objid   = x.objid
+            	it.planttreerysettingid  = item.objid
+            	it.code = x.code
+            	it.name = x.name
+            	it.rate = x.rate
+            	it.classification_objid = 'NULL'
+				emain.validate("planttreerysetting:assesslevel", it)    
+        		emain.save("planttreerysetting:assesslevel", it) 
+			}
+		}
+		return 'done';
+	}
+
+	@ProxyMethod
+	public def migrateMiscAssessLevel() {
+		def slist = em22.getMiscAssessLevel();
+
+		slist.each{item ->
+			item.ranges = em22.serializer.read(item.ranges);
+			item.ranges.each{x->
+				def range = [:]
+				range.objid = 'ALR' + new java.rmi.server.UID()
+				range.miscassesslevelid = item.objid
+				range.miscrysettingid = item.miscrysettingid
+				range.mvfrom = x.mvfrom
+				range.mvto = x.mvto
+				range.rate = x.rate
+				emain.validate("miscrysetting:range", range)    
+        		emain.save("miscrysetting:range", range) 
+			}
+		}
+		return 'done';
+	}
+
+	@ProxyMethod
+	public List getFaasesForMigration(params){
+	 	return em22.getFaasesForMigration(params)
+	}
+
+    @ProxyMethod
+    public void logMigrationErrors(faasid,msg){
+    	em.logError([objid:faasid, log:msg])
+    }
+
+    @ProxyMethod
+    public def migrateFaasData(params) {
+		if (!params.rputype) throw new Exception('RPU Type is required')
+		if (!params.count) throw new Exception('Count is required')
+
+	    def faases = getFaasesForMigration(params);
+    	println 'Migrating ' + params.rputype + ' FAAS.... ' + faases.size()
+
+        faases.each{it->
+           try{
+               self.migrateFaas(it);
+           }catch(e){
+               println e
+               logMigrationErrors(it.objid,e.getMessage() + "  docstate:" + it.docstate+ "  tdno:" + it.tdno+ "  fullpin:" + it.fullpin)
+           }
+        }
+        return faases.size()
+    }  
+
+
+	@ProxyMethod
+	public def migrateFaas( faas ) {
+		println 'Migrating FAAS ' + faas.objid 
+		def faas22 = em22.findFaasByid(faas)	
+		faas22.info = em22.serializer.read(faas22.info)
+		faas22.extended = em22.serializer.read(faas22.extended)
+		faas22.rp = em22.serializer.read(faas22.rp)
+		faas22.rpu = em22.serializer.read(faas22.rpu)
+		faas22.previousfaases = em22.serializer.read( faas22.previousfaases == null ? [] : faas22.previousfaases) 
+
+		doMigrateRealProperty(faas22)
+		doMigrateRpu(faas22)
+		doMigrateFaas(faas22)
+		doMigrateSignatories(faas22)
+		return faas22 
+	}
+
+
+
+	@ProxyMethod
+    public def migratePreviousFaasData(params) {
+		if (!params.count) throw new Exception('Count is required')
+
+	    def faases = em22.getPrevFaasesForMigration(params);
+    	println 'Migrating Previous FAAS.... ' + faases.size()
+
+        faases.each{it->
+        	println 'Migrating FAAS ' + it.objid 
+           def faas22 = em22.findFaasPrevInfoById(it)	
+           try{
+           	   if (faas22.previousfaases == null ) faas22.previousfaases = '[]'
+           	   faas22.previousfaases = em22.serializer.read(faas22.previousfaases)
+               doMigratePreviousFaases(faas22)
+           }catch(e){
+            	println 'ERROR: ' + e.message 
+           		em.logPrevFaasError([objid:faas22.objid, log:e.message])
+           }
+        }
+        return faases.size()
+    }  
+
+
+	/*==============================================================
+	*
+	*  MIGRATE REAL PROPERTY
+	*
+	*==============================================================*/
+	void doMigrateRealProperty(faas22){
+		if (faas22.rpu.rputype != 'land')
+			return 
+
+		if ( ! faas22.rp.objid ){
+			def rpid = 'RP' + new java.rmi.server.UID()
+			if (faas22.rpu.realpropertyid)
+				rpid = faas22.rpu.realpropertyid
+			faas22.rp.objid = rpid 
+			faas22.rpu.realpropertyid = rpid 
+			faas22.realpropertyid = rpid 				
+		}
+
+		if (existRealProperty(faas22.rp))
+			return 
+
+		def rp = faas22.rp 
+		def newrp = [
+			objid 			: rp.objid,
+			state 			: faas22.docstate,
+			autonumber 		: 0,
+			pintype 		: rp.pintype,
+			pin 			: rp.pin,
+			section 		: rp.section, 
+			parcel 			: rp.parcel, 
+			ry 				: faas22.rpu.ry, 
+			claimno  		: rp.claimno, 
+			purok 			: rp.purok, 
+			surveyno 		: rp.surveyno, 
+			cadastrallotno  : rp.cadastrallotno,
+			blockno 		: rp.blockno, 
+			street 			: rp.street, 
+			barangayid 		: rp.barangayid.replaceAll('-', ''),
+			north 			: rp.north, 
+			east			: rp.east, 
+			south			: rp.south, 
+			west			: rp.west, 
+			lgutype			: rp.lgutype, 
+			lguid			: faas22.extended.lguid, 
+			previd			: rp.previd, 
+		]
+		rpEm.create(newrp)
+	}
+
+	boolean existRealProperty(rp){
+		return em254.findRealPropertyById(rp) != null 
+	}
+
+
+	/*==============================================================
+	*
+	*  MIGRATE RPU 
+	*
+	*==============================================================*/
+	void doMigrateRpu(faas22){
+		if ( existRpu(faas22.rpu))
+			return 
+
+		def rpu = faas22.rpu 
+		rpu.realpropertyid = faas22.rp.objid 
+
+		if (!rpu.objid){
+			rpu.objid = 'RPU' + new java.rmi.server.UID()
+			faas22.rpuid = rpu.objid 
+		}
+
+		def newrpu = [
+			objid 			: rpu.objid,
+			state 			: faas22.docstate,
+			realpropertyid 	: rpu.realpropertyid,
+			rputype 		: rpu.rputype,
+			ry 				: rpu.ry,
+			fullpin 		: rpu.fullpin,
+			suffix 			: rpu.suffix,
+			subsuffix 		: rpu.subsuffix,
+			classification	: [objid:rpu.classid],
+			exemptiontype   : (rpu.exemptid ? [objid:rpu.exemptid] : null),
+			taxable 		: rpu.taxable,
+			totalareaha 	: rpu.totalareaha,
+			totalareasqm 	: rpu.totalareasqm,
+			totalbmv 		: rpu.totalbmv,
+			totalmv 		: rpu.totalmv,
+			totalav 		: rpu.totalav,
+			hasswornamount 	: toBoolean(rpu.info.swornstatement, false),
+			swornamount 	: (rpu.info.swornamount == null ? 0.0 : rpu.info.swornamount),
+			useswornamount 	: toBoolean(rpu.info.useswornamount, false),
+			previd 			: rpu.previd,
+			rpumasterid 	: rpu.rpumasterid,
+			reclassed 		: false,
+		]
+		rpuEm.create(newrpu)
+	}
+
+	boolean existRpu(rpu){
+		return em254.findRpuById(rpu) != null 
+	}
+
+
+	/*==============================================================
+	*
+	*  MIGRATE FAAS 
+	*
+	*==============================================================*/
+	void doMigrateFaas(faas22)	{
+		if (existFaas(faas22)){
+			if (!existFaasLog(faas22))
+				em.logMigratedFaas([objid:faas22.objid])
+			return 
+		}
+
+		def landfaas = [realpropertyid:faas22.rp.objid];
+		if (faas22.rpu.rputype != 'land'){
+			landfaas = em22.findLandFaasById(faas22)
+			if (landfaas) 
+				landfaas = em254.findLandFaasById(landfaas)
+		}
+		faas22.rp.objid = landfaas.realpropertyid
+
+		def pdate = dtSvc.parseDate(faas22.info.dtapproved, null)
+		def newfaas = [
+			objid 			: faas22.objid,
+			state 			: faas22.docstate,
+			datacapture 	: faas22.info.datacapture,
+			autonumber 		: 0, 
+			tdno 			: faas22.info.tdno,
+			utdno 			: (faas22.info.tdno ? faas22.info.tdno : faas22.objid[-20..-1]), 
+			txntype 		: [objid:faas22.info.txntype],
+			effectivityyear : faas22.info.effectivityyear,
+			effectivityqtr 	: faas22.info.effectivityqtr,
+			titletype 		: faas22.titletype,
+			titleno 		: faas22.titleno,
+			titledate 		: faas22.titledate,
+			rpuid 			: faas22.rpu.objid,
+			realpropertyid 	: faas22.rp.objid,
+			fullpin 		: faas22.rpu.fullpin,
+			taxpayer 	    : [objid:faas22.info.taxpayerid, name:faas22.info.taxpayername, address:faas22.info.taxpayeraddress],
+			owner    		: [name:faas22.info.ownername, address:faas22.info.owneraddress],
+			administrator  	: getAdministratorInfo(faas22),
+			beneficiary  	: null,
+			memoranda 		: faas22.info.memoranda,
+			cancelnote 		: faas22.info.cancelnote,
+			restrictionid 	: faas22.info.restrictionid,
+			backtaxyrs 		: faas22.info.backtaxyrs,
+			prevtdno 		: faas22.info.prevtdno,
+			prevpin 		: faas22.info.prevpin,
+			prevowner 		: faas22.info.prevowner,
+			prevadministrator 	: faas22.info.prevadministrator,
+			prevav 			: faas22.info.prevav,
+			prevmv 			: faas22.info.prevmv,
+			prevareasqm 	: faas22.info.prevareasqm == null ? 0.0 : faas22.info.prevareasqm,
+			prevareaha 		: faas22.info.prevareaha == null ? 0.0 : faas22.info.prevareaha,
+			preveffectivity : faas22.info.preveffectivity,
+			cancelreason 	: faas22.info.cancelreason,
+			canceldate 		: faas22.info.canceldate,
+			cancelledbytdnos : faas22.info.cancelledbytdnos,
+			lguid 			: (faas22.extended.lguid != null ? faas22.extended.lguid : LGUID),
+			lgutype 		: faas22.extended.lgutype,
+			txntimestamp 	: faas22.info.txntimestamp,
+			cancelledtimestamp 	: faas22.info.cancelledtimestamp,
+			name 			: getNameInfo(faas22),
+			dtapproved 		: faas22.info.dtapproved,
+			ryordinanceno 	: (faas22.info.ryordinanceno == null ? '-' : faas22.info.ryordinanceno),
+			ryordinancedate : faas22.info.ryordinancedate,
+			year 			: pdate.year,
+			qtr 			: pdate.qtr,
+			month 			: pdate.month,
+			day 			: pdate.day,
+		]
+
+		if (faas22.docstate=='CANCELLED'){
+			def cdate = dtSvc.parseDate(faas22.info.canceldate, null)
+			newfaas.cancelledyear = cdate.year
+			newfaas.cancelledqtr = cdate.qtr
+			newfaas.cancelledmonth = cdate.month 
+			newfaas.cancelledday = cdate.day
+		}
+
+		faasEm.create(newfaas)
+		em.logMigratedFaas([objid:faas22.objid])
+	}
+
+	def getNameInfo(faas22){
+		def len = faas22.info.ownername.length()
+		if (len >= 25) len = 25
+		return faas22.info.ownername.substring(0,len)
+	}
+
+	def getAdministratorInfo(faas22){
+		if (faas22.info.administratorname)
+			return [
+				objid : faas22.info.administratorid,
+				name : faas22.info.administratorname,
+				address : faas22.info.administratoraddress,
+			]
+	}
+
+	void doMigratePreviousFaases(faas22){
+		if (faas22.previousfaases){
+			faas22.previousfaases.each{
+				def prevfaas = [faasid:faas22.objid, prevfaasid:it.faasid]
+				if (!existPreviousFaas(prevfaas)){
+					em254.insertPreviousFaas(prevfaas)
+					em.logMigratedPreviousFaas(faas22)
+				}
+			}
+		}
+		else{
+			em.logMigratedPreviousFaas(faas22)
+		}
+	}
+
+	boolean existPreviousFaas(prevfaas){
+		return em254.findPreviousFaas(prevfaas) != null 
+	}
+
+	void doMigrateSignatories(faas22){
+		def faaslist = em22.findFaasListById(faas22)
+		if (faaslist){
+			def signatory = [refid:faaslist.objid, dtsigned:faaslist.issuedate]
+			signatory.assignee = [name:faaslist.appraisedby, title:faaslist.appraisedbytitle]
+			signatory.type = 'appraiser'
+			migrateSignatory(signatory)
+
+			signatory.assignee = [name:faaslist.approvedby, title:faaslist.approvedbytitle]
+			signatory.type = 'approver'
+			migrateSignatory(signatory)
+		}
+	}
+
+	void migrateSignatory(signatory){
+		def sid = signatory.refid + signatory.type
+		if (!existSignatory(sid)){
+			def s = [
+				objid  : sid,
+				refid  : signatory.refid, 
+				state  : signatory.type, 
+				startdate : signatory.dtsigned, 
+				enddate : signatory.dtsigned, 
+				assignee_name : signatory.assignee.name,
+				assignee_title : signatory.assignee.title,
+				actor_name    : signatory.assignee.name,
+				actor_title    : signatory.assignee.title
+			]
+			em254.insertFaasSignatory(s)
+		}
+	}
+
+	boolean existSignatory(sid){
+		return em254.findSignatoryById([objid:sid]) != null 
+	}
+
+	boolean existFaas(faas){
+		return em254.findFaasById(faas) != null 
+	}
+
+	boolean existFaasLog(faas){
+		em.findFaasLogById(faas) != null 
+	}
+	
+
+	boolean toBoolean(val, defaultvalue ){
+		if (val == null)
+			return defaultvalue
+		if (val instanceof Boolean)
+			return val 
+		return val.toString().toLowerCase().matches('y|yes|t|true|1')
+	}
+}

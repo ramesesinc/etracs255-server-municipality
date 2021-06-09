@@ -1,0 +1,7 @@
+<schema>
+	<element tablename="cashreceipt_plugin">
+		<field name="objid" primary="true" />
+		<field name="connection" caption="Connection" />
+		<field name="servicename" caption="Service Name" />
+	</element>
+</schema>

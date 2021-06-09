@@ -1,0 +1,26 @@
+import com.rameses.annotations.*;
+import com.rameses.util.*;
+import java.rmi.server.*;
+import com.rameses.common.*;
+import treasury.facts.*;
+import treasury.actions.*;
+
+class PaymentOrderCashReceiptService {
+	
+	@Service("DateService")
+	def dtSvc 
+
+	@Env 
+	def env; 
+
+	@ProxyMethod
+	public def getInfo( params) { 
+		return [:];
+	}
+
+	@ProxyMethod
+	public def getItems( params) { 
+		return [];
+	}
+
+}

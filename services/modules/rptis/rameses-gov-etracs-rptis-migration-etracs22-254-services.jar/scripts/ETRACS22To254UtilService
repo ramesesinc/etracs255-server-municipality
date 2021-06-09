@@ -1,0 +1,93 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import java.rmi.server.UID;
+import com.rameses.util.*;
+
+class ETRACS22To254UtilService
+{
+
+	@ActiveDB(value='etracs22rpt', em='etracs22')
+	def em22
+
+	@ActiveDB('etracs254rpt')
+	def em254
+
+
+	@ProxyMethod
+	public void logFaasError(entity, err) {
+		println '='*50 
+		err.printStackTrace()
+		em22.logFaasError([objid:entity.objid, log:err.message])
+	}
+
+
+	@ProxyMethod
+	public void logMigratedFaas( faas ) {
+		em22.logMigratedFaas(faas)	
+	}
+
+
+    @ProxyMethod
+    public void logPrevFaasError(entity, err){
+    	em22.logPrevFaasError([objid:entity.objid, log:err.message])
+    }
+
+
+    @ProxyMethod
+    public void deleteMigratedXFaas(faas) {
+		em22.deleteMigratedXFaas(faas)
+    }
+
+	@ProxyMethod
+	public def findLandFaas254(rpu) {
+		def landfaas254 = em254.findLandFaasByRealProperty([realpropertyid:rpu.realpropertyid, ry:rpu.ry])
+			
+		if (!landfaas254) {
+			def landpin = rpu.fullpin.substring(0, rpu.fullpin.lastIndexOf('-'))
+			landfaas254 = em254.findLandFaasByFullPin([fullpin:landpin, ry:rpu.ry])
+		}
+
+		if (!landfaas254) 			
+			throw new Exception('Land RPU reference does not exist.')
+
+		return landfaas254
+	}
+
+
+	@ProxyMethod
+	public boolean toBoolean(val, defaultvalue ){
+		if (val == null)
+			return defaultvalue
+		if (val instanceof Boolean)
+			return val 
+		return val.toString().toLowerCase().matches('y|yes|t|true|1')
+	}
+
+	@ProxyMethod
+	public def toInteger(paramvalue){
+		if (paramvalue == null || paramvalue.toString().trim().length() == 0) 
+			return 0
+
+		try{
+			return new java.math.BigDecimal(paramvalue.toString()).intValue()
+		}
+		catch(e){
+			return 0
+		}
+	}
+
+	@ProxyMethod
+	public def toDecimal(paramvalue){
+		if (paramvalue == null || paramvalue.toString().trim().length() == 0)  
+			return 0.0
+
+		try{
+			return new java.math.BigDecimal(paramvalue.toString())
+		}
+		catch(e){
+			return 0.0 
+		}
+	}
+
+
+}

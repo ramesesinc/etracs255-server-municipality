@@ -1,0 +1,29 @@
+import com.rameses.annotations.*;
+
+class RemittanceRCDInterceptor {
+
+	@Service("NumberService")
+	def numSvc;
+
+	@Service('RemittanceRCDReportService') 
+	def reportSvc; 
+
+	@After(pattern="RemittanceService.getReportData")
+	void getReportData( evt ) { 
+		def result = evt.result; 
+		def data = reportSvc.getReport( result ); 
+		if ( data ) {
+			result.putAll( data ); 
+            result.totalnoncash = result.totalcheck + result.totalcr;
+            result.remittancedate = result.controldate;
+            result.txnno = result.controlno; 
+			if( result.amount < 1 ) { 
+				def amount = Long.parseLong( result.amount.toString().split("\\.")[1] )
+				result.amountinwords = numSvc.doubleToWords( amount ).toUpperCase() + " CENTAVOS";
+			} 
+			else {
+				result.amountinwords = numSvc.doubleToWords( result.amount ).toUpperCase() + " PESOS ONLY";
+			}
+		}	
+	} 
+} 

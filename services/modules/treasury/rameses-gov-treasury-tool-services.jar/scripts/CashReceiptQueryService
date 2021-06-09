@@ -1,0 +1,62 @@
+import com.rameses.annotations.*;
+
+class CashReceiptQueryService {
+
+	@ActiveDB("cashreceipt_query")
+	def em;
+	
+	@ProxyMethod
+	public def getColumns( m ) {
+		return [
+			[name:"formno", caption:"FormNo."],
+			[name:"receiptno", caption:"ReceiptNo."],
+			[name:"receiptdate", caption:"ReceiptDate"],
+			[name:"txnmode", caption:"Mode"],
+			[name:"paidby", caption:"Payer"],
+			[name:"amount", caption:"Amount", type:"decimal"],
+			[name:"collector.name", caption:"Collector"],
+			[name:"collectiontype.name", caption:"CollectionType"],
+			[name:"voided", caption:"Voided", type:'checkbox', checkedValue:1, uncheckedValue: 0],
+			[name:"remitted", caption:"Remitted", type:'checkbox', checkedValue:1, uncheckedValue: 0],
+			[name:"liquidated", caption:"Liquidated", type:'checkbox', checkedValue:1, uncheckedValue: 0]
+		];
+	}
+
+	public def getList( params ) { 
+		def qbuff = [];
+		def startdate = params.fromreceiptdate; 
+		def enddate = params.toreceiptdate; 
+		if ( !enddate ) enddate = startdate; 
+		if ( startdate && enddate ) {
+			params.startdate = java.sql.Date.valueOf(startdate); 
+			params.enddate = com.rameses.util.DateUtil.add( java.sql.Date.valueOf(enddate), '1d' );
+			qbuff << ''' c.receiptdate >= $P{startdate} AND c.receiptdate < $P{enddate} '''; 
+		}
+
+		if ( params.receiptno ) { 
+			qbuff << ''' c.receiptno like $P{receiptno} ''';
+		} 
+		if ( params.formno ) { 
+			qbuff << ''' c.formno like $P{formno} ''';
+		} 
+		if ( params.paidby ) {
+			qbuff << ''' c.paidby like $P{paidby} ''';
+		}
+		if ( params.collectorname ) {
+			qbuff << ''' c.collector_name like $P{collectorname} ''';
+		}
+
+
+		if ( params.searchtext ) {
+			params.receiptno = params.searchtext.toString()+'%';  
+			qbuff << ''' c.receiptno like $P{receiptno} '''; 
+		} 
+
+		if ( !qbuff ) return []; 
+
+		qbuff << " c.state IN ('POSTED','DELEGATED','CAPTURED','CAPTURE') "; 
+		params.filter = qbuff.join(" AND "); 
+		params.orderby = 'c.receiptno, c.receiptdate'; 
+		return em.getList( params ); 
+	} 
+}

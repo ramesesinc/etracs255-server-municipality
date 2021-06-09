@@ -1,0 +1,90 @@
+import com.rameses.annotations.*;
+
+class CashbookLiquidationReportService {
+	
+	@ActiveDB('cashbook_liquidation_report')
+	def reportdb; 
+
+	@DataContext('sys_user') 
+	def userdb; 
+
+	@Service('DateService')
+	def dateSvc; 
+
+	@ProxyMethod 
+	public def getReport( params ) { 
+		buildParams( params ); 
+
+		def result = [:]; 
+		result.items = reportdb.getDetails( params.filter ); 
+
+		def header = params.remove('header'); 
+		header.BEGBALDR = header.BEGBALCR = header.BEGBALANCE = 0.0; 
+
+		def balinfo = reportdb.findBeginBalance( params.filter ); 
+		if ( balinfo?.balance ) { 
+			header.BEGBALDR = (balinfo.dr ? balinfo.dr : 0.0);
+			header.BEGBALCR = (balinfo.cr ? balinfo.cr : 0.0);
+			header.BEGBALANCE = (balinfo.balance ? balinfo.balance : 0.0);
+
+			def m = [refid: 'begin_balance', refno: '** BEGIN BALANCE **', dr: 0.0, cr: 0.0, balance: balinfo.balance];  
+			if ( result.items ) {
+				result.items.add(0, m); 
+			} 
+			else {
+				result.items << m; 
+			}
+		} 
+
+		result.header = header; 
+		return result; 
+	}
+
+	private void buildParams( params ) { 
+		def filter = [:]; 
+		def header = [:]; 
+		def YMD = new java.text.SimpleDateFormat('yyyy-MM-dd'); 
+
+		header.PERIOD_TYPE = params.period.code.toString(); 
+		switch ( header.PERIOD_TYPE ) {
+			case 'daily': 
+				if ( !params.date ) throw new Exception('date parameter is required'); 
+
+				def dt = YMD.parse( params.date ); 
+				filter.startdate = dt; 
+				filter.enddate   = dateSvc.add( dt, '1d' ); 
+				header.PERIOD_TITLE = new java.text.SimpleDateFormat('MMMMM dd, yyyy').format( dt ).toUpperCase(); 
+				break; 
+
+			case 'monthly': 
+				if ( !params.year ) throw new Exception('year parameter is required'); 
+				if ( !params.month?.index ) throw new Exception('month.index parameter is required'); 
+
+				def strdate = ''+ params.year +'-'+ params.month.index.toString().padLeft( 2, '0') +'-01'; 
+				filter.startdate = YMD.parse( strdate ); 
+				filter.enddate   = dateSvc.add( filter.startdate, '1M' ); 
+				header.PERIOD_TITLE = 'FOR THE MONTH OF '+ new java.text.SimpleDateFormat('MMMMM yyyy').format( filter.startdate ).toUpperCase(); 
+				break; 
+
+			default: 
+				throw new Exception(''+ params.PERIOD_TYPE +' period option not supported'); 
+				break; 
+		} 
+
+		filter.fundid = params.fund?.objid; 
+		header.FUND_TITLE = params.fund?.title;
+
+		def acct = [:]; 		
+		filter.accountid = params.account?.objid; 
+		if ( filter.accountid ) acct = userdb.select('objid,fullname,jobtitle').find([ objid: filter.accountid ]).first(); 
+		header.ACCOUNT_NAME = acct?.fullname; 
+		header.ACCOUNT_TITLE = acct?.jobtitle;
+		
+		if ( !filter.fundid ) filter.fundid = '';
+		if ( !filter.accountid ) filter.accountid = '';
+
+		params.filter = filter; 
+		params.header = header; 
+	}
+
+}

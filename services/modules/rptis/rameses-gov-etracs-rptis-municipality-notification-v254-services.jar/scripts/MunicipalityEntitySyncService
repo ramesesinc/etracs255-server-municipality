@@ -1,0 +1,33 @@
+import com.rameses.annotations.*;
+import com.rameses.common.*;
+
+class MunicipalityEntitySyncService
+{   
+	@Service('IndividualEntityService')
+	def individualSvc 
+
+	@Service('JuridicalEntityService')
+	def juridicalSvc 
+
+	@Service('MultipleEntityService')
+	def multipleSvc 
+
+
+	@ProxyMethod
+    public void syncData( msg ) {
+    	try{
+    		def entity = msg.data 
+	        println 'Synching entity -> ' + entity.objid
+
+	        if ('individual'.equalsIgnoreCase(entity.type))
+	        	individualSvc.save( msg.data )
+	        else if ('juridical'.equalsIgnoreCase(entity.type))
+	        	juridicalSvc.save( msg.data )
+	        else if ('multiple'.equalsIgnoreCase(entity.type))
+	        	multipleSvc.save( msg.data )
+    	}
+    	catch( e ){
+    		println 'Error saving entity -> ' + msg.data.objid
+    	}
+    }
+}

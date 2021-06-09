@@ -1,0 +1,43 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.util.*;
+import com.rameses.io.*;
+
+class EntityJuridicalListInterceptor  {
+
+	@Service("LOVService")
+	def lovSvc;
+
+	@Env
+	def env;
+
+	@After(pattern="QueryService.getNodeList", eval="#{args[0]._schemaname == 'entityjuridical' }")
+	public def getNodes(def evt) {
+		def nodes = evt.result;
+		nodes << [name: 'all', title: 'All' ];
+		def list = lovSvc.getKeyValues( "JURIDICAL_ORG_TYPES" );
+		list.each {
+			nodes  <<  [name:it.key, title:it.value];
+		}
+	}	
+
+	@Before(pattern="QueryService.getList", eval="#{ args[0]._schemaname == 'entityjuridical' }")
+	public void loadList(def evt) {
+		def o = evt.args[0];
+		if( !o.node?.name ) return;
+		if( o.node.name == 'all' ) return;
+
+
+		def str = " orgtype = :orgtype ";
+		def m = [ orgtype: o.node.name ];
+
+		if( o.where ) {
+			o.where[0] = str + " AND " + o.where[0];	
+			o.where[1].putAll( m );
+		}
+		else {
+			o.where = [str, m];
+		} 
+	}	
+
+}

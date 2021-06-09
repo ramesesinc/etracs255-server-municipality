@@ -1,0 +1,12 @@
+<schema>
+    <element name="bldgtype" tablename="bldgtype">
+		<field name="objid" primary="true"/>
+		<field name="bldgrysettingid" required="true"/>
+		<field name="code" required="true"/>
+		<field name="name" required="true" />
+        <field name="residualrate" required="true"/>
+        <field name="basevaluetype" required="true"/>
+        <field name="previd"  />
+        <field name="usecdu" type="boolean" />
+	</element>
+</schema>

@@ -1,0 +1,78 @@
+import com.rameses.annotations.*;
+import com.rameses.common.*
+import com.rameses.util.*;
+
+class CollectionReportService  {
+
+	@ActiveDB('collection_report')
+	def adb; 
+
+	@Env
+	def env; 
+
+	@Service('DateService')
+	def dtSvc; 
+
+	@ProxyMethod
+	public def getReportOptions( params ) {
+		return [ 
+			months : dtSvc.getMonthsByQtr(0) 
+		]; 
+	}
+
+	@ProxyMethod
+	public def getReportListing( params ) { 
+		buildParams( params ); 
+
+		def postingtypeid = params.postingtype?.objid.toString().toUpperCase(); 
+		params.postingtypeid = postingtypeid; 
+
+		def list = adb.getReportListing( params );  
+		if ( !list ) throw new Exception('No available record(s) found that matches your criteria'); 
+
+		return [
+			header : [
+				REPORTTITLE : 'DAILY REPORT OF COLLECTION LISTING', 
+				PERIOD      : params.strperiod  
+			], 
+			reportdata: [ receipts : list ] 
+		]; 
+	}
+
+
+	void buildParams( params ) {
+		def YMD = new java.text.SimpleDateFormat('yyyy-MM-dd'); 
+		
+		def period = new StringBuilder();
+		if ( params.period.toString().toUpperCase() == 'MONTHLY' ) {
+			if ( !params.year ) throw new Exception('year parameter is required');
+			if ( !params.month?.index ) throw new Exception('month parameter is required');
+
+			def monthindex = params.month.index; 
+			def startdate = YMD.parse( params.year +'-'+ monthindex.toString().padLeft(2, '0') +'-01' );
+			def enddate = DateUtil.add( startdate, '1M' ); 	
+
+			def months = dtSvc.getMonths(); 
+			params.startdate = startdate;
+			params.enddate = enddate;
+			period.append('For the month of ' + months[monthindex-1].caption +' '+ params.year ); 
+		
+		} else {
+			if ( !params.date ) throw new Exception('date parameter is required');
+
+			def sdate = params.date; 
+			if ( params.date instanceof java.util.Date ) {
+				sdate = YMD.format( params.date );
+			} 
+
+			params.startdate = YMD.parse( sdate );
+			params.enddate = DateUtil.add( params.startdate, '1d' ); 	
+			def formatter = new java.text.SimpleDateFormat('MMMMM dd, yyyy');
+			period.append('For the day of ' + formatter.format( params.startdate ));
+			params.date = params.startdate; 
+		}
+		params.strperiod = period.toString(); 
+		params.collectorid = params.collector?.objid; 
+		if ( !params.collectorid ) params.collectorid='%'; 
+	} 
+}

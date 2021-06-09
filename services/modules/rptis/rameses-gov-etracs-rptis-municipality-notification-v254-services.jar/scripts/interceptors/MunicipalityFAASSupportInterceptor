@@ -1,0 +1,44 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+
+class MunicipalityFAASSupportInterceptor
+{
+	@Env
+	def env
+
+    @Service('RPTNotificationService')
+    def svc 
+
+    @After(pattern="FAASService.deleteFaas") 
+    public void submitDeleteFaasToProvince( evt ) {
+        submitToProvince([result:[tdno:evt.result.tdno]])
+    }
+
+    @After(pattern="FAASSupportService.deleteApprovedFaas", eval="#{result.isremote==null}") 
+	public void submitToProvince( evt ) {
+		def params = evt.result
+        params.isremote = true
+        def asyncreq    = svc.createAsyncRequest('FAASSupportService', 'deleteApprovedFaas', params, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.filetype    = 'faas-delete-approved'
+        msg.messagetype = 'faas-delete-approved'
+        msg.message     = 'Post delete approved FAAS.'
+        svc.sendAsyncMessage(msg)
+        println 'Submit municipality deleted approved FAAS to Province....'
+	}
+
+
+    @After(pattern="CancelledFAASService.approve", eval="#{result.isremote==null}") 
+    public void submitToProvinceFaasCancellation( evt ) {
+        def entity = evt.result
+        entity.isremote = true
+        def asyncreq    = svc.createAsyncRequest('ProvinceFAASCancellationRemoteService', 'postApprovedFaasCancellation', entity, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.filetype    = 'faas-cancellation-approved'
+        msg.messagetype = 'faas-cancellation-approved'
+        msg.message     = 'Post approved FAAS cancellation.'
+        svc.sendAsyncMessage(msg)
+        println 'Submit municipality approved FAAS cancellation to Province....'
+    }
+}
+

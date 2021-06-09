@@ -1,0 +1,325 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import java.rmi.server.UID;
+import com.rameses.util.*;
+
+class ETRACS22To254MasterMigrationService 
+{
+	@ActiveDB(value='etracs22_master', em='etracs22')
+	def em22;
+
+	@ActiveDB('etracs254rpt')
+	def em254;
+
+	@ActiveDB('org')
+	def orgEm;
+
+	@ActiveDB('province')
+	def provEm;
+
+	@ActiveDB('municipality')
+	def muniEm;
+
+	@ActiveDB('city')
+	def cityEm;
+
+	@ActiveDB('district')
+	def districtEm;
+
+	@ActiveDB('barangay')
+	def brgyEm;
+
+
+
+	@ProxyMethod
+	public void createMigrationRefTables(  ) {
+		try { em22.createMigrateFaasTable()}catch(e){}
+		try { em22.createMigrateFaasLogTable()}catch(e){}
+		try { em22.createMigrateFaasLogIndex()}catch(e){}
+		try { em22.createMigratePrevFaasTable()}catch(e){}
+		try { em22.createMigratePrevFaasLogTable()}catch(e){}
+
+		em22.deleteMigrateFaasTable()
+		em22.deleteMigrateFaasLogTable()
+		em22.deleteMigratePrevFaasTable()
+		em22.deleteMigratePrevFaasLogTable()
+	}
+
+
+	@ProxyMethod
+	public def migrateOrg(orgclass) {
+		clearSysOrg()
+		orgclass = orgclass.toLowerCase();
+		if (orgclass.matches('province|municipality'))
+			migrateProvinceMunicipality(orgclass)
+		else if (orgclass.matches('city'))
+			migrateCity(orgclass)
+		else
+			throw new Exception('Unsupported org class ' + orgclass + '.')
+		println 'Migrated sysorg'
+	}
+
+	void clearSysOrg(){
+		em254.clearOrgParentId()
+		em254.deleteBarangay();
+		em254.deleteDistrict();
+		em254.deleteCity();
+		em254.deleteMunicipality();
+		em254.deleteProvince();
+		em254.deleteSysOrg();
+	}
+
+	void migrateProvinceMunicipality(orgclass){
+		def provs = em22.getLgusByClass([orgclass:'PROVINCE'])
+		if (!provs) throw new Exception('Province does not exist.')
+		def prov = provs[0]
+		prov.root = (orgclass.matches('province') ? 1 : 0)
+		orgEm.save(prov)
+		provEm.save(prov)
+
+		em22.getLgusByClass([orgclass:'MUNICIPALITY']).each{muni ->
+			muni.parent = prov
+			muni.root = (orgclass.matches('municipality') ? 1 : 0)
+			orgEm.save(muni)
+			muniEm.save(muni)
+
+			em22.getLgusByClass([orgclass:'BARANGAY']).each{brgy->
+				brgy.parent = muni 
+				orgEm.save(brgy)
+				brgyEm.save(brgy)
+			}
+		}
+	}
+
+	void migrateCity(orgclass){
+		def cities = em22.getLgusByClass([orgclass:'CITY'])
+		if (!cities) throw new Exception('LGU city does not exist.')
+		def city = cities[0]
+		city.root = 1 
+		orgEm.save(city)
+		cityEm.save(city)
+
+		em22.getLgusByClass([orgclass:'DISTRICT']).each{district ->
+			district.parent = city
+			orgEm.save(district)
+			districtEm.save(district)
+
+			em22.getLgusByClass([orgclass:'BARANGAY']).each{brgy->
+				brgy.parent = district 
+				orgEm.save(brgy)
+				brgyEm.save(brgy)
+			}
+		}
+	}
+
+
+	/*===============================================================================*/
+	@ActiveDB('propertyclassification')
+	def pcEm;
+
+	@ProxyMethod
+	public void migratePropertyClassifications(  ) {
+		em22.getClassifications().each{
+			try{
+				pcEm.save(it)
+			}
+			catch(e){
+				it.code += '.'
+				it.name += '.'
+				pcEm.save(it)
+			}
+		}
+		println 'Migrated classifications'
+	}
+
+
+	/*===============================================================================*/
+	@ActiveDB('exemptiontype')
+	def exemptEm;
+
+	@ProxyMethod	
+	public void migrateExemptionTypes(){
+		em22.getExemptionTypes().each{
+			try{
+				exemptEm.save(it)
+			}
+			catch(e){
+				it.code += '.'
+				it.name += '.'
+				exemptEm.save(it)
+			}
+		}
+		println 'Migrated exemption types'
+	}
+
+
+	/*===============================================================================*/
+	@ActiveDB('cancelfaasreason')
+	def cancetdEm;
+
+	@ProxyMethod		
+	public void migrateCancelTDReasons(){
+		em22.getCancelTdReasons().each{
+			cancetdEm.save(it);
+		}
+		println 'Migrated cancel td reasons'
+	}
+
+
+
+	/*======================================================================*/
+	@ActiveDB('bldgkind')
+	def bldgEm;
+
+	@ProxyMethod		
+	public void migrateBldgKinds(){
+		em22.getBldgKinds().each{
+			try{
+				bldgEm.save(it);
+			}
+			catch(e){
+				it.code += '.'
+				it.name += '.'
+				bldgEm.save(it);
+			}
+		}
+		println 'Migrated kind of buildings'
+	}
+
+
+	/*======================================================================*/
+	@ActiveDB('material')
+	def matEm
+
+	@ProxyMethod		
+	public void migrateMaterials(){
+		em22.getMaterials().each{
+			try{
+				matEm.save(it);
+			}
+			catch(e){
+				it.code += '.'
+				it.name += '.'
+				matEm.save(it);
+			}
+		}
+		println 'Migrated materials'
+	}
+
+
+	/*======================================================================*/
+	@ActiveDB('structure')
+	def structEm
+
+	@DataContext('structurematerial')
+	def em_structurematerial
+
+	@ProxyMethod		
+	public void migrateStructures(){
+		em22.getStructures().each{struct -> 
+			struct.indexno = (struct.indexno == null ? 0 : struct.indexno)
+			struct.showinfaas = false
+			structEm.save(struct);
+
+			struct.materials = em22.serializer.read(struct.materials);
+			struct.materials.material.each{mat->
+				def sm = [
+					structure : struct,
+					material  : mat,
+					display   : 0,
+					idx       : 0,
+				]
+				try{
+					em_structurematerial.save(sm)
+				}
+				catch(e){
+					println 'migrateStructures [ERROR]: '
+					e.printStackTrace();
+					//ignore dups
+				}
+			}
+		}
+		println 'Migrated structures'
+	}
+
+
+	/*======================================================================*/
+	@ActiveDB('machine')
+	def machEm
+
+	@ProxyMethod		
+	public void migrateMachines(){
+		em22.getMachines().each{
+			try{
+				machEm.save(it);
+			}
+			catch(e){
+				it.code += '.'
+				it.name += '.'
+				machEm.save(it);
+			}
+		}
+		println 'Migrated machines'
+	}
+
+
+	/*======================================================================*/
+	@ActiveDB('planttree')
+	def planttreeEm
+
+	@ProxyMethod		
+	public void migratePlantTrees(){
+		em22.getPlantTrees().each{
+			try{
+				planttreeEm.save(it);
+			}
+			catch(e){
+				it.code += '.'
+				it.name += '.'
+				planttreeEm.save(it);
+			}
+		}
+		println 'Migrated plants/trees'
+	}
+
+
+	/*======================================================================*/
+	@ActiveDB('miscitem')
+	def miscEm
+
+	@ProxyMethod		
+	public void migrateMiscItems(){
+		em22.getMiscItems().each{
+			try{
+				miscEm.save(it);
+			}
+			catch(e){
+				it.code += '.'
+				it.name += '.'
+				miscEm.save(it);
+			}
+		}
+		println 'Migrated miscitems'
+	}
+
+
+	/*======================================================================*/
+	@ActiveDB('rptparameter')
+	def paramEm;
+
+	@ProxyMethod		
+	public void migrateRPTParameters(){
+		em22.getRPTParameters().each{
+			try{
+				paramEm.save(it);
+			}
+			catch(e){
+				it.name += '_'
+				paramEm.save(it);
+			}
+		}
+		println 'Migrated rpt parameters'
+	}	
+
+	
+}

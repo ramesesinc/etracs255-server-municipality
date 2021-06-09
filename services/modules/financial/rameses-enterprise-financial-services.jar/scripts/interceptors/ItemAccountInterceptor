@@ -1,0 +1,18 @@
+import com.rameses.annotations.*;
+
+class ItemAccountInterceptor {
+
+	@Before(pattern="PersistenceService.create", eval="#{ args[0]._schemaname == 'itemaccount' }")
+	public void beforeCreate( evt ) {
+		def param = evt.args[0]; 
+		if ( !param.generic ) param.generic = 0;  
+		if ( !param.hidefromlookup ) param.hidefromlookup = 0;  
+	}
+
+	@After(pattern="PersistenceService.read", eval="#{ args[0]._schemaname == 'itemaccount' }")
+	public void afterRead( evt ) {
+		def result = evt.result; 
+		if ( !result.generic ) result.generic = 0;  
+		if ( !result.hidefromlookup ) result.hidefromlookup = 0;  
+	}
+}

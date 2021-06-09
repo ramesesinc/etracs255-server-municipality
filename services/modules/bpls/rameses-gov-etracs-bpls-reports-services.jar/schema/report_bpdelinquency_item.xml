@@ -1,0 +1,13 @@
+<schema>
+	<element tablename="report_bpdelinquency_item">
+		<field name="objid" primary="true"/> 
+		<field name="parentid" required="true"/> 
+		<field name="applicationid" required="true"/> 
+		<field name="amount" /> 
+		<field name="amtpaid" /> 
+		<field name="surcharge" /> 
+		<field name="interest" /> 
+		<field name="balance" /> 
+		<field name="total" /> 		
+	</element>
+</schema>

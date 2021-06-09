@@ -1,0 +1,472 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import java.rmi.server.UID;
+import com.rameses.util.*;
+
+class ETRACS22To254BldgMigrationInterceptor 
+{
+	@ActiveDB('bldgrpu')	
+	def rpuEm 
+
+	@ActiveDB('etracs254rpt')
+	def em254
+
+	@ActiveDB(value='etracs22rpt', em='etracs22')
+	def em22
+
+	@Service('ETRACS22To254UtilService')
+	def util
+	
+
+	@After(pattern="ETRACS22To254FaasMigrationService.migrateFaas", eval="#{result.rpu.rputype == 'bldg'}")
+	public void migrateBldgRpu(evt){
+		def faas22 = evt.result 
+		try{
+			doMigrateBldgRpu(faas22)
+			doMigrateBldgStructures(faas22.rpu)
+			doMigrateBldgStructuralTypes(faas22.rpu)
+			doMigrateAssessment(faas22.rpu)
+			doUpdateBldgRpuInfo(faas22.rpu)
+			util.logMigratedFaas(faas22)
+			println 'Bldg FAAS ' + faas22.objid + ' successfully migrated.'
+		}
+		catch(e){
+			e.printStackTrace()
+			util.logFaasError(faas22, e)
+		}
+		finally{
+			util.deleteMigratedXFaas(faas22)
+		}
+	}
+
+	void doMigrateBldgRpu(faas22){
+		def rpu = faas22.rpu 
+		if (!existBldgRpu(rpu)){
+			def landfaas254 = util.findLandFaas254(rpu)
+			def newrpu = [
+				objid 			: rpu.objid,
+				landrpuid 		: landfaas254.rpuid,
+				houseno 		: rpu.info.houseno,
+				psic 			: rpu.info.psic,
+				permitno 		: rpu.info.permitno,
+				permitdate 		: rpu.info.permitdate,
+				permitissuedby 	: rpu.info.permitissuedby,
+				bldgtype 		: null, 
+				bldgkindbucc  	: null, 
+				basevalue 		: rpu.info.firstfloorbasevalue,
+				dtcompleted 	: rpu.info.dtcompleted,
+				dtoccupied 		: rpu.info.dtoccupied,
+				floorcount 		: 0,
+				depreciation 	: rpu.info.depreciation,
+				depreciationvalue : rpu.info.depreciationvalue,
+				totaladjustment : rpu.info.totaladjustment,
+				additionalinfo  : rpu.info.additionalinfo,
+				bldgage 		: util.toInteger(rpu.info.bldgage),
+				effectiveage 	: util.toInteger(rpu.info.bldgage),
+				percentcompleted : 100,
+				bldgassesslevel : [objid:rpu.info.assesslevelid],
+				assesslevel 	: rpu.info.assesslevel,
+				condominium 	: util.toBoolean(rpu.info.condominium, false),
+				bldgclass 		: rpu.info.bldgclass,
+				predominant		: 0, 
+			]
+			rpuEm.create(newrpu)
+		}
+	}
+
+	boolean existBldgRpu(rpu){
+		return em254.findBldgRpuById(rpu) != null 
+	}
+
+	void doMigrateBldgStructures(rpu){
+		rpu.bldgstructures.each{
+			if (!existBldgStructure(it)){
+				
+				resolveStructure(it)
+				resolveMaterial(it)
+
+				def newstructure = [
+					objid 		: it.objid,
+					bldgrpuid 	: rpu.objid, 
+					floor 		: 1, 
+					structure   : [objid:it.structureid],
+					material    : null, 
+				]
+				rpuEm.create(newstructure, 'structure')
+
+				if (it.materialid){
+					newstructure.material = [objid:it.materialid]
+					rpuEm.update(newstructure, 'structure')	
+				}
+			}
+		}
+	}
+
+	boolean existBldgStructure(structure){
+		return em254.findBldgStructureById(structure) != null 
+	}
+
+	void doMigrateBldgStructuralTypes(rpu){
+		if (!existBldgStructuralType(rpu)){
+			
+			resolveBldgType(rpu)
+			resolveBldgKindBucc(rpu)
+
+			def newst = [
+				objid 			: rpu.objid,
+				bldgrpuid 		: rpu.objid,
+				classification  : [objid:rpu.classid],
+				bldgtype 		: [objid:rpu.info.bldgtype.bldgtypeid],
+				bldgkindbucc 	: [objid:rpu.info.bldgkindbucc.bldgkindbuccid],
+				floorcount 		: rpu.info.floorcount,
+				basefloorarea 	: rpu.info.totalarea,
+				totalfloorarea  : rpu.info.totalarea,
+				basevalue  		: rpu.info.firstfloorbasevalue,
+				unitvalue	    : rpu.info.firstfloorbasevalue,
+				taxable 		: true,
+			]
+			rpuEm.create(newst, 'structuraltype')
+		}
+		doMigrateBldgUses(rpu)
+	}
+
+	boolean existBldgStructuralType(rpu){
+		return em254.findBldgStructuralTypeById(rpu) != null
+	}
+
+
+	void doMigrateBldgUses(rpu){
+		rpu.info.bldguses.each{bu->
+			
+			resolveBldgAssessLevel(rpu, bu)
+
+			if (!existBldgUse(bu)){
+				def newbu = [
+					objid 			: bu.objid,
+					bldgrpuid 		: rpu.objid,
+					structuraltype  : [objid:rpu.objid],
+					actualuse       : [objid:bu.actualuse.actualuseid],
+					basevalue 		: rpu.info.firstfloorbasevalue,
+					area 			: bu.area,
+					basemarketvalue : bu.basemarketvalue,
+					depreciationvalue 	: bu.depreciationvalue,
+					adjustment 			: bu.adjustment,
+					marketvalue 		: bu.marketvalue,
+					assesslevel 		: bu.assesslevel,
+					assessedvalue 		: bu.assessedvalue,
+					adjfordepreciation  : 0.0,
+					taxable 			: true,
+				]
+				rpuEm.create(newbu, 'bldguse')
+			}
+			doMigrateFloors(rpu, bu)
+		}
+	}
+
+
+	boolean existBldgUse(bu){
+		return em254.findBldgUseById(bu) != null 
+	}
+
+	void doMigrateFloors(rpu, bu){
+		bu.floors.each{floor ->
+			if (!existFloor(floor)){
+				def newfloor = [
+					objid 		: floor.objid,
+					bldguseid 	: bu.objid,
+					bldgrpuid 	: rpu.objid,
+					floorno 	: floor.floorno,
+					area 		: floor.area,
+					storeyrate 	: floor.storeyrate,
+					basevalue 	: floor.basevalue,
+					unitvalue 	: floor.unitvalue,
+					basemarketvalue : floor.basemarketvalue,
+					adjustment 	: floor.adjustment,
+					marketvalue : floor.marketvalue,
+				]
+
+				rpuEm.create(newfloor, 'floor')
+			}
+			doMigrateAdditionalItems(rpu, floor)
+		}
+	}
+
+	boolean existFloor(floor){
+		return em254.findFloorById(floor) != null
+	}
+
+	void doMigrateAdditionalItems(rpu, floor){
+		floor.additionalitems.each{item ->
+			if (!existBldgFloorAdditional(item)){
+
+				resolveBldgAdditionalItem(rpu, item)
+
+				def newitem = [
+					objid 			: item.objid,
+					bldgfloorid 	: floor.objid,
+					bldgrpuid 		: rpu.objid,
+					additionalitem  : [objid:item.addlitemid],
+					amount 			: item.amount,
+					expr			: item.expr,
+					depreciate      : true, 
+				]
+				rpuEm.create(newitem, 'additional')
+			}
+			doMigrateAdditionalParams(rpu, item)
+		}
+	}
+
+	boolean existBldgFloorAdditional(item){
+		return em254.findBldgFloorAdditionalById(item) != null 
+	}
+
+
+	void doMigrateAdditionalParams(rpu, item){
+		item.params.each{param ->
+			def objid = item.objid + param.addlitemcode
+			if (!existBldgFloorAdditionalParam([objid:objid])){
+
+				resolveRptParameter(rpu, param)
+				
+				def newparam = [
+					objid 					: objid,
+					bldgflooradditionalid 	: item.objid,
+					bldgrpuid 				: rpu.objid,
+					param 					: [objid:param.paramid],
+					intvalue 				: (param.datatype.matches('.*integer.*') ? util.toInteger(param.paramvalue) : 0),
+					decimalvalue 			: (param.datatype.matches('.*decimal.*') ? util.toDecimal(param.paramvalue) : 0.0),
+				]
+
+				rpuEm.create(newparam, 'param')
+			}
+		}
+	}
+
+	boolean existBldgFloorAdditionalParam(param){
+		return em254.findBldgFloorAdditionalParamById(param) != null
+	}
+
+	void doUpdateBldgRpuInfo(rpu){
+		em254.updateBldgRpuFloorCount(rpu)
+		em254.updateStructuralTypeBaseArea(rpu)
+	}
+
+
+	void doMigrateAssessment(rpu){
+		try{
+			em254.insertBldgRpuAssessment(rpu)
+		}
+		catch(e){
+			//ignore 
+		}
+	}
+
+
+
+	/*======= RESOLUTION =================================*/
+	@ActiveDB('structure')
+	def structEm
+
+	@ActiveDB('material')
+	def matEm
+
+
+	void resolveStructure(bs){
+		def st = structEm.read([objid:bs.structureid])
+		if (!st){
+			st = [
+				objid	: bs.structureid,
+				state   : 'APPROVED',
+				code 	: bs.structurecode,
+				name 	: bs.structurename,
+				idx 	: 0,
+				indexno : 0,
+				showinfaas: 0,
+			]
+			structEm.create(st)
+		}
+	}
+
+	void resolveMaterial(bs){
+		if (!bs.materialid)
+			return 
+
+		def mat = matEm.read([objid:bs.materialid])
+		if (!mat){
+			mat = [
+				objid 	: bs.materialid,
+				state 	: 'APPROVED',
+				code 	: bs.materialcode,
+				name 	: bs.materialname,
+			]
+			matEm.create(mat)
+		}
+	}
+
+
+
+
+	/*======= RESOLUTION =================================*/
+
+	@ActiveDB('bldgrysetting')
+	def bldgsettingEm
+
+	@ActiveDB('bldgkind')
+	def bldgkindEm
+
+	@ActiveDB('rptparameter')
+	def paramEm
+
+
+	def findBldgSetting(rpu){
+		def setting = em254.findBldgSettingByRy([ry:rpu.ry])
+		if (!setting)
+			throw new Exception('Building revision setting for year ' + rpu.ry + ' does not exist.')
+		return setting
+	}
+
+	void resolveBldgType(rpu){
+		def setting = findBldgSetting(rpu)
+		def bt = em254.findBldgTypeById([objid:rpu.info.bldgtype.bldgtypeid])
+		if (!bt){
+			bt = [
+				objid 			: rpu.info.bldgtype.bldgtypeid,
+				bldgrysettingid : setting.objid,
+				code 			: rpu.info.bldgtype.bldgtypecode,
+				name			: rpu.info.bldgtype.bldgtypename,
+				residualrate 	: rpu.info.bldgtype.residualrate,
+				basevaluetype 	: rpu.info.bldgtype.basevaluetype,
+				previd			: rpu.info.bldgtype.previd,
+			]
+			bldgsettingEm.create(bt, 'bldgtype')
+		}
+	}
+
+	void resolveBldgKind(rpu){
+		def buccinfo = rpu.info.bldgkindbucc
+		def bk = bldgkindEm.read([objid:buccinfo.bldgkindid])
+		if (!bk){
+			bk = [
+				objid : buccinfo.bldgkindid,
+				state : 'APPROVED',
+				code  : buccinfo.bldgkindcode,
+				name  : buccinfo.bldgkindname,
+			]
+			bldgkindEm.create(bk)
+		}
+	}
+
+	void resolveBldgKindBucc(rpu){
+		def setting = findBldgSetting(rpu)
+		def buccinfo = rpu.info.bldgkindbucc
+		def bldgtype = rpu.info.bldgtype 
+
+		resolveBldgKind(rpu)
+
+		def bucc = em254.findBldgKindBuccById([objid:buccinfo.bldgkindbuccid])
+		if (!bucc){
+			bucc = [
+				objid 			: buccinfo.bldgkindbuccid,
+				bldgtypeid 		: bldgtype.bldgtypeid,
+				bldgrysettingid : setting.objid,
+				bldgkind     	: [objid:buccinfo.bldgkindid],
+				basevaluetype 	: buccinfo.basevaluetype,
+				basevalue 		: buccinfo.basevalue,
+				minbasevalue 	: buccinfo.minbasevalue,
+				maxbasevalue 	: buccinfo.maxbasevalue,
+				gapvalue 		: buccinfo.gapvalue,
+				minarea 		: buccinfo.minarea,
+				maxarea 		: buccinfo.maxarea,
+				bldgclass 		: buccinfo.bldgclass,
+				previd 			: buccinfo.previd,
+			]
+			bldgsettingEm.create(bucc, 'bldgkindbucc')
+		}
+	}
+
+	void resolveBldgAssessLevel(rpu, bu){
+		def setting = findBldgSetting(rpu)
+		def auinfo = bu.actualuse
+		def lvl = em254.findBldgAssessLevelById([objid:auinfo.actualuseid])
+		if (!lvl){
+			lvl = [
+				objid 			: auinfo.actualuseid,
+				bldgrysettingid : setting.objid,
+				classification 	: [objid:rpu.classid],
+				code 			: auinfo.actualusecode,
+				name 			: auinfo.actualusename,
+				fixrate 		: util.toBoolean(auinfo.fixrate, true),
+				rate 			: auinfo.rate,
+				previd 			: auinfo.previd,
+			]
+			bldgsettingEm.save(lvl, 'assesslevel')
+
+			lvl.ranges.each{
+				def range = [
+					objid 			  	: 'BR' + new java.rmi.server.UID(),
+					bldgassesslevelid 	: lvl.objid,
+					bldgrysettingid    	: lvl.bldgrysettingid,
+					mvfrom 				: it.mvfrom,
+					mvto 				: it.mvto,
+					rate				: it.rate,
+				]
+				bldgsettingEm.save(range, 'range')
+			}
+		}
+	}
+
+
+	void resolveBldgAdditionalItem(rpu, item){
+		def addlinfo = item.addlitem
+		def setting = findBldgSetting(rpu)
+
+		def addl = em254.findBldgAdditionalItemById([objid:addlinfo.addlitemid])
+		if(!addl)
+			addl = em254.findBldgAdditionalItemByCode([code:addlinfo.addlitemcode])
+		if(!addl)
+			addl = em254.findBldgAdditionalItemByName([name:addlinfo.addlitemname])
+		if (!addl){
+			addl = [
+				objid 	: addlinfo.addlitemid,
+				bldgrysettingid : setting.objid,
+				type 	: 'additionalitem',
+				code 	: addlinfo.addlitemcode,
+				name 	: addlinfo.addlitemname,
+				unit 	: addlinfo.addlitemunit,
+				expr 	: addlinfo.expr,
+				previd  : addlinfo.previd, 
+			]
+			try{
+				bldgsettingEm.save(addl, 'bldgadditionalitem')
+			}
+			catch(e){
+				//ignore if duplicate 
+			}
+		}
+		else{
+			item.addlitemid = addl.objid 
+			item.addlitem.addlitemid = addl.objid 
+		}
+	}
+
+
+	void resolveRptParameter(rpu, param){
+		def rptparam = em254.findRptParameterById([objid:param.paramid])
+		if (!rptparam)
+			rptparam = em254.findRptParameterByName([name:param.paramname]) 
+		if (!rptparam){
+			rptparam = [
+				objid		: param.paramid,
+				state		: 'APPROVED',
+				name		: param.paramname,
+				caption		: param.paramcaption,
+				description	: param.paramcaption,
+				paramtype	: param.datatype,
+				minvalue	: 0.0,
+				maxvalue	: 0.0,
+			]
+			paramEm.create(rptparam)
+		}
+		param.paramid = rptparam.objid 
+	}
+}

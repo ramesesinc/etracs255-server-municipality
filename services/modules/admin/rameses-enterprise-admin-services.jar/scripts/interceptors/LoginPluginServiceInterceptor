@@ -1,0 +1,50 @@
+import com.rameses.annotations.*;
+
+class LoginPluginServiceInterceptor  {
+
+
+	@DataContext("sys_domain")
+	def domainEm;
+
+	@Service(dynamic=true)
+	def svcDb;
+
+	@After(pattern="LoginService.login" )
+	public void loadAuth(evt) {
+		def o = evt.args[0];
+		def res = evt.result;
+
+		//println "USER ID is " + res.USERID;
+		//println "ORG ID is " + res.env.ORGID;
+		def orgid = res.env.ORGID;
+		if( res.env.ORGROOT == 1 ) {
+			orgid = null;
+		}
+
+		def plugins = domainEm.where("1=1").list();
+		if( plugins ) {
+			plugins.each { d->
+
+				try {
+					def svc =  svcDb.lookup( "UserRoleService", d.connection );
+					def roles = svc.getUserRoles( [userid: res.USERID, orgid: orgid ] );
+					if( roles ) {
+						roles.each { k,v->
+							res.env.ROLES.put( d.name.toUpperCase() +"."+k, v );
+						}
+					}				
+				}
+				catch(ex) {
+					println "error in load authorization in domain " + d.name + " -> " + ex.getMessage();
+				}
+			}
+		}
+
+		/*
+		res.env.ROLES.each {
+			println it;
+		}
+		*/
+	}
+
+}

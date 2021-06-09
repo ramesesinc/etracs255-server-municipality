@@ -1,0 +1,42 @@
+<schema>
+
+	<element name="rptcertification" tablename="rptcertification">
+		<field name="objid" primary="true" />
+		<field name="txnno" required="true"/>
+		<field name="txndate" required="true"/>
+		<field name="opener" required="true"/>
+		<field name="faasid" />
+		<field name="taxpayer_objid" />
+		<field name="taxpayer_name" />
+		<field name="taxpayer_address" />
+		<field name="requestedby" required="true" />
+		<field name="requestedbyaddress" required="true" />
+		<field name="purpose" required="true" />
+		<field name="addlinfo" />
+		<field name="year" type="integer" />
+		<field name="qtr" type="integer" />
+		<field name="asofyear" type="integer" />
+		<field name="certifiedby" required="true" />
+		<field name="certifiedbytitle" required="true" />
+		<field name="byauthority" />
+		<field name="byauthoritytitle" />
+		<field name="attestedby" />
+		<field name="attestedbytitle" />
+		<field name="official" type="boolean" />
+		<field name="orno" />
+		<field name="ordate" />
+		<field name="oramount" type="decimal" />
+		<field name="stampamount" type="decimal" />
+		<field name="createdbyid" />
+		<field name="createdby" required="true" />
+		<field name="createdbytitle" required="true" />
+		<field name="office" required="true" />
+		<complex name="properties" serializer="default" required="false" />
+	</element>
+
+	<element name="item" tablename="rptcertificationitem">
+		<field name="rptcertificationid" required="true" />
+		<field name="refid" required="true" />
+	</element>
+	
+</schema>

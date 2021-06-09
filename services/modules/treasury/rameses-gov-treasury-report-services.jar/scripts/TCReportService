@@ -1,0 +1,162 @@
+import com.rameses.annotations.*;
+import com.rameses.common.*;
+import com.rameses.util.*;
+
+class TCReportService { 
+
+	@ActiveDB('tcreport')
+	def adb; 
+
+	@DataContext('fund') 
+	def fund_em;
+
+	@Env
+	def env; 
+ 
+	@Service('DateService')
+	def dtSvc; 
+
+	@ProxyMethod 
+	public def initReport() {
+		def rundate = new java.sql.Date( dtSvc.getServerDate().getTime()); 
+		def arrs = rundate.toString().split("-"); 
+		return [		
+			funds  : getFunds(), 
+			months : dtSvc.getMonths(), 
+			year   : arrs[0].toInteger(),  
+			month  : arrs[1].toInteger(),  
+			day    : arrs[2].toInteger() 
+		]; 
+	}
+
+	@ProxyMethod 
+	public def getCollectionByFund( params ) { 
+		if ( !params.year ) throw new Exception('year parameter is required'); 
+		if ( !params.month ) throw new Exception('month parameter is required'); 
+		if ( !params.month?.index ) throw new Exception('month.index parameter is required'); 
+		if ( !params.month?.caption ) throw new Exception('month.index parameter is required'); 
+
+		def periodtype = 'MONTHLY'; 
+		def YMD = new java.text.SimpleDateFormat("yyyy-MM-dd"); 
+
+		if ( params.day ){ 
+			def dtstr = params.year +'-'+ params.month.index.toString().padLeft(2, '0') +'-'+ params.day.toString().padLeft(2, '0'); 
+			params.fromdate =  new java.sql.Date( YMD.parse( dtstr ).getTime()); 
+			params.todate   =  new java.sql.Date( DateUtil.add( params.fromdate, "1d").getTime()); 
+			periodtype = 'DAILY';
+		} 
+		else { 
+			def dtstr = params.year +'-'+ params.month.index.toString().padLeft(2, '0') +'-01'; 
+			params.fromdate =  new java.sql.Date( YMD.parse( dtstr ).getTime()); 
+			params.todate   =  new java.sql.Date( DateUtil.add( params.fromdate, "1M").getTime()); 
+		} 
+
+		params.filter = ''; 
+		if ( params.fund?.objid ) { 
+			params.fundid = params.fund.objid; 
+			params.filter = ''' AND fund.objid = $P{fundid} '''; 
+		}  
+
+		def postingtypeid = params.postingtype?.objid; 
+
+		def reportdata = [:]
+		if ( postingtypeid == 'BY_REMITTANCE' ) { 
+			reportdata.items = adb.getRemittedCollectionByFund( params ); 
+		} else { 
+			reportdata.items = adb.getLiquidatedCollectionByFund( params ); 
+		} 
+		
+		if ( !reportdata.items ) throw new Exception("No record(s) found.     "); 
+		reportdata.totalamount = reportdata.items.sum{( it.amount? it.amount : 0.0)}
+
+		reportdata.summaries = []; 
+		reportdata.items.groupBy{[ fundid: it.fundid, acctid: it.acctid ]}.each{ k,v-> 
+			def fo = v.first(); 
+			reportdata.summaries << [
+				fundid: k.fundid, fundname: fo.fundname, 
+				acctid: k.acctid, acctname: fo.acctname, 
+				amount: v.sum{( it.amount? it.amount: 0.0 )} 
+			]; 
+		}
+		reportdata.summaries.sort{( it.fundcode +'-'+ it.fundname )} 
+
+		def reportheader = [
+			REPORTTITLE     : 'REPORT OF COLLECTION BY FUND', 
+			PREPAREDBY 		: env.FULLNAME, PREPAREDBYTITLE: env.JOBTITLE, 
+			POSTINGTYPE     : params.postingtype.title.toUpperCase(), 
+			PERIODTYPE      : periodtype.toUpperCase() 
+		]; 
+
+		if ( periodtype=='DAILY' ) {
+			def formatter = new java.text.SimpleDateFormat("MMMMM dd, yyyy"); 
+			reportheader.PERIOD = formatter.format( params.fromdate).toUpperCase(); 
+		} else if ( periodtype=='MONTHLY' ) {
+			def formatter = new java.text.SimpleDateFormat("MMMMM yyyy"); 
+			reportheader.PERIOD = formatter.format( params.fromdate).toUpperCase(); 
+		} 
+		return [header: reportheader, reportdata: reportdata]; 
+	}	
+
+
+	@ProxyMethod 
+	public def getAbstractOfCollection( params ) {
+		def YMD = new java.text.SimpleDateFormat('yyyy-MM-dd'); 
+		if ( params.day ) { 
+			def strdate = params.year + '-' + params.month.index.toString().padLeft(2, '0') +'-'+ params.day.toString().padLeft(2, '0'); 
+			params.fromdate = new java.sql.Date( YMD.parse( strdate ).getTime() ); 
+			params.todate = new java.sql.Date( DateUtil.add( params.fromdate, '1d' ).getTime() ); 
+		} else {
+			def strdate = params.year +'-'+ params.month.index.toString().padLeft(2, '0') +'-01'; 
+			params.fromdate = new java.sql.Date( YMD.parse( strdate ).getTime() ); 
+			params.todate = new java.sql.Date( DateUtil.add( params.fromdate, '1M' ).getTime() ); 
+		} 
+
+		params.filter = ''; 
+		if ( params.fund?.objid ) {
+			params.fundid = params.fund.objid
+			params.filter += ' AND fund.objid = $P{fundid} '; 
+		}
+
+		if ( params.collector?.objid ) { 
+			params.collectorid = params.collector.objid 
+			params.filter += ' AND t1.collectorid = $P{collectorid} '; 
+		}
+
+		def data = [:];
+		data.info = [
+			PREPAREDBY 		: env.FULLNAME,
+			PREPAREDBYTITLE : env.JOBTITLE, 
+			PERIOD			: params.day ?  "FOR THE DAY OF " + params.month.caption + ' ' + params.day +  ', ' + params.year  : 'FOR THE MONTH OF ' + params.month.caption + ', ' + params.year,
+			TITLE 			: "Abstract of Collection Report ",
+			COLLECTORNAME	: params.collector ? params.collector.fullname : 'ALL'
+		];
+		
+		data.items = adb.getAbstractOfCollection( params ); 
+		if ( !data.items ) throw new Exception("No record(s) found"); 
+		return data; 
+	} 
+
+	@ProxyMethod
+	public def getFunds( ) {
+		return adb.getFunds([ filter: '' ]); 
+	}
+
+	@ProxyMethod
+	public def getSubFunds( objid ) { 
+		def m = [ parentid: objid ]; 
+		m.filter = ''' AND fund.parentid = $P{parentid} '''; 
+		return adb.getFunds( m ); 
+	} 
+
+	@ProxyMethod
+	public List getNumDays( year, month ) {
+		if ( !month && month < 0 ) return []
+		
+		Calendar cal = Calendar.getInstance()
+        cal.set( year, month, 1)
+        int maxday = cal.getActualMaximum(cal.DAY_OF_MONTH)
+		def numdays = []
+		1.upto( maxday ) { numdays.add( it ) }
+		return numdays 
+	}	
+}

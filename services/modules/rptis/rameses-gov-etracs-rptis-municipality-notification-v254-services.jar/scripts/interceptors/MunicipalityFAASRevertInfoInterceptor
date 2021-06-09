@@ -1,0 +1,28 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+
+class MunicipalityFAASRevertInfoInterceptor
+{
+	@Env
+	def env
+
+    @Service('RPTNotificationService')
+    def svc 
+
+
+	@After(pattern="FAASRevertStateService.revertStateToInterim", eval="#{result.isremote==null}") 
+	public void submitToProvince( evt ) {
+		def entity = evt.result
+        entity.isremote = true
+
+        def asyncreq    = svc.createAsyncRequest('FAASRevertStateService', 'revertStateToInterim', entity, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.filetype    = 'faas-revertstate'
+        msg.messagetype = 'faas-revertstate'
+        msg.message     = 'Post revert FAAS state information.'
+        svc.sendAsyncMessage(msg)
+        println 'Submit municipality changed FAAS revert state to Province....'
+	}
+
+}
+

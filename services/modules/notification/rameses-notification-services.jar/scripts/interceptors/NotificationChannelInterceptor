@@ -1,0 +1,26 @@
+import com.rameses.annotations.*;
+
+class NotificationChannelInterceptor {
+	
+	@XConnection("ws_sender")
+	def wssender;
+
+	@After( pattern="NotificationChannelService.register", index=-9999 )
+	public void register( evt ) {
+		def params = evt.args[0]; 
+		if ( params && params.channel ) {
+			wssender.send([ 
+				action : 'addchannel', 
+				channel: params.channel
+			]); 
+		} 
+	} 
+
+	@After( pattern="NotificationChannelService.send", index=-9999 )
+	public void send( evt ) {
+		def params = evt.args[0]; 
+		if ( params ) { 
+			wssender.send( params ); 
+		} 
+	} 
+} 

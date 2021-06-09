@@ -1,0 +1,17 @@
+<schema>
+    <element tablename="rpt_syncdata_completed">
+        <field name="objid" primary="true" />
+        <field name="idx" />
+        <field name="action" caption="Action" />
+        <field name="refid" caption="" />
+        <field name="refno" caption="Ref No." searchable="true" />
+        <field name="reftype" caption="Ref Type" />
+        <field name="parent_orgid" caption="" />
+        <field name="sender_name" caption="Sender" />
+        <field name="sender_title" caption="Job Title" />
+        <field name="dtcreated" />
+        <complex name="lgu" ref="sys_org" jointype="many-to-one" includefields="name,orgclass" required="false">
+            <key field="parent_orgid" target="objid" />
+        </complex>
+    </element>
+</schema>

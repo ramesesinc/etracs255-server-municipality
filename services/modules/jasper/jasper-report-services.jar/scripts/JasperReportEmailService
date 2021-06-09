@@ -1,0 +1,63 @@
+import com.rameses.annotations.*;
+import java.io.*;
+import com.rameses.util.*;
+import java.rmi.server.*;
+import java.util.zip.*;
+
+class JasperReportEmailService  {
+	
+	@Service("JasperReportService")
+	def jasperSvc;
+
+	@XConnection(dynamic=true)
+	def connDb;
+
+	String outputReportPath = "/apps/server/output/";
+
+	@ProxyMethod
+	@Async
+	public def sendAsync( def o ) {
+		return send( o );
+	}
+
+	@ProxyMethod
+	public def send( def o ) {
+		if(!o.to) throw new Exception("to is required in JasperReportEmailService.send");
+		if(!o.connection) throw new Exception("email connection is required in JasperReportEmailService.send");
+
+
+		def attachments = o.attachments;
+		if( attachments ) {
+			attachments.each { p->
+				if(!p.filename) {
+					def token = jasperSvc.generateReport( p );
+					p.filename = outputReportPath + token.tokenid + "." + ( p.ext ? p.ext : "pdf" );			
+				}
+				if(!p.title) p.title = p.filename;
+			}
+		}
+
+		try {
+			def z = connDb.lookup( o.connection );
+			def em = [:];
+			em.to = o.to;
+			if(o.subject) em.subject = o.subject;
+			if(o.message) em.message = o.message;
+			em.attachments = attachments;
+			z.send( em );
+			return [status: "OK"]; 
+		}
+		catch( e) {
+			throw e;		
+		}	
+		finally {
+			//delete all file attachments after sending pass or fail
+			if(attachments) {
+				attachments.each { p->
+					def file = new File( p.filename );
+					file.delete();
+				}		
+			}
+		}
+	}
+}

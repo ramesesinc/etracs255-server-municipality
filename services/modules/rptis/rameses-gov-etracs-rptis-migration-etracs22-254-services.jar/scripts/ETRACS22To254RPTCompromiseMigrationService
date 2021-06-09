@@ -1,0 +1,209 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import java.rmi.server.UID;
+import com.rameses.util.*;
+
+class ETRACS22To254RPTCompromiseMigrationService 
+{
+
+	@ActiveDB('rptcompromise')
+	def compromiseEm
+
+	@ActiveDB('etracs254rpt_compromise')
+	def emsql254
+
+	@ActiveDB(value='etracs22rpt_compromise', em='etracs22')
+	def emsql22
+
+	
+	@Service()
+	def self 
+
+	@ProxyMethod
+	public def getMigrationStatus(  ) {
+		def item = emsql22.findMigrationData()
+		if (item.count == 0)
+			return 'PROCESSING'
+		return 'DONE'
+	}
+
+	@ProxyMethod
+	public void initMigrationTables(  ) {
+		try{
+			try{ emsql22.dropXCompromiseTable() }catch(e){}
+			try{ emsql22.createXCompromiseTable() }catch(e){}
+			try{ emsql22.createCompromiseMigrateTable() }catch(e){}
+			try{ emsql22.createCompromiseMigrateLogTable() }catch(e){}
+			emsql22.deleteCompromiseLog()
+			self.insertCompromises()
+		}
+		catch(ign){
+			ign.printStackTrace();
+			throw ign;
+		}
+	}
+
+
+	@Async
+	@ProxyMethod
+	public void insertCompromises(){
+		println 'Inserting comprises for migration...'
+		emsql22.insertCompromises([:])
+	}
+
+
+    @ProxyMethod
+    public def migrateCompromises(params) {
+		if (!params.count) throw new Exception('Count is required')
+		params._limit = params.count 
+
+	    def compromises = emsql22.getCompromisesForMigration(params);
+		compromises.each{compromise -> 
+			try{
+				println 'Migrating compromise : ' + compromise
+				migrateCompromise(compromise)
+			}
+			catch(e){
+				try{
+					println 'Migrate Ledger [ERROR] ' + e.message 
+					emsql22.logMigrateError([objid:compromise.objid, log:e.message])
+				}
+				catch(ign){
+					//ignore duplicate
+				}
+			}
+			finally{
+				emsql22.deleteXCompromise(compromise)
+			}
+		}
+        return compromises.size()
+    }  
+
+
+    @ProxyMethod
+    public void migrateCompromise(compromise){
+    	def comp22 = emsql22.findCompromise(compromise)
+    	if (!comp22) throw new Exception('Compromise does not exist.')
+    	comp22.info = emsql22.serializer.read(comp22.info)
+    	comp22.signatories = emsql22.serializer.read(comp22.signatories)
+
+    	createCompromise(comp22)
+    	createInstallments(comp22)
+    	createCompromiseItems(comp22)
+    	createCredits(comp22)
+		logMigratedCompromise(compromise)
+	}
+
+
+	void logMigratedCompromise(compromise){
+		try{
+			emsql22.logMigratedCompromise(compromise)
+		}
+		catch(ign){
+			//ignore duplicate 
+		}
+	}
+
+
+	void createCompromise(comp22){
+		def ledger = emsql254.findLedger([objid:comp22.ledgerid])
+		if (!ledger) throw new Exception('Ledger does not exist.')
+
+		def comp = emsql254.findCompromise(comp22)
+		if (comp) return
+
+		comp = [:]	
+		comp.objid = comp22.objid
+		comp.state = comp22.docstate
+		comp.txnno = comp22.txnno
+		comp.txndate = comp22.txndate 
+		comp.faasid = comp22.faasid
+		comp.rptledgerid = comp22.ledgerid
+		comp.lastyearpaid = comp22.info.lastyearpaid
+		comp.lastqtrpaid = comp22.info.lastqtrpaid
+		comp.startyear = comp22.info.startyear
+		comp.startqtr = comp22.info.startqtr
+		comp.endyear = comp22.info.endyear
+		comp.endqtr = comp22.info.endqtr
+		comp.enddate = comp22.info.enddate
+		comp.cypaymentrequired = comp22.info.cypaymentrequired
+		comp.cypaymentorno = comp22.info.cypaymentorno
+		comp.cypaymentordate = comp22.info.cypaymentordate
+		comp.cypaymentoramount = comp22.info.cypaymentoramount
+		comp.downpaymentrequired = comp22.info.downpaymentrequired
+		comp.downpaymentrate = comp22.info.downpaymentrate
+		comp.downpayment = comp22.info.downpayment
+		comp.downpaymentorno = comp22.info.downpaymentorno
+		comp.downpaymentordate = comp22.info.downpaymentordate
+		comp.term = comp22.info.term
+		comp.numofinstallment = comp22.info.numofinstallment
+		comp.amount = comp22.info.amount
+		comp.amtforinstallment = comp22.info.amtforinstallment
+		comp.amtpaid = comp22.info.amtpaid
+		comp.firstpartyname = comp22.info.firstpartyname
+		comp.firstpartytitle = comp22.info.firstpartytitle
+		comp.firstpartyaddress = comp22.info.firstpartyaddress
+		comp.firstpartyctcno = comp22.info.firstpartyctcno
+		comp.firstpartyctcissued = comp22.info.firstpartyctcissued
+		comp.firstpartyctcdate = comp22.info.firstpartyctcdate
+		comp.firstpartynationality = comp22.info.firstpartynationality
+		comp.firstpartystatus = comp22.info.firstpartystatus
+		comp.firstpartygender = comp22.info.firstpartygender
+		comp.secondpartyrepresentative = comp22.info.secondpartyrepresentative
+		comp.secondpartyname = comp22.info.secondpartyname
+		comp.secondpartyaddress = comp22.info.secondpartyaddress
+		comp.secondpartyctcno = comp22.info.secondpartyctcno
+		comp.secondpartyctcissued = comp22.info.secondpartyctcissued
+		comp.secondpartyctcdate = comp22.info.secondpartyctcdate
+		comp.secondpartynationality = comp22.info.secondpartynationality
+		comp.secondpartystatus = comp22.info.secondpartystatus
+		comp.secondpartygender = comp22.info.secondpartygender
+		comp.dtsigned = comp22.info.dtsigned
+		comp.notarizeddate = comp22.info.notarizeddate
+		comp.notarizedby = comp22.info.notarizedby
+		comp.notarizedbytitle = comp22.info.notarizedbytitle
+		comp.signatories = comp22.signatories
+		comp.manualdiff = (comp22.info.manualdiff ? comp22.info.manualdiff : 0.0)
+		comp.cypaymentreceiptid = comp22.info.cypaymentreceiptid
+		comp.downpaymentreceiptid = comp22.info.downpaymentreceiptid
+
+		compromiseEm.create(comp)
+		updateLedgerCompromiseFlag(comp)
+	}
+
+	void updateLedgerCompromiseFlag(comp){
+		if (comp.state.matches('APPROVED|FORAPPROVAL')){
+			def params = [
+				objid : comp.rptledgerid,
+				undercompromise : 1,
+			]
+			emsql254.updateLedgerCompromiseFlag(params)
+
+		}
+	}
+
+	void createInstallments(comp22){
+		def installments = emsql22.getInstallments(comp22)
+		installments.each{
+			compromiseEm.save(it, 'rptcompromise_installment')
+		}
+	}
+
+	void createCompromiseItems(comp22){
+		def items = emsql22.getItems(comp22)
+		items.each{
+			compromiseEm.save(it, 'rptcompromise_item')
+		}
+	}
+
+	void createCredits(comp22){
+		def credits = emsql22.getCredits(comp22)
+		credits.each{
+			it.paidby = (it.paidby ? it.paidby : '-')
+			it.paidbyaddress = (it.paidbyaddress ? it.paidbyaddress : '-')
+			it.rptreceiptid = null
+			compromiseEm.save(it, 'rptcompromise_credit')
+		}
+	}
+
+}

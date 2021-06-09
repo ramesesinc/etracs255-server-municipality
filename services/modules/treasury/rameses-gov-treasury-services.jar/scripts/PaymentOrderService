@@ -1,0 +1,46 @@
+import com.rameses.annotations.*;
+
+class PaymentOrderService {
+
+	@DataContext("paymentorder") 
+	def pmt; 
+	
+	@DataContext("paymentorder_paid") 
+	def po_paid; 
+	
+	@Service("PersistenceService")
+	def persistenceSvc;
+
+
+	@ProxyMethod
+	public def create(def entity) {	
+		entity._schemaname = 'paymentorder'; 
+		persistenceSvc.create(entity); 
+	} 
+
+	/***********************************
+	* This is called during receipts
+	************************************/
+	@ProxyMethod
+	public void close(def po) {
+		if ( po.controlno ) {
+			po_paid.create( po ); 
+		}
+		pmt.delete( po );
+	}
+
+	/***********************************
+	* This is called during receipts
+	************************************/
+	@ProxyMethod
+	public def open(def po) {
+		entity._schemaname = 'paymentorder'; 
+		persistenceSvc.read( po );	
+	}
+
+	@ProxyMethod
+	public void removeEntity(def po) {
+		po_paid.find([ objid: po.objid ]).delete();
+		pmt.find([ objid: po.objid ]).delete();
+	}	
+}

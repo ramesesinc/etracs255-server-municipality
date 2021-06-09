@@ -1,0 +1,46 @@
+import com.rameses.annotations.*;
+import com.rameses.util.*;
+import java.rmi.server.*;
+import com.rameses.services.extended.*;
+
+
+public class CashReceiptBarcodeService {
+	
+	@ActiveDB("collectiontype")
+	def collectionType;
+
+	@Service("CashReceiptService")
+	def service;
+
+	@Env
+	def env;
+
+	@Service
+	def self;
+
+
+	/************************************************************************************************************
+	* This method is used for barcodes that do not have prefixes. It is required to check the database
+	* of each handler if it exists.
+	************************************************************************************************************/
+	@ProxyMethod
+	public def findPrefix( def o ) {
+		return [:];
+	}
+
+	@ProxyMethod
+	public def init( def o ) {
+		//you must handle the prefix in this area for handlers of barcodes.
+		def prefix = o.prefix;
+		def collectiontype = collectionType.findCollectionTypeByBarcode([barcode: prefix]);
+		if(!collectiontype)	
+			throw new Exception("Collection type not found with barcode prefix " + prefix + ". Please check collection type and register barcode prefix");
+		def z = [formtype: "serial", formno: collectiontype.formno, txnmode: 'ONLINE', collectiontype: collectiontype ];
+        def entity = service.init( z );	
+        entity.collectiontype = collectiontype;
+        return entity;
+	}
+
+
+
+}

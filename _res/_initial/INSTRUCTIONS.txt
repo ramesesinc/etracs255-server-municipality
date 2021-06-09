@@ -1,0 +1,22 @@
+============================
+Restore the Backup Databases
+============================
+
+1. Open Command Prompt console 
+
+2. Execute the following commands: 
+
+   2.1  cd C:\etracs255-server-kiamba\_res\_initial 
+
+   2.2  mysql -u root -p  < 01-etracs.sql
+   
+   2.3  mysql -u root -p  < 02-etracs_image.sql
+   
+   2.4  mysql -u root -p  < 03-etracs_notification.sql
+   
+   2.5  mysql -u root -p  < 04-queue.sql
+   
+   2.6  mysql -u root -p  < 05-eor.sql
+
+
+3. Done.

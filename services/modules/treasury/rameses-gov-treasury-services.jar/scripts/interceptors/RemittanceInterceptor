@@ -32,6 +32,7 @@ class RemittanceInterceptor {
 		result << [  title: 'Open', state:'OPEN' ];
 		result << [  title: 'Posted', state:'POSTED', liquidated: false ];
 		result << [  title: 'Liquidated', state:'POSTED', liquidated:true ];
+		result << [  title: 'On Hold', state:'HOLD' ];
 	}
 
 	@Before(pattern="QueryService.getList", eval="#{ args[0]._schemaname == 'remittance' }")
@@ -40,7 +41,7 @@ class RemittanceInterceptor {
 
 		if ( !o.node?.state ) return;
 
-		if ( o.node.state == 'POSTED' ) {
+		if ( o.node.state.toString().matches('POSTED|HOLD')) {
 			o.orderBy = ' controldate desc, dtposted desc '; 
 		} else {
 			o.orderBy = ' controldate, dtposted '; 

@@ -69,8 +69,8 @@ class RuleLoaderService {
 			ruleDB.getRulesForDeployment( [ruleset:rs] ).each{ r->
 				try {
 					String s = r.ruletext.toString().trim();
-					readers << new java.io.StringReader( fixString( s ));
-				} catch(Throwable e) {
+					readers << new java.io.StringReader( s );
+				} catch(Throwable e) { 
 					e.printStackTrace(); 
 				} 
 			}
@@ -82,12 +82,4 @@ class RuleLoaderService {
 			} 		
 		}
 	}	
-
-	private String fixString( String str ) {
-        String findstr1 = new String(['\\', 'r'] as char[]); 
-		String findstr2 = new String(['\\', 'n'] as char[]); 
-		String findstr3 = new String(['\\', '"'] as char[]); 
-		String ln = System.getProperty("line.separator"); 
-		return str.replace( findstr1, "" ).replace( findstr2, ln ).replace( findstr3, "\""); 
-	}
 }

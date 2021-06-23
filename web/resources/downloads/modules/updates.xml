@@ -31,7 +31,7 @@ rpt.app.context=etracs25
   <module version="2.50" file="core/osiris2-client-ui.jar"  />
   <module version="2.50" file="core/osiris2-draw.jar"  />
   <module version="2.50" file="core/osiris2-framework.jar"  />
-  <module version="2.51" file="core/osiris2-report.jar"  />
+  <module version="2.52" file="core/osiris2-report.jar"  />
   <module version="2.51" file="core/rameses-client-ui.jar"  />
   <module version="2.50" file="core/rameses-client-ui-bio.jar"  />
   <module version="2.50" file="core/rameses-client-ui-jfx.jar"  />
@@ -69,11 +69,11 @@ rpt.app.context=etracs25
 
   <module version="2.50" file="treasury/rameses-treasury-common.jar"  />
   <module version="2.50" file="treasury/rameses-gov-depositslip.jar"  />
-  <module version="2.50" file="treasury/rameses-gov-treasury.jar"  />
+  <module version="2.51" file="treasury/rameses-gov-treasury.jar"  />
   <module version="2.50" file="treasury/rameses-gov-treasury-report.jar"  />
   <module version="2.50" file="treasury/rameses-gov-treasury-tool.jar"  />
 
-  <module version="2.50" file="rptis/rameses-gov-etracs-rptis-landtax.jar"  />
+  <module version="2.51" file="rptis/rameses-gov-etracs-rptis-landtax.jar"  />
   <module version="2.50" file="rptis/rameses-gov-etracs-rptis-landtax-report.jar"  />
   <module version="2.50" file="rptis/rameses-gov-etracs-rptis.jar"  />
   <module version="2.50" file="rptis/rameses-gov-etracs-rptis-transmittal.jar"  />

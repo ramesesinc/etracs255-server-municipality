@@ -254,6 +254,9 @@ class AFTxnService  {
         ref.respcenter = afi.parent.respcenter;
 
 		int qty = o.qty;
+		if ( qty == null ) throw new Exception("Qty to Issue is required"); 
+		else if ( qty < 0 ) throw new Exception("Qty to Issue must be greater than zero"); 
+
 		def remarks = afi.txntype;
 		def sbuff = new StringBuilder();
 		def p = [:];
@@ -271,7 +274,12 @@ class AFTxnService  {
 
 		def list = afControl.select('objid,startseries,currentseries,endseries,prevdetailid,salecost,afunit.saleprice').where( sbuff.toString(), p ).orderBy('dtfiled,batchno,startseries,stubno').limit( qty ).list();
 		if ( !list ) throw new Exception("No available stock for " + p.afid + " " + p.unit); 
-		if ( list.size() != qty )throw new Exception("Not enough stock to issue"); 
+
+		list = list.subList(0, qty); 
+
+		if ( list.size() != qty ) { 
+			throw new Exception("Not enough stock to issue"); 
+		} 
 
 		def txntype = afi.txntype.toString().toUpperCase(); 
 

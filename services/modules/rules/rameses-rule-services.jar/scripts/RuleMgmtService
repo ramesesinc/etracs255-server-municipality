@@ -9,6 +9,9 @@ class RuleMgmtService extends ActiveCrudListService {
 	@ActiveDB("rule")
 	def em;
 	
+	@Service 
+	def self;
+
 	@Service("DateService")
 	def dateSvc;
 
@@ -29,6 +32,9 @@ class RuleMgmtService extends ActiveCrudListService {
 
 	@DataContext("sys_ruleset")
 	def sysruleset;
+
+	@DataContext("sys_rule_deployed")
+	def sysruledeployed;
 
 	@ProxyMethod
 	public def getColumns( def o ) {
@@ -278,7 +284,7 @@ class RuleMgmtService extends ActiveCrudListService {
 	public def viewRuleText( o ) {
 		o = open(o);
 		o.vars = em.getRuleVars(o); 
-		return  template.get( "rules/rule", [rule: o, templateSvc: template ] ).toString();
+		return template.get( "rules/rule", [rule: o, templateSvc: template ] ).toString(); 
 	}
 
 	@ProxyMethod
@@ -401,4 +407,43 @@ class RuleMgmtService extends ActiveCrudListService {
 		if(!o.rulegroup) throw new Exception("Please include rulegroup");
 		sysrule.find( [objid: o.objid] ).update( [ruleset: o.ruleset, rulegroup: o.rulegroup] );
 	}
+
+
+	@ProxyMethod
+	public def touchDeployedRules( param ) {
+		if ( !param.ruleset ) throw new Exception('ruleset parameter is required'); 
+
+		def list = sysruledeployed.getRulesByRuleset([ ruleset: param.ruleset ]);
+		if ( list ) {
+			list.each{ o-> 
+				try {
+					o.ruletext = viewRuleText([ objid: o.objid ]); 
+				} 
+				catch(Throwable t) {
+					o.ruletext = null; 
+
+					println '\nfailed to view rule text for '+ o.name +' caused by '+ t.message; 
+					t.printStackTrace(); 
+				}
+			}
+
+			def m = [:]; 
+			list.each{ o-> 
+				if ( o.ruletext == null ) { return; } 
+				
+				m.objid = o.objid; 
+				sysruledeployed.find( m ).update([ ruletext: o.ruletext ]);  
+			} 
+
+			self.reloadAsync( param.ruleset ); 
+		}
+
+		return [status: "success"]; 
+	}
+
+	@Async
+	@ProxyMethod
+	public void reloadAsync( ruleset ) {
+		reload( ruleset ); 
+	} 
 } 

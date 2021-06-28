@@ -1,4 +1,10 @@
 @echo off
+if exist env.conf (
+	for /f "delims=" %%x in (env.conf) do (
+		set str=%%x
+		if not "!str:~0,1!" == "#" set "%%x" 
+	) 
+) 
 
 rem Setup the java command
 rem set JAVA_HOME=C:\Apps\jdk7u80-x64
@@ -18,7 +24,10 @@ cd ..
 rem This will be the base directory
 set BASE_DIR=%cd%
 
-set JAVA_OPT="-Xms512m -Xmx2048m -Dosiris.run.dir=%RUN_DIR% -Dosiris.base.dir=%BASE_DIR%"
+set JAVA_OPT_XMX=2048
+if not "%JAVA_XMX%" == "" set JAVA_OPT_XMX=%JAVA_XMX%
+
+set JAVA_OPT="-Xms512m -Xmx%JAVA_OPT_XMX%m -Dosiris.run.dir=%RUN_DIR% -Dosiris.base.dir=%BASE_DIR%"
 
 echo .=================================================================
 echo .

@@ -134,3 +134,12 @@ alter table structure add (
 -- 
 -- CREATE INDEX `ix_expirydate` ON `syncdata_pending` (`expirydate`)
 -- ;
+
+
+
+alter table rptledger_item add ( 
+   fromqtr  int null, 
+   toqtr int null 
+)
+;
+

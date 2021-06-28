@@ -1,0 +1,11 @@
+<schema>
+    <element tablename="propertyauction_step">
+        <field name="objid" primary="true" />
+        <field name="code" required="true" caption="Code" width="50"/>
+        <field name="title" required="true" caption="Type" width="120"/>
+        <field name="seqno" required="true" caption="Sequence No." />
+        <field name="applicable" required="true" type="boolean" caption="Applicable?" />
+        <field name="duration" required="true" type="integer" caption="Duration"/>
+        <field name="report" required="true" caption="Report"/>
+    </element>
+</schema>

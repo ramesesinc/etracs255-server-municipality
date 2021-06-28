@@ -1,0 +1,56 @@
+import com.rameses.annotations.*
+import com.rameses.eserver.*;
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+
+class PropertyAuctionBidderInterceptor
+{
+	@Service('PropertyAuctionBidderService')
+	def svc 
+
+	@DataContext('propertyauction')
+	def em_auction 
+
+
+	@Before(pattern="PersistenceService.create", eval="#{args[0]._schemaname=='propertyauction_bidder'}") 
+	public void beforeCreate( evt ) {
+		def entity = evt.args[0]
+		svc.beforeCreate(entity)
+	}
+
+
+	@After(pattern="QueryService.getNodeList", eval="#{args[0]._schemaname=='propertyauction_bidder'}") 
+	public void getNodeList( evt ) {
+		def arg = evt.args[0]
+		def result = evt.result
+
+		def auctions = em_auction.select('objid, txnno')
+							.where('1=1')
+							.orderBy('txnno desc')
+							.list()
+
+		auctions.each{
+			result << [title: it.txnno, id:it.objid]
+		}
+	}
+
+	@Before(pattern="QueryService.getList", eval="#{ args[0]._schemaname == 'propertyauction_bidder' }")
+	public void getList(def evt) {
+		def o = evt.args[0];
+		if( !o.node?.id ) return;
+
+		def m   = [objid:o.node.id];
+		def str = " parent.objid = :objid";
+
+		//add to first position of where
+		if( o.where ) {
+			o.where[0] = str + " AND " + o.where[0];	
+			o.where[1].putAll( m );
+		}
+		else {
+			o.where = [str, m];
+		}
+	}	
+}
+

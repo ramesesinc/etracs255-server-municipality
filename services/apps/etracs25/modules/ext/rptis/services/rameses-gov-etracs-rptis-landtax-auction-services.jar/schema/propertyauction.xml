@@ -1,0 +1,21 @@
+<schema>
+    <element tablename="propertyauction">
+		<field name="objid" primary="true" prefix="PA" />
+		<field name="state" required="true" caption="State" searchable="true" indexed="true" />
+		<field name="txnno" caption="Txn No" indexed="true" />
+		<field name="txndate" required="true" type="date" caption="Txn Date" indexed="true" />
+		<field name="publicationdate1" required="true" type="date" caption="1st Publication"/>
+		<field name="published1" required="true" type="boolean"  default="false" caption="Published?"/>
+		<field name="publicationdate2" required="true" type="date" caption="2nd Publication"/>
+		<field name="published2" required="true" type="boolean" default="false" caption="Published?"/>
+		<field name="auctiondate" required="true" type="date" caption="Auction Date" searchable="true" indexed="true"/>
+		<field name="finalsaledate" type="date" caption="Final Sale Date" searchable="true" indexed="true"/>
+		<field name="createdby_name" />
+		<field name="createdby_title" />
+		<field name="approvedby_name" caption="Approved By" width="180"/>
+		<field name="approvedby_title" caption="Job Title" width="180"/>
+		<field name="closedby_name" caption="Closed By" width="180"/>
+		<field name="closedby_title" caption="Job Title" width="180"/>
+		<field name="location" caption="Location" required="true"/>
+    </element>
+</schema>

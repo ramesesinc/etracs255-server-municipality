@@ -1,0 +1,19 @@
+<schema>
+    <element tablename="propertyauction_publication">
+        <field name="objid" primary="true" prefix="PAP" />
+		<field name="parent_objid" required="true" />
+		<field name="notice_objid" required="true"/>
+		<field name="rptledger_objid" required="true"/>
+
+		<complex name="notice" ref="propertyauction_notice" jointype="many-to-one"
+			includefields="txnno,txndate">
+			<key field="notice_objid" target="objid" />
+		</complex>
+
+		<complex name="rptledger" ref="rptledger" jointype="many-to-one"
+			includefields="owner.name,administrator.name,rputype,tdno,fullpin,titleno,cadastrallotno,totalmv,totalav,totalareaha,classcode,taxpayer.name,taxpayer.address.text,barangay.name,classification.name">
+			<key field="rptledger_objid" target="objid" />
+		</complex>
+		
+    </element>
+</schema>

@@ -1,0 +1,27 @@
+<schema>
+    <element tablename="propertyauction_bidding">
+		<field name="objid" primary="true" prefix="PAB" />
+		<field name="state" required="true" caption="State" defaultValue="DRAFT" searchable="true" />
+		<field name="parent_objid" />
+		<field name="property_objid" />
+		<field name="dtstarted" type="timestamp" caption="Date Started" />
+		<field name="dtclosed" type="timestamp" caption="Date Closed" />
+		<field name="createdby_name" caption="Created By" />
+		<field name="createdby_title" caption="Job Title"/>
+		<field name="bidder_objid" />
+		<field name="bidamt" caption="Bid Amount" />
+		<field name="lineno" type="integer" required="true" />
+
+	    <complex name="bidder" ref="propertyauction_bidder" jointype="many-to-one" required="false"
+	    	includefields=".*,entity.name,entity.address.text">
+	    	<key field="bidder_objid" target="objid" /> 
+	    </complex>
+
+	    <complex name="property" ref="propertyauction_property" jointype="many-to-one" required="false"
+	    	includefields="amtdue,costofsale,minbidamt,balance,rptledger.*"
+    	>
+	    	<key field="property_objid" target="objid" /> 
+	    </complex>
+    </element>
+
+</schema>

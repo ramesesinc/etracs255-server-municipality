@@ -1,0 +1,113 @@
+import com.rameses.annotations.*
+import com.rameses.eserver.*;
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+
+class PropertyAuctionPropertyInterceptor
+{
+	@Service('PropertyAuctionPropertyService')
+	def svc 
+
+	@Service('RPTReceiptService')
+	def receiptSvc 
+
+
+	@Before(pattern="PersistenceService.update", eval="#{args[0]._schemaname == 'propertyauction_property'}") 
+	public void beforeUpdate( evt ) {
+		def entity = evt.args[0]
+		svc.beforeUpdate(entity)
+	}
+
+	@After(pattern="PersistenceService.read", eval="#{ args[0]._schemaname == 'cashreceipt' && result.collectiontype?.handler?.toString().matches('rptauction') }", index=1000)
+	public void afterOpenCashReceiptSchema( evt ) {
+		interceptOpenReceipt( evt );  
+	} 
+
+	@After(pattern="CashReceiptService.open", eval="#{result.collectiontype?.handler.toString().matches('rptauction')}") 
+	public void interceptOpenReceipt( evt ) {
+		def receipt = evt.result; 
+		receiptSvc.open(receipt) 
+		receiptSvc.formatReceiptForPrinting(receipt)
+	}
+
+	@After(pattern="CashReceiptService.post", eval="#{args[0].collectiontype.handler=='rptauction'}", index=1000) 
+	public void postAuctionTaxDue( evt ) {
+		def receipt = evt.result
+		receiptSvc.create(receipt)
+		receiptSvc.formatReceiptForPrinting(receipt)
+		svc.postAuctionTaxDue(receipt)
+	}
+
+	@After(pattern="CashReceiptVoidService.post", eval="#{args[0].receipt.collectiontype.handler=='rptauction'}") 
+	public void postVoidAuctionTaxDue( evt ) {
+		def receipt = evt.args[0].receipt 
+		receiptSvc.voidReceipt(evt.result.receipt)
+		svc.postVoidAuctionTaxDue(receipt)
+	}	
+	
+
+	@After(pattern="CashReceiptService.post", eval="#{args[0].collectiontype.handler=='auctionbid'}") 
+	public void postAuctionBid( evt ) {
+		def receipt = evt.result
+		svc.postAuctionBid(receipt)
+	}
+
+	@After(pattern="CashReceiptVoidService.post", eval="#{args[0].receipt.collectiontype.handler=='auctionbid'}") 
+	public void postVoidAuctionBid( evt ) {
+		def receipt = evt.args[0].receipt 
+		svc.postVoidAuctionBid(receipt)
+	}
+
+	@After(pattern="CashReceiptService.post", eval="#{args[0].collectiontype.handler=='auctionredeem'}") 
+	public void postRedeemPayment( evt ) {
+		def receipt = evt.result
+		svc.postRedeemPayment(receipt)
+	}
+
+	@After(pattern="CashReceiptVoidService.post", eval="#{args[0].receipt.collectiontype.handler=='auctionredeem'}") 
+	public void postVoidRedeemPayment( evt ) {
+		def receipt = evt.args[0].receipt 
+		svc.postVoidRedeemPayment(receipt)
+	}
+
+
+
+	/*==================================================================
+	*
+	* LEDGER INTERCEPTS
+	*
+	===================================================================*/
+	@After(pattern="PersistenceService.read", eval="#{args[0]._schemaname=='rptledger'}", index=1000)
+	public afterOpenLedger(evt) {
+		def ledger = evt.result
+
+		def info = svc.getAuctionInfo(ledger)
+		if (info) {
+			ledger._messagelist = []
+	        def msg = 'Property is currently under auction.'
+	        msg += ' Auction No.: '  + info.auctionno 
+
+	        if (info.period) {
+	            msg += ' Period Covered: ' + info.period
+	        }
+
+	        ledger._messagelist << msg 
+	        ledger._auctioned = true 
+		}
+	}
+
+	@Before(pattern='RPTBillingService.generateBill', index=100)
+	public void beforeLedgerBill(evt) {
+		def bill = evt.args[0]
+		
+		bill.ledgers.each{
+			def info = svc.getAuctionInfo(it)
+			if (info) {
+				throw new Exception('Ledger is currently under auction. Billing is not allowed')
+			}
+		}
+	}
+
+}	
+

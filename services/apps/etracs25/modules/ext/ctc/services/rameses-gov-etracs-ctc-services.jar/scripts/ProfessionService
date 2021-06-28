@@ -1,0 +1,48 @@
+import com.rameses.annotations.*;
+import com.rameses.util.*;
+import java.rmi.server.*;
+import com.rameses.services.extended.*;
+
+public class ProfessionService extends ActiveListService {
+
+	@ActiveDB('profession')
+	def em;
+
+
+	@ProxyMethod
+	public def getColumns(o) {
+		return [
+			[name:'objid', caption:'Profession'],
+		];
+	}
+
+	void beforeList(o) {
+		o._pagingKeys = "objid";
+		o._limit = 50;
+		if (!o.searchtext) 
+			o.searchtext = ''
+		o.searchtext += '%'
+	}
+
+
+
+	@ProxyMethod
+	public def open( entity ) {
+		return em.findById(entity)
+	}
+
+
+	@ProxyMethod
+	public def create( entity ) {
+		em.createProfession(entity)	
+		return entity
+	}
+
+
+	@ProxyMethod
+	public void removeEntity( entity ) {
+		em.deleteEntity(entity)
+	}
+
+
+}

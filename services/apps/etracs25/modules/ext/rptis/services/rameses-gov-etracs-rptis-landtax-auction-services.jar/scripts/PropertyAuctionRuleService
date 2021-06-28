@@ -1,0 +1,104 @@
+import com.rameses.annotations.*;
+import com.rameses.util.*;
+import java.rmi.server.*;
+import com.rameses.services.extended.*;
+import com.rameses.rules.common.*;
+import rptis.propertyauction.facts.*;
+import rptis.propertyauction.actions.*;
+
+
+class PropertyAuctionRuleService
+{
+    @Env
+    def env
+
+    @Resource("RuleService")
+    def ruleSvc
+
+    @ActiveDB("rule")
+    def ruleDB
+
+    @Service("DateService")
+    def dtSvc
+
+    @Service("NumberService")
+    def numberSvc
+
+    @DataContext('itemaccount')
+    def em_itemaccount
+    
+    String RULESET = "propertyauctionbilling"
+
+    def buildFacts(){
+        def facts = []
+        def currdate = dtSvc.serverDate
+        facts << new CurrentDate(currdate)
+        facts << new EffectiveDate(currdate)
+        return facts
+    }
+
+
+    def buildActions(def req) {
+        def actions = new RuleAction()
+        actions.addCommand( "calc-costofsale", new CalcCostOfSale(NS:numberSvc))
+        actions.addCommand( "calc-charge", new CalcCharge( request:req, NS:numberSvc, IA:em_itemaccount ))
+        actions.addCommand( "add-bid-item", new AddBidItemAccount( request:req, NS:numberSvc, IA:em_itemaccount ))
+        return actions
+    }
+
+    @ProxyMethod
+    public def getBidItems( prop ) {
+        def request = [items: [], charges: []]
+        request.actions = buildActions(request)
+        request.facts = buildFacts()
+
+        request.facts << new AuctionedProperty(prop)
+        if (prop.auction){
+            request.facts << new Auction(prop.auction)
+        }
+        
+        def grps = ruleDB.getRulegroups( [ruleset: RULESET] )
+        for( g in grps ) { 
+            ruleSvc.execute( RULESET, request.facts, request.actions, g.name )
+        }
+        def result = [items:request.items]   
+        return result      
+    }
+
+    @ProxyMethod
+    public def getRedemptionCharges( prop ) {
+        def request = [charges: []]
+        request.actions = buildActions( request )
+        request.facts = buildFacts()
+        
+        request.facts << new AuctionedProperty(prop)
+        if (prop.auction){
+            request.facts << new Auction(prop.auction)
+        }
+
+        def grps = ruleDB.getRulegroups( [ruleset: RULESET] )
+        for( g in grps ) { 
+            ruleSvc.execute( RULESET, request.facts, request.actions, g.name )
+        }
+        def result = [charges:request.charges]   
+        return result      
+    }
+
+    @ProxyMethod 
+    public def calcCostOfSale(nod){
+        def request = [facts:[], actions:[]]
+        request.actions = buildActions( request )
+        request.facts = buildFacts()
+        request.facts << new Notice(nod)
+        
+        def grps = ruleDB.getRulegroups( [ruleset: RULESET] )
+        for( g in grps ) { 
+            ruleSvc.execute( RULESET, request.facts, request.actions, g.name )
+        }
+        return nod.costofsale 
+    }
+
+
+}
+
+

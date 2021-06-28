@@ -1,0 +1,6 @@
+package propertyauctionbilling;
+
+import rptis.propertyauction.facts.*;
+import com.rameses.rules.common.*;
+
+global RuleAction action;

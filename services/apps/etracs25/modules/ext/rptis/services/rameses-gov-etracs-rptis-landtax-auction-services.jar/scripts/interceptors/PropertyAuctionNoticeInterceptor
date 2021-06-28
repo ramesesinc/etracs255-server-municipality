@@ -1,0 +1,97 @@
+import com.rameses.annotations.*
+import com.rameses.eserver.*;
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+
+class PropertyAuctionNoticeInterceptor
+{
+	@Service('PropertyAuctionNoticeService')
+	def svc
+
+	@DataContext('propertyauction_step')
+	def propertyauction_step
+
+	
+	@Before(pattern="RPTBillingService.generateBill", index=1000) 
+	public void beforeBilling( evt ) {
+		def bill = evt.args[0]
+		svc.validateBilling(bill)
+	}
+
+	@Before(pattern="PersistenceService.removeEntity", eval="#{args[0]._schemaname=='propertyauction_notice'}") 
+	public void beforeDelete( evt ) {
+		def entity = evt.args[0]
+		svc.beforeDelete(entity)
+	}
+
+	@After(pattern="PersistenceService.read", eval="#{args[0]._schemaname=='propertyauction_notice'}") 
+	public void afterRead( evt ) {
+		def entity = evt.result
+		entity = svc.open(entity)
+	}
+
+
+	@Before(pattern="PropertyAuctionNoticeService.delivered") 
+	public void beforeDelivery( evt ) {
+		def entity = evt.args[0]
+		svc.beforeDelivery(entity)
+	}
+
+	@After(pattern="PropertyAuctionNoticeService.supersede", eval="#{args[0].step.objid=='WOL'}") 
+	public void postWarrantOfLevyAnnotation( evt ) {
+		def entity = evt.args[0]
+		svc.postWarrantOfLevyAnnotation(entity)
+	}
+
+
+	@After(pattern="CashReceiptService.post", eval="#{args[0].txntype.toString().matches('online|manual')}", index=1000000) 
+	public void postPayment( evt ) {
+		def receipt = evt.result
+		svc.closePaidNotices(receipt)
+		
+	}
+
+
+
+
+
+
+
+	@After(pattern="QueryService.getNodeList", eval="#{args[0]._schemaname=='propertyauction_notice'}") 
+	public void getNodeList( evt ) {
+		def arg = evt.args[0]
+		def result = evt.result
+
+		propertyauction_step.select('objid, title').where('applicable = 1').orderBy('seqno').list().each{
+			result << [title:it.title, id:it.objid]
+		}
+		result << [title: 'Closed Notices', id: 'closed']
+	}
+
+	@Before(pattern="QueryService.getList", eval="#{ args[0]._schemaname == 'propertyauction_notice' }")
+	public void loadList(def evt) {
+		def o = evt.args[0];
+		if( !o.node?.id ) return;
+
+		def m   = [:];
+		def str = ''
+
+		if (o.node.id == 'closed') {
+			str = " state = 'CLOSED' ";
+		} else {
+			str = " step_objid = '" + o.node.id + "' AND state <> 'CLOSED' ";
+		}
+
+		//add to first position of where
+		if( o.where ) {
+			o.where[0] = str + " AND " + o.where[0];	
+			o.where[1].putAll( m );
+		}
+		else {
+			o.where = [str, m];
+		}
+	}		
+
+}
+

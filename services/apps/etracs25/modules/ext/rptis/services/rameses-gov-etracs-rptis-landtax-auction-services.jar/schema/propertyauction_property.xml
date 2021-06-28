@@ -1,0 +1,56 @@
+<schema>
+    <element tablename="propertyauction_property">
+        <field name="objid" primary="true" prefix="PAS" />
+        <field name="state" required="true" caption="State" indexed="true" />
+		<field name="parent_objid" required="true" />
+		<field name="rptledger_objid"/>
+		<field name="bidder_objid" />
+		<field name="bidder_dtbid" />
+		<field name="bidder_marriedto" />
+		<field name="bidder_marriedtoaddress" />
+		<field name="amtdue" required="true" type="decimal" />
+		<field name="costofsale" required="true" type="decimal" />
+		<field name="amtduepaid" required="true" type="decimal" />
+		<field name="minbidamt" type="decimal" expr="amtdue + costofsale" />
+		<field name="bidamt" required="true" type="decimal" />
+		<field name="balance" required="true" type="decimal" />
+		<field name="redemptiondate" required="true" type="date" />
+		<field name="redeemedby_objid" />
+		<field name="redeemedamt" type="decimal" caption="Redeemed Amount" />
+
+		<complex name="credits" ref="propertyauction_property_credit" 
+				jointype="one-to-many" required="false" orderBy="refdate desc">
+			<key field="objid" target="parent_objid" />
+		</complex>
+
+		<complex name="charges" ref="propertyauction_property_charge" 
+				jointype="one-to-many" required="false">
+			<key field="objid" target="parent_objid" />
+		</complex>
+
+		<complex name="parent" ref="propertyauction" jointype="many-to-one" 
+			includefields="txnno,txndate,auctiondate,location,costofsale,publicationdate1">
+			<key field="parent_objid" target="objid" />
+		</complex>
+
+		<complex name="notice" ref="propertyauction_notice" jointype="many-to-one" required="false"
+			includefields="toyear,costofsale">
+			<key field="objid" target="objid" />
+		</complex>
+
+		<complex name="bidder" ref="propertyauction_bidder" jointype="many-to-one" required="false"
+			includefields="entity.entityno,entity.name,entity.address.text">
+			<key field="bidder_objid" target="objid" />
+		</complex>
+
+		<complex name="redeemedby" ref="entity" jointype="many-to-one" required="false"
+			includefields="entityno,name,address_text">
+			<key field="redeemedby_objid" target="objid" />
+		</complex>
+
+		<complex name="rptledger" ref="rptledger" jointype="many-to-one"
+			includefields="faasid,taxpayer.objid,taxpayer.name,taxpayer.address.text,owner.name,tdno,fullpin,titleno,cadastrallotno,totalmv,totalav,totalareaha,totalareasqm,barangay.name,blockno">
+			<key field="rptledger_objid" target="objid" />
+		</complex>
+    </element>
+</schema>

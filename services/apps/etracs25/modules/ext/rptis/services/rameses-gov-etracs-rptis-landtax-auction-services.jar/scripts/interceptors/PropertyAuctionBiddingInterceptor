@@ -1,0 +1,58 @@
+import com.rameses.annotations.*
+import com.rameses.eserver.*;
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+
+class PropertyAuctionBiddingInterceptor
+{
+	@Service('PropertyAuctionBiddingService')
+	def svc 
+
+	@DataContext('propertyauction')
+	def em_auction 
+
+
+	@Before(pattern="PersistenceService.create", eval="#{args[0]._schemaname=='propertyauction_bidding'}") 
+	public void beforeCreate( evt ) {
+		def entity = evt.args[0]
+		svc.beforeCreate(entity)
+	}
+
+	@After(pattern="PersistenceService.read", eval="#{args[0]._schemaname=='propertyauction_bidding'}") 
+	public void afterOpen( evt ) {
+		def entity = evt.result
+		svc.open(entity)
+	}
+
+
+
+	@After(pattern="QueryService.getNodeList", eval="#{args[0]._schemaname=='propertyauction_bidding'}") 
+	public void getNodeList( evt ) {
+		def arg = evt.args[0]
+		def result = evt.result
+		result << [state: 'DRAFT', title: 'DRAFT']
+		result << [state: 'ONGOING', title: 'ONGOING']
+		result << [state: 'AUCTIONED', title: 'AUCTIONED']
+		result << [state: 'CLOSED', title: 'CLOSED']
+	}
+
+	@Before(pattern="QueryService.getList", eval="#{ args[0]._schemaname == 'propertyauction_bidding' }")
+	public void loadList(def evt) {
+		def o = evt.args[0];
+		if( !o.node?.state ) return;
+
+		def m   = [state: o.node.state];
+		def str = " state = :state "
+
+		//add to first position of where
+		if( o.where ) {
+			o.where[0] = str + " AND " + o.where[0];	
+			o.where[1].putAll( m );
+		}
+		else {
+			o.where = [str, m];
+		}
+	}	
+}
+

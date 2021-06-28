@@ -1,0 +1,12 @@
+<schema>
+    <element tablename="propertyauction_property_credit">
+		<field name="objid" primary="true" prefix="PAPC"/>
+		<field name="parent_objid" required="true" />
+		<field name="mode" required="true" />
+		<field name="refid" required="true" />
+		<field name="refno" required="true" caption="Ref No." searchable="true" indexed="true"/>
+		<field name="refdate" required="true" type="date" caption="Ref Date"/>
+		<field name="amount" required="true" type="decimal" caption="Amount" />
+		<field name="particulars" required="true" caption="Particulars" />
+    </element>
+</schema>

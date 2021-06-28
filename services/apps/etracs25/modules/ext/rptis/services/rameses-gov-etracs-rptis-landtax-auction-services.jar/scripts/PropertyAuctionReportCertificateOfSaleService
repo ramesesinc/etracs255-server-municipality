@@ -1,0 +1,70 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.util.*
+import com.rameses.services.extended.*
+
+
+class PropertyAuctionReportCertificateOfSaleService
+{
+    @Service('PropertyAuctionNoticeService')
+    def noticeSvc
+    
+    @Service('PersistenceService')
+    def persistence 
+
+    @Service('NumberService')
+    def numSvc
+
+    @DataContext('propertyauction_property')
+    def em_auction_property
+
+    @DataContext('propertyauction_property_credit')
+    def em_auction_property_credit
+
+    @DataContext('faas')
+    def em_faas
+
+    @DataContext('realproperty')
+    def em_realproperty
+
+    
+    @ProxyMethod
+    public def getReport(entity) {
+        entity = em_auction_property.read(entity)
+    	def notice = openNotice(entity)
+        entity.kind = notice.kind
+        entity.taxdue = notice.taxdue
+        entity.interest = notice.interest
+        entity.bidinwords = numSvc.doubleToWords(new BigDecimal(entity.bidamt+"").doubleValue()).toUpperCase() + ' PESOS'        
+		entity.strbidamt = numSvc.format('#,##0.00', entity.bidamt)
+		updateReceiptInfo(entity)
+		updateBoundaryInfo(entity)
+        return entity
+    }
+
+    def openNotice(entity){
+        return persistence.read([
+            _schemaname: 'propertyauction_notice',
+            objid   : entity.objid 
+        ])
+    }
+
+    void updateReceiptInfo(entity){
+    	def credits = em_auction_property_credit.find([parent_objid: entity.objid]).list()
+    	if (credits) {
+    		entity.ornos = credits.refno.join(',')
+    		entity.ordate = credits.first().refdate 
+    	}
+    }
+
+    void updateBoundaryInfo(entity) {
+    	def faas = em_faas.select('realpropertyid').find([objid: entity.rptledger.faasid]).first()
+    	if (faas) {
+    		entity.rp = em_realproperty.select('north,south,east,west')
+    							.find([objid: faas.realpropertyid])
+    							.first()
+    	}
+    }
+}
+
+

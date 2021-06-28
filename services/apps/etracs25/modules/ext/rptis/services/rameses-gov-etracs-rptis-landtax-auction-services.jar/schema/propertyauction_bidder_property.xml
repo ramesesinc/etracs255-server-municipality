@@ -1,0 +1,14 @@
+<schema>
+    <element tablename="propertyauction_bidder_property">
+        <field name="objid" primary="true" prefix="PAB" />
+		<field name="parent_objid" required="true" />
+		<field name="property_objid" required="true" />
+		<field name="rptledger_objid" />
+		<field name="tdno" />
+		<field name="fullpin" />
+		<field name="owner_name" />
+		<field name="totalmv" type="decimal" />
+		<field name="totalav" type="decimal" />
+		<field name="totalareaha" type="decimal" />
+    </element>
+</schema>

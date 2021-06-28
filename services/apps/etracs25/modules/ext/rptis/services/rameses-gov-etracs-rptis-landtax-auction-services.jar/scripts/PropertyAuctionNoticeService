@@ -1,0 +1,253 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.util.*
+import com.rameses.services.extended.*
+
+
+class PropertyAuctionNoticeService
+{
+    @Env
+    def env
+
+    @Service('DateService')
+    def dtSvc 
+
+    @Service('ReportParameterService')
+    def paramSvc 
+
+    @Service('SequenceService')
+    def seqSvc
+
+    @Service('RPTUtil')
+    def util 
+
+    @Service('NumberService')
+    def numSvc
+
+    @Service('FAASAnnotationService')
+    def annotationSvc
+
+    @Service('CancelAnnotationService')
+    def cancelAnnotationSvc
+
+    @Service('RPTBillingService')
+    def billingSvc
+
+    @DataContext('propertyauction_step')
+    def em_auction_step
+
+    @DataContext('propertyauction')
+    def em_auction
+
+    @DataContext('propertyauction_notice')
+    def em_auction_notice
+
+    @DataContext('propertyauction_property')
+    def em_auction_property
+
+    @DataContext('faasannotation')
+    def em_annotation 
+
+
+    @ProxyMethod
+    public def open(entity) {
+        if (entity.rptledger.rputype == 'land') entity.kind = 'Land'
+        else if (entity.rptledger.rputype == 'bldg') entity.kind = 'Building'
+        else if (entity.rptledger.rputype == 'mach') entity.kind = 'Machinery'
+        else if (entity.rptledger.rputype == 'planttree') entity.kind = 'Plant/Tree'
+        else entity.kind = 'Miscellaneous Property'
+
+        entity.givenday = util.formalizeDate(entity.txndate, 'd' )
+        entity.givenmonth = util.formalizeDate(entity.txndate, 'MMMMM' )
+        entity.givenyear = util.formalizeDate(entity.txndate, 'yyyy' )
+        entity.durationinwords = numSvc.convertLong(entity.step.duration)
+
+        entity.taxdue = entity.basic - entity.basicdisc + 
+                        entity.basicidle - entity.basicidledisc + 
+                        entity.sef - entity.sefdisc +
+                        entity.firecode 
+        entity.interest = entity.basicint + entity.basicidleint + entity.sefint
+
+        if (entity.auction && entity.auction.objid) {
+            if (entity.auction.minincidental){
+                entity.auction.minincidentalamtinword = numSvc.convertLong((Long)entity.auction.minincidental).toUpperCase()
+            }
+            if (entity.auction.maxincidental){
+                entity.auction.maxincidentalamtinword = numSvc.convertLong((Long)entity.auction.maxincidental).toUpperCase()
+            }
+        }
+
+        return entity
+    }
+
+    @ProxyMethod
+    public void beforeDelete(entity) {
+        def old = em_auction_notice.find([objid: entity.objid]).first()
+        if (old && old.state != 'FORDELIVERY') {
+            throw new Exception('Record cannot be deleted. The notice has already been delivered.')
+        }
+    }
+
+    @ProxyMethod
+    public void beforeDelivery(entity) {
+        if ('NOPAS' == entity.step.objid) {
+            associateAuction(entity)
+        }
+    }
+
+    @ProxyMethod
+    public void validateBilling(bill) {
+        def prop = em_auction_property.find([rptledger_objid: bill.rptledgerid, state:'FORREDEMPTION']).first()
+        if (prop) {
+            throw new Exception('Billing is currently not allowed. This property is under auction.')
+        }
+    }
+
+    @ProxyMethod
+    public def delivered( notice ) {
+        def old = em_auction_notice.select('state').find([objid:notice.objid]).first()
+        if (old.state != 'FORDELIVERY')
+            throw new Exception('Notice has already been delivered.')
+        
+        validateDelivery(notice)
+        
+        def duration = em_auction_step.find([objid:notice.step.objid]).first().duration 
+        notice.state = 'DELIVERED'    
+        notice.expirydate = dtSvc.add(notice.dtreceived, duration+'d' )
+        em_auction_notice.update(notice)
+        return notice
+    }
+
+    @ProxyMethod
+    public void closePaidNotices(receipt) {
+        receipt._items.each{ledger ->
+            def notices = em_auction_notice
+                            .select('objid, state, step_objid, txnno')
+                            .where("rptledger_objid = :rptledgerid and state <> 'CLOSED'", ledger)
+                            .list() 
+            
+            notices.each{
+                it.state = 'CLOSED'
+                it.receipt = receipt 
+                em_auction_notice.update(it)
+                if ('WOL' == it.step.objid) {
+                    cancelWarrantOfLevy(it, ledger)
+                }
+            }
+        }
+    }
+
+    @ProxyMethod
+    public void postWarrantOfLevyAnnotation(entity) {
+        if (!entity.rptledger.faasid) {
+            return
+        }
+        
+        def annotation = [:]
+        annotation.objid = 'FA' + new java.rmi.server.UID()
+        annotation.state = 'APPROVED'
+        annotation.annotationtype= getWarrantOfLevyAnnotationType()
+        annotation.faasid = entity.rptledger.faasid 
+        annotation.fileno = entity.txnno
+        annotation.orno = null 
+        annotation.ordate = null 
+        annotation.oramount = 0.0 
+        annotation.memoranda = 'WARRANT OF LEVY IS ISSUED PURSUANT TO SECTION 258 OF THE LOCAL GOVERNMENT CODE OF 1991, R.A. 7160 '
+        annotation.memoranda += 'WITH THE TOTAL AMOUNT OF P' + numSvc.format('#,##0.00', entity.amtdue) + '  FROM'
+        annotation.memoranda += ' TAX YEARS ' + entity.fromyear + ' TO ' + entity.toyear + '.'
+        annotationSvc.create(annotation)
+        annotationSvc.approve(annotation)
+    }
+
+
+    @ProxyMethod
+    public def supersede(notice, nextstep){
+        def currdate = dtSvc.parseCurrentDate()
+        def newnotice = [:]
+        newnotice.putAll(notice)
+        newnotice.objid = 'AUCN' + new java.rmi.server.UID()
+        newnotice.state = 'FORDELIVERY'
+        newnotice.step = nextstep
+        newnotice.txndate = currdate.date 
+        newnotice.txnno = nextstep.code + '-' + currdate.year + seqSvc.getNextFormattedSeries(nextstep.code + '-' + currdate.year)
+        newnotice.createdby = [name:'system', title:'system']
+        newnotice.verifiedby = null
+        newnotice.deliveredby = null
+        newnotice.dtreceived = null
+        newnotice.receivedby = null
+        newnotice.remarks = null
+        newnotice.expirydate = null
+        newnotice.prevnotice = notice
+        newnotice.auction = em_auction.find([state:'APPROVED']).first()
+
+        def p = paramSvc.getStandardParameter()
+        newnotice.treasurer = [name:p.TREASURERNAME, title:p.TREASURERTITLE]
+        if (nextstep.objid == 'FINALDEMAND'){
+            newnotice.notedby = [name:p.PROVINCIALTREASURERNAME, title:p.PROVINCIALTREASURERTITLE]
+        }
+
+        try{
+            em_auction_notice.create(newnotice)
+            em_auction_notice.find([objid:notice.objid]).update([state:'SUPERSEDED'])
+            println 'Notice ' + notice.txnno + ' has been superseded.'
+        }
+        catch(Exception ex){
+            ex.printStackTrace();
+        }
+    }
+
+    void validateDelivery(notice){
+        def currdate = dtSvc.findNextDate('1d');
+        notice.dtreceived = dtSvc.parse('yyyy-MM-dd', notice.dtreceived)
+        if (notice.dtreceived > currdate)
+            throw new Exception('Date Received must not be later than current date.')
+        if ((notice.dtreceived+1) < notice.txndate)
+            throw new Exception('Date Received must not be earlier than notice date.')
+    }
+
+    def getWarrantOfLevyAnnotationType() {
+        return [
+            objid: 'WL',
+            type: 'WARRANT OF LEVY',
+        ]
+    }
+
+    @ProxyMethod
+    public void associateAuction(entity) {
+        if ('NOPAS' != entity.step.objid){
+            return 
+        }
+
+        def auction = em_auction.where("state in ('DRAFT','FORAPPROVAL', 'APPROVED')").first()
+        if (!auction) {
+            def msg = 'An auction record is required for this notice.\n'
+            msg += 'Create an approved auction first before delivering this ' + entity.step.title + '.'
+            throw new Exception(msg)
+        }
+        entity.auction = auction 
+        em_auction_notice.update(entity)
+    }
+
+    void cancelWarrantOfLevy(notice, ledger) {
+        def annotation = em_annotation.find([fileno: notice.txnno]).first()
+        if (!annotation) return 
+
+        def ca = [:]
+        ca.objid = 'CA' + new java.rmi.server.UID()
+        ca.state = 'DRAFT'
+        ca.annotationid = annotation.objid 
+        ca.fileno = annotation.txnno 
+        ca.remarks = 'Cancelled from payment of ledger with Warrant of Levy Notice.'
+        ca.signedby = 'system'
+        ca.signedbytitle = 'system'
+        ca.dtsigned = dtSvc.serverDate 
+        ca.orno = null 
+        ca.ordate = null 
+        ca.oramount = 0.0 
+        cancelAnnotationSvc.createCancelAnnotation(ca)
+        cancelAnnotationSvc.approveCancelAnnotation(ca)
+    }
+
+}
+
+

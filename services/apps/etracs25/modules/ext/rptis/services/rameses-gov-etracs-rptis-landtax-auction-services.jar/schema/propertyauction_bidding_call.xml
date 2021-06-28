@@ -1,0 +1,15 @@
+<schema>
+    <element tablename="propertyauction_bidding_call">
+		<field name="objid" primary="true" prefix="PBC" />
+		<field name="parent_objid" required="true" />
+		<field name="bidder_objid" required="true" />
+		<field name="lineno" required="true" type="integer" caption="Line No. " />
+		<field name="callno" required="true" type="integer" caption="Call No." />
+		<field name="amount" required="true" type="decimal" caption="Bid"/>
+
+	    <complex name="bidder" ref="propertyauction_bidder" jointype="many-to-one" required="false"
+	    	includefields="bidderno,entity.name">
+	    	<key field="bidder_objid" target="objid" /> 
+	    </complex>
+    </element>
+</schema>

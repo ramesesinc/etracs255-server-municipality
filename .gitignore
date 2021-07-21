@@ -6,6 +6,7 @@
 Thumbs.db
 _tmp
 /_custom
+/_tools
 /fileserver
 /custom-template
 /bin/env.conf

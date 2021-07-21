@@ -50,7 +50,7 @@ class OnlineBusinessBillingService {
 
 		def r = [:];
     	r.app = [apptype:app.apptype, appyear:app.appyear, dtfiled:app.dtfiled, appno:app.appno]; 
-    	r.billdate = dateSvc.getBasicServerDate();
+    	r.billdate = (o.billdate ? o.billdate : dateSvc.getBasicServerDate()); 
     	r.applicationid = app.objid;
         if ( o.qtr ) {
         	r.payment = [option:'FULLQTR', qtr: o.qtr.toInteger() ]		
@@ -102,10 +102,13 @@ class OnlineBusinessBillingService {
 	public def verifyPayment(  def o ) {
 		def r = [:]
 		r.appno = o.refno;
+		r.billdate = o.billdate; 
 		if ( o.info?.qtr ) r.qtr = o.info.qtr; 
+
 		def z = generateBilling( r );
 		if ( o.amount != z.amount ) 
 			throw new Exception('Bill amount has changed from '+ o.amount +' to '+ z.amount); 
+
 		o.businessid = z.app.business.objid;
 		o.applicationid = z.app.objid;
 		o.appyear = z.app.appyear; 

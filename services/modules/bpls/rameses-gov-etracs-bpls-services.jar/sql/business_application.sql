@@ -246,3 +246,10 @@ where businessid=$P{businessid}
     and (amount-amtpaid) > 0.0 
 group by businessid, iyear 
 order by iyear 
+
+[findBusinessAddress]
+select addr.* 
+from business_application ba 
+    inner join business b on b.objid = ba.business_objid 
+    inner join business_address addr on addr.objid = b.address_objid 
+where ba.objid = $P{applicationid}

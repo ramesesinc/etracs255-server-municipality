@@ -71,7 +71,7 @@ rpt.app.context=etracs25
   <module version="2.50" file="treasury/rameses-gov-depositslip.jar"  />
   <module version="2.51" file="treasury/rameses-gov-treasury.jar"  />
   <module version="2.50" file="treasury/rameses-gov-treasury-report.jar"  />
-  <module version="2.50" file="treasury/rameses-gov-treasury-tool.jar"  />
+  <module version="2.51" file="treasury/rameses-gov-treasury-tool.jar"  />
 
   <module version="2.51" file="rptis/rameses-gov-etracs-rptis-landtax.jar"  />
   <module version="2.50" file="rptis/rameses-gov-etracs-rptis-landtax-report.jar"  />
@@ -81,7 +81,7 @@ rpt.app.context=etracs25
   <module version="2.50" file="rptis/rameses-gov-etracs-rptis-municipality.jar"  />
   <module version="2.50" file="rptis/rameses-gov-etracs-rptis-sync2.jar"  />
 
-  <module version="2.50" file="bpls/rameses-gov-etracs-bpls.jar"  />
+  <module version="2.51" file="bpls/rameses-gov-etracs-bpls.jar"  />
   <module version="2.50" file="bpls/rameses-gov-etracs-bpls-ceo.jar"  />
   <module version="2.50" file="bpls/rameses-gov-etracs-bpls-reports.jar"  />
 

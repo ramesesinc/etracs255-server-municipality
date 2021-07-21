@@ -155,6 +155,10 @@ class RemoteServerDataDeployerService {
 
 		ct_db.where('1=1').update([ state: 'INACTIVE' ]); 
 		entity.data.collectiontypes.each{ 
+			if ( it.info instanceof Map ) { 
+				it.info = ObjectSerializer.getInstance().toString( it.info ); 
+			} 
+
 			if ( ct_db.find([ objid: it.objid ]).select('objid').first()) {
 				ct_db.update( it ); 
 			} else { 
@@ -193,6 +197,8 @@ class RemoteServerDataDeployerService {
 
 		bank_db.where('1=1').update([ state: 'INACTIVE' ]); 
 		entity.data.banks.each{ 
+			if ( !it.deposittype ) it.deposittype = 'LOCAL'; 
+
 			if ( bank_db.find([ objid: it.objid ]).select('objid').first()) {
 				bank_db.update( it ); 
 			} else { 

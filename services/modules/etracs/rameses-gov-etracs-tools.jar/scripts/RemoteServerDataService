@@ -45,6 +45,9 @@ class RemoteServerDataService {
 		entity.data.collectiontypes = adb.getCollectionTypes( params );
 		entity.data.collectiontypes.each{ 
 			it.org = [ objid: it.orgid, name: it.orgname, type: it.orgtype ];
+			if ( it.info instanceof String ) { 
+				it.info = ObjectDeserializer.getInstance().read( it.info ); 
+			} 
 		}
 		entity.data.collectiontypeorgs = adb.getCollectionTypeOrgs( params ); 
 		entity.data.collectionTypesAccounts = adb.getCollectionTypeAccounts( params );
@@ -85,10 +88,10 @@ class RemoteServerDataService {
 		def o = adb.findOrg([ objid: param.objid ]); 
 		if ( !o ) return; 
 
-		list << o; 
 		if ( o.parent?.objid ) {
 			loadOrg( list, o.parent ); 
 		}
+		list << o; 
 	}
 	private void loadOrgClass( list, param ) {
 		if ( !param?.name ) return; 
@@ -96,10 +99,10 @@ class RemoteServerDataService {
 		def o = adb.findOrgClass([ name: param.name ]); 
 		if ( !o ) return; 
 
-		list << o; 
 		if ( o.parentclass ) {
 			loadOrgClass( list, [name: o.parentclass] ); 
 		}
+		list << o; 
 	}
 	private void loadFund( list, param ) {
 		if ( !param?.objid ) return; 
@@ -111,10 +114,10 @@ class RemoteServerDataService {
 		o.groupid = (o.groupid ? o.groupid.toString().toUpperCase() : o.groupid);
 		o.depositoryfundid = (o.depositoryfundid ? o.depositoryfundid.toString().toUpperCase() : o.depositoryfundid);
 
-		list << o; 
 		if ( o.depositoryfundid && o.depositoryfundid != o.objid ) {
 			loadFund( list, [ objid: o.depositoryfundid ] );  
 		} 
+		list << o; 
 	} 
 
 	private void resolve254Compatibility( data ) {

@@ -75,6 +75,11 @@ public class BusinessBillingService  {
 			return lobMap[lob.objid];
 		}
 
+		if ( o.app.business == null ) o.app.business = [:]; 
+		if ( o.app.business.address == null ) {
+	        o.app.business.address = appEm.findBusinessAddress([ applicationid: o.applicationid.toString() ]);
+		}
+
 		o.taxfees.each {
 			if(it.amtpaid==null) it.amtpaid = 0;
 			it.amtdue = it.amount - it.amtpaid;
@@ -105,6 +110,10 @@ public class BusinessBillingService  {
 		if(o.app) {
 			def app = new BPApplication(o.app);
 			facts << app;
+
+			if ( o.app.business?.address ) {
+				facts << new BusinessLocation( o.app.business.address );
+			}			
 		}
 
 		def qtrdates = [];
@@ -259,13 +268,14 @@ public class BusinessBillingService  {
 
 	@ProxyMethod 
 	public def getBilling( o ) {
-		def e =  appEm.read( [objid: o.applicationid ] );
+		def e =  appEm.read([ objid: o.applicationid ]);
 		def items = receivableSvc.getReceivables([ applicationid: o.applicationid ]);
         if ( !items ) throw new Exception("There are no unpaid balances for this application");
 
         if ( !o.billdate ) o.billdate = dateSvc.getBasicServerDate();
         
         def p = [:];
+        p.applicationid = e.objid;
         p.billdate = o.billdate; 
         p.taxfees = items; 
         p.show_paid = true; 

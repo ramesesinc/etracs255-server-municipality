@@ -84,6 +84,7 @@ rpt.app.context=etracs25
   <module version="2.51" file="bpls/rameses-gov-etracs-bpls.jar"  />
   <module version="2.50" file="bpls/rameses-gov-etracs-bpls-ceo.jar"  />
   <module version="2.50" file="bpls/rameses-gov-etracs-bpls-reports.jar"  />
+  <module version="2.50" file="bpls/rameses-gov-etracs-bpls-fire.jar"  />
 
   <module version="2.50" file="queue/rameses-queueing.jar"  />
 

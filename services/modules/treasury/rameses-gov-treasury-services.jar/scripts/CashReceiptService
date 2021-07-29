@@ -118,13 +118,20 @@ class CashReceiptService  {
 		}
 
 		p.paymentitems.each {
-			it.voidamount = 0.0;
-			if( it.reftype == 'CHECK' ) {				
+			boolean _imported_ = it._imported_.toString().matches('true|1'); 
+
+			it.voidamount = 0.0;			
+			if ( it.reftype == 'CHECK' ) { 
+				if ( _imported_ ) {
+					// proceed to the next item if data is marked as imported 
+					return; 
+				}
+
 				it.checkid = it.refid;
 				checkPayment.find( [objid: it.checkid ] ).update( [amtused: "{ amtused + :amt }"], [amt: it.amount] );
 				//if amtused is fully exhausted fire an error
 				def z = checkPayment.find([objid: it.checkid ] ).where("amount - amtused < 0 ").first();
-				if( z ) throw new Exception("Check no " + z.refno + " is already used. amount - amtused less than 0");				
+				if ( z ) throw new Exception("Check no " + z.refno + " is already used. amount - amtused less than 0");				
 			}
 			else if( it.reftype == 'EFT') {
 				def item = it.item;

@@ -29,6 +29,7 @@ public class AskInfo implements RuleActionHandler {
 		if(! ct.env.infoUtil ) {
 			ct.env.infoUtil = new VariableInfoUtil();
 		}	
+
 		String sname = getInfoSchemaName();
 		if( sname!=null ) {
 			 ct.env.infoUtil.schemaName = sname; 
@@ -39,10 +40,11 @@ public class AskInfo implements RuleActionHandler {
 				params.value = new ActionExpression( " " + params.value );
 			}
 			value = params.value.eval();
-		};	
+		}	
+
 		//lookup the info from variable em. then create the fact.
 		def dinfo = ct.env.infoUtil.lookupInfo( [name: infoName, value: value] );
-		dinfo.params = params;
+		dinfo.params = params; 
 		return ct.env.infoUtil.provider.createFact( dinfo );	
 	}
 

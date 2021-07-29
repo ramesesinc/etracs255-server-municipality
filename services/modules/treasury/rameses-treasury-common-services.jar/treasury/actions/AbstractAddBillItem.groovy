@@ -44,6 +44,7 @@ public abstract class AbstractAddBillItem implements RuleActionHandler {
 
 	public void addToFacts( def billitem ) {
 		def facts = getFacts();
+		
 		//check if we can add the fact. Do not include if it already exists.
 		if( !facts.find{ (it instanceof AbstractBillItem) && (it.hashCode() == billitem.hashCode()) } ) {
 			facts << billitem;

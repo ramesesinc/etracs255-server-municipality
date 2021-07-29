@@ -65,9 +65,12 @@ public class AssessmentRuleService {
 					}
 				}
 				if(!ac.refid) ac.refid = bi.objid; 
-				def bbi = factBuilder.getBillItemFact( ac );
-				if( !facts.find{ (it instanceof AbstractBillItem) && (it.hashCode()==bbi.hashCode())  } ) {
-					facts << bbi;
+
+				if ( factBuilder.metaClass.respondsTo( factBuilder, 'getBillItemFact' )) {
+					def bbi = factBuilder.getBillItemFact( ac );
+					if ( !facts.find{ (it instanceof AbstractBillItem) && (it.hashCode()==bbi.hashCode()) }) {
+						facts << bbi; 
+					} 
 				}
 			}
 		};

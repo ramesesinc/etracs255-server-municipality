@@ -4,6 +4,9 @@ import java.rmi.server.UID;
 
 class BusinessPermitService  {
 
+	@DataContext(dynamic=true)
+	def dynaEm;
+
 	@DataContext("sys_org")
 	def sys_org;
 
@@ -249,6 +252,15 @@ class BusinessPermitService  {
 		else if ( perm.orgtype == 'NONS') perm.orgtypedesc = 'NON-STOCK';
 		else if ( perm.orgtype == 'NONP') perm.orgtypedesc = 'NON-PROFIT';
 		else perm.orgtypedesc = perm.orgtype; 
+
+		if ( app.business?.owner ) {
+			perm.owner = app.business.owner; 
+			if ( perm.owner.objid && perm.owner.type ) {
+				def ownerEm = dynaEm.lookup("entity" + perm.owner.type.toLowerCase()); 
+				def ownerData = ownerEm.find([ objid: perm.owner.objid.toString() ]).first(); 
+				if ( ownerData ) perm.owner.putAll( ownerData );  
+			}
+		}
 
 		return perm;
 	}

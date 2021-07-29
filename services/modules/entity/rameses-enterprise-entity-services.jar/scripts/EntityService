@@ -24,6 +24,8 @@ class EntityService
 	@ActiveDB('entitymember')
 	def em_member
 
+	@Service
+	def self;	
 
 	@ProxyMethod
 	public def open( o ) { 

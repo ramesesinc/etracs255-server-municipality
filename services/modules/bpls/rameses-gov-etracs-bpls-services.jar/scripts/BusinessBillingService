@@ -216,6 +216,13 @@ public class BusinessBillingService  {
 
 		//generate first the billing
 		if(!o.payment) throw new Exception("Please include a payment object");
+
+		if ( !o.app && o.applicationid ) {
+			// load application
+			def aa = appEm.read([ objid: o.applicationid ]);
+			o.app = [ apptype: aa.apptype, appyear: aa.appyear, dtfiled: aa.dtfiled, appno: aa.appno ]; 
+		}
+		
 		def result = generateBilling(o);
 		def receiptItems = [];	
 

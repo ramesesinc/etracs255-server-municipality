@@ -157,12 +157,24 @@ class RemittanceImportExportService  {
 				rct.checks = []; 
 				def checkids = rct.paymentitems.findAll{( it.reftype == 'CHECK' )}.collect{ it.checkid }.findAll{( it )} 
 				checkids.unique().each{ chkid-> 
-					def chk = checkpayments.checkpayments.find{( it.objid == chkid )} 
+					def chk = data.checkpayments.find{( it.objid == chkid )} 
 					if ( chk ) rct.checks << chk; 
 				} 
 
 				rct.shares = rct.sharing;
 				rct.remove('remittanceid');
+
+				if ( rct.checks ) { 
+					rct.checks.each{ 
+						it._imported_ = true; 
+					}
+				}
+				if ( rct.paymentitems ) { 
+					rct.paymentitems.each{ 
+						it._imported_ = true; 
+					}
+				}
+
 				crSvc.post( rct ); 
 
 				def cv = data.cashreceiptvoids.find{( it.receiptid == rct.objid )} 

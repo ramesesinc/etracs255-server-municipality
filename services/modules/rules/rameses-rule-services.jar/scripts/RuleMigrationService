@@ -115,47 +115,36 @@ class RuleMigrationService {
 
 	@ProxyMethod
 	public void uploadDef( def pkg ) {
-		for( x in pkg.facts) {
-			def ids = refactorFacts(x.factclass);
+		for( f in pkg.facts) {
+			target.save( f, "fact" );
+			for( ff in f.fields )  {
+				target.save( ff, "fact_field" );
+			} 
+		} 	
 
-			target.save( x, "fact" );
-			for( f in x.fields )  {
-				target.save( f, "fact_field" );
-			}	
-
-			ids?.each { xxx->
-				factSvc.merge([oldid: xxx, newid:x.factclass]);
+		for( ad in pkg.actiondefs ) {
+			target.save( ad, "actiondef" );
+			for( adp in ad.params ){
+				target.save( adp, "actiondef_param" );
 			}
 		} 	
-		for( y in pkg.actiondefs) {
-			def ids = refactorActionDefs( y.actionclass );
 
-			target.save( y, "actiondef" );
-			for( y1 in y.params ){
-				target.save( y1, "actiondef_param" );
-			}
-
-			ids?.each { xxx->
-				actionDefSvc.merge([oldid: xxx, newid:y.actionclass]);
-			}
-
-		} 	
 		for( rs in pkg.rulesets ) {
-			//save rulesets, rulegroups, rulesetfacts, rulesetactiondefs
 			target.save( rs, "ruleset" );
-			//save rulegroups
-			for ( x in rs.rulegroups ) {
-				target.save( x, "rulegroup" );
+
+			for ( rg in rs.rulegroups ) {
+				target.save( rg, "rulegroup" );
 			}
+
 			rsfactdb.find([ ruleset: rs.name ]).delete(); 
-			for( x in rs.facts ) {
-				rsfactdb.create( [ruleset: rs.name, rulefact: x.rulefact ]);
+			rsactiondefdb.find([ ruleset: rs.name ]).delete(); 	
+
+			for( f in rs.facts ) {
+				rsfactdb.create([ ruleset: f.ruleset, rulefact: f.rulefact ]);
 			}
-			rsactiondefdb.find([ ruleset: rs.name ]).delete();			
-			for(y in rs.actiondefs ) {
-				rsactiondefdb.create([ruleset: rs.name, actiondef: y.actiondef ]);	
+			for( ad in rs.actiondefs ) {
+				rsactiondefdb.create([ ruleset: ad.ruleset, actiondef: ad.actiondef ]);	
 			}
 		}
 	}
-
 }

@@ -51,8 +51,17 @@ class RuleExporterService {
 			if ( o.buildver && o.buildver >= 2.0 ) {
 				uploadV2( o ); 
 
-			} else { 
+			} 
+			else { 
 				buildVars( o ); 
+
+				def rec = rule.findRule([ objid: o.objid ]); 
+				if ( rec && rec.state.toString().toUpperCase() == 'DEPLOYED' ) {
+					o.state = 'DEPLOYED'; 
+				} else {
+					o.state = 'DRAFT'; 
+				}
+
 				service.create( o ); 
 				o.conditions.each { 
 					it.notexist = ( it.notexist == null ? 0 : it.notexist ); 
@@ -62,7 +71,8 @@ class RuleExporterService {
 					service.saveAction( it ); 
 				} 
 			} 
-		} catch(e) { 
+		} 
+		catch(e) { 
 			throw e; 
 		} 
 	}
@@ -72,6 +82,13 @@ class RuleExporterService {
 			def formatter = new java.text.SimpleDateFormat('yyyy-MM-dd HH:mm:ss');
 			o.dtfiled = formatter.format( o.dtfiled ); 
 		}
+
+		def rec = rule.findRule([ objid: o.objid ]); 
+		if ( rec && rec.state.toString().toUpperCase() == 'DEPLOYED' ) {
+			o.state = 'DEPLOYED'; 
+		} else { 
+			o.state = 'DRAFT'; 
+		} 
 
 		rule.save( o ); 
 		o.conditions.each{   

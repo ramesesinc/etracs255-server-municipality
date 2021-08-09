@@ -17,7 +17,7 @@ alter table account_incometarget add CONSTRAINT `fk_account_incometarget_itemid`
    FOREIGN KEY (`itemid`) REFERENCES `account` (`objid`)
 ;
 
-/*
+
 CREATE TABLE `business_closure` ( 
    `objid` varchar(50) NOT NULL, 
    `businessid` varchar(50) NOT NULL, 
@@ -36,7 +36,7 @@ CREATE TABLE `business_closure` (
    CONSTRAINT `fk_business_closure_businessid` FOREIGN KEY (`businessid`) REFERENCES `business` (`objid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 ; 
-*/
+
 
 create UNIQUE index `uix_code` on businessrequirementtype (`code`); 
 create UNIQUE index `uix_title` on businessrequirementtype (`title`); 
@@ -2781,3 +2781,9 @@ alter table cashreceipt_share add receiptitemid varchar(50) null
 create index ix_receiptitemid on cashreceipt_share (receiptitemid) 
 ; 
 
+
+
+
+-- ## 2021-08-09
+INSERT INTO `businessvariable` (`objid`, `state`, `name`, `datatype`, `caption`, `description`, `arrayvalues`, `system`, `sortorder`, `category`, `handler`) 
+VALUES ('PREV_BUSINESS_TAX', 'DRAFT', 'PREV_BUSINESS_TAX', 'decimal', 'PREVIOUS BUSINESS TAX', NULL, '[]', '0', '100', NULL, NULL);

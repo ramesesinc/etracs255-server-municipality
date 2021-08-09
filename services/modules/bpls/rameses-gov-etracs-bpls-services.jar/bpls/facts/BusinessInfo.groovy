@@ -43,5 +43,21 @@ public class BusinessInfo {
     }
     
     
-    
+    public Map toMap() {
+        def m = [:]; 
+        m.objid = objid; 
+        m.name = name; 
+        m.year = year; 
+        m.qtr = qtr; 
+        m.stringvalue = stringvalue; 
+        m.intvalue = intvalue; 
+        m.booleanvalue = booleanvalue;
+        m.decimalvalue = decimalvalue; 
+        m.lob = ( lob ? lob.toMap() : null ); 
+        return m; 
+    }
+
+    public void printInfo() {
+        println '\n*** BusinessInfo ===> ' + toMap(); 
+    }
 }

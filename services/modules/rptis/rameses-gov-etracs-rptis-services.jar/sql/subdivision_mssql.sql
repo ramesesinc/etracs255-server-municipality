@@ -307,6 +307,7 @@ SELECT cl.*,
 	f.owner_address,
 	f.administrator_name,
 	f.administrator_address,
+	f.lguid,
 	r.fullpin,
 	r.totalmv,
 	r.totalav,
@@ -314,7 +315,6 @@ SELECT cl.*,
 	r.totalareasqm,
 	r.taxable,
 	rp.barangayid,
-	rp.lguid,
 	rp.lgutype,
 	f.effectivityyear
 FROM subdivision_motherland cl
@@ -322,7 +322,7 @@ FROM subdivision_motherland cl
 	INNER JOIN rpu r ON f.rpuid = r.objid 
 	INNER JOIN realproperty rp ON f.realpropertyid = rp.objid 
 WHERE cl.subdivisionid = $P{objid }
-ORDER BY r.fullpin 
+ORDER BY f.tdno 
 
 
 

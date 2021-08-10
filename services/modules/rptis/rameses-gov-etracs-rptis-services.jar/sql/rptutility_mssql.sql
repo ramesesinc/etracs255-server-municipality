@@ -39,7 +39,8 @@ SELECT * FROM realproperty WHERE pin = $P{pin} AND ry = $P{ry} AND state <> 'CAN
 
 [modifyRpuPin]
 update rpu set 
-  fullpin=$P{newpin}, suffix=$P{suffix}, 
+  fullpin=$P{newpin}, 
+  subsuffix=$P{subsuffix}, 
   realpropertyid = $P{realpropertyid}
 where objid=$P{rpuid}
 

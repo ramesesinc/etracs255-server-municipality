@@ -21,7 +21,7 @@
         <field name="balance" expr="amount - amtapplied" caption="Balance" />
         <complex name="info" serializer="default" required="false" />
         <complex name="rptledger" ref="rptledger" jointype="many-to-one"
-            includefields="tdno,fullpin,owner.name,taxpayer.*">
+            includefields="tdno,fullpin,owner.name,taxpayer.objid,taxpayer.name">
             <key field="rptledger_objid" target="objid"/>
         </complex>
         <complex name="srcledger" ref="rptledger" jointype="many-to-one" required="false"

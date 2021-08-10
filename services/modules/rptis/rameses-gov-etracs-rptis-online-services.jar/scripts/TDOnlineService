@@ -107,10 +107,10 @@ class TDOnlineService {
 		]
 
 		if (
-			rptledger.lastyearpaid < pdate.year || 
-			(rptledger.lastyearpaid == pdate.year && rptledger.lastqtrpaid < pdate.qtr)
+			rptledger.lastyearpaid > pdate.year || 
+			(rptledger.lastyearpaid == pdate.year && rptledger.lastqtrpaid >= pdate.qtr)
 		) {
-			bill.ispaid = false;
+			return bill
 		}
 		
 
@@ -118,8 +118,10 @@ class TDOnlineService {
 			def b = billSvc.generateBillByTdNo(rptledger)
 			bill.amtdue = b.totals.total 
 			bill.period = buildPeriodCovered(b.ledgers[0])
+			bill.ispaid = false
 		} catch(e) {
 			println '[ERROR] ' + e.message
+			bill.ispaid = true
 		}
 		return bill
 	}

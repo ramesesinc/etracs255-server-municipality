@@ -59,7 +59,8 @@ GROUP BY rputype
 
 [findNextSuffix]
 SELECT 
-  MAX(r.suffix + 1) AS nextsuffix 
+  MAX(r.suffix + 1) AS suffix,
+  MAX(case when r.subsuffix is null then 1 else r.subsuffix + 1 end) AS subsuffix
 FROM faas f 
   inner join rpu r on f.rpuid = r.objid 
 WHERE f.realpropertyid = $P{realpropertyid}

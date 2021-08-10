@@ -2,15 +2,15 @@
 	<element tablename="batchgr">
 		<field name="objid" primary="true" prefix="BG" />
 		<field name="state" required="true" caption="State" />
-		<field name="ry" required="true" />
+		<field name="ry" required="true" caption="Revision Year" searchable="true" indexed="true" />
 		<field name="txntype_objid" required="true" />
-		<field name="txnno" required="true" />
-		<field name="txndate" required="true" />
+		<field name="txnno" required="true" caption="Txn No." searchable="true" indexed="true" />
+		<field name="txndate" required="true" caption="Txn Date" />
 		<field name="effectivityyear" required="true" type="integer" />
 		<field name="effectivityqtr" required="true" type="integer" />
 		<field name="memoranda" />
-		<field name="rputype" />
-		<field name="section" />
+		<field name="rputype"  caption="Kind" searchable="true" indexed="true" />
+		<field name="section" caption="Section" searchable="true"  />
 		<field name="originlgu_objid" required="true" />
 		<complex name="lgu" ref="sys_org" jointype="many-to-one" 
 			required="true" includefields="code,name,orgclass" >

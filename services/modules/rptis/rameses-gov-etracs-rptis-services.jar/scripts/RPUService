@@ -374,19 +374,17 @@ class RPUService
 
     @ProxyMethod
     public def getNextSuffix(info) {
-        if (info.rputype.equalsIgnoreCase(RPUTYPE_LAND)){
-            info.suffix = 0
-        }
-        else {
-            def suffix = em.findNextSuffix([realpropertyid:info.realpropertyid, rputype:info.rputype])
-            if (suffix){
-                info.suffix = suffix.nextsuffix
-            } else {
-                suffix = em_rpu_type_suffix.find([rputype:info.rputype]).orderBy('from').first() 
-                info.suffix = suffix.from 
+        def nextsuffix = [suffix: 0]
+        if (!info.rputype.equalsIgnoreCase(RPUTYPE_LAND)){
+            nextsuffix = em.findNextSuffix([realpropertyid:info.realpropertyid, rputype:info.rputype])
+            if (!nextsuffix) {
+                nextsuffix = [:]
+                def suffix = em_rpu_type_suffix.find([rputype:info.rputype]).orderBy('from').first() 
+                nextsuffix.suffix = suffix.from
+                nextsuffix.subsuffix = info.subsuffix
             }
         }
-        return info.suffix 
+        return nextsuffix
     }
 
     void checkValidRy(ry){

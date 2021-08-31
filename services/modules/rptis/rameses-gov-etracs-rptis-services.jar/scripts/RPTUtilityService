@@ -55,7 +55,7 @@ class RPTUtilityService
 	}
 
 	void updateCommonInfo(info){
-		info.rpu = [objid:info.rpuid, fullpin:info.newpin, rputype:info.rputype, suffix: info.suffix]
+		info.rpu = [objid:info.rpuid, fullpin:info.newpin, rputype:info.rputype, suffix: info.suffix, subsuffix: info.subsuffix]
 		info.rp = [pin: info.newpin]
 		
 		if (info.suffix > 0) {

@@ -9,10 +9,6 @@ import vehicle.facts.*;
 import com.rameses.annotations.*;
 import com.rameses.util.*;
 
-/**************************************************************************************
-* This interceptor is exclusively for VehicleApplicationService.create method
-* This is called upon creating the application for NEW, RENEW, DROP, CHANGE_OWNER_UNIT 
-***************************************************************************************/
 class CashReceiptPluginInterceptor {
 	
 	@Service(dynamic=true)
@@ -25,21 +21,24 @@ class CashReceiptPluginInterceptor {
 	public void onPostPayment(def evt) {
 		def a = evt.args[0];
 		def handler = a.collectiontype.handler;
-		def p = pluginEm.find( [objid: handler] ).first();
-		if( p ) {
+		def p = pluginEm.find([ objid: handler ]).first();
+		if ( p ) {
 			def conn = p.connection;
 			def serviceName = p.servicename;
-			if(!conn) {
-				conn = p.objid;
+			if ( !conn ) { 
+				conn = p.objid; 
 			}
-			if(!serviceName) {
+			if ( !serviceName ) {
 				serviceName = "PaymentService";
-			}
+			} 
+			
 			def t = svc.lookup(serviceName, conn );
-			if(!t) throw new Exception(serviceName + " not found for "+handler +" @connection "+conn);
+			if ( !t ) throw new Exception(serviceName +" not found for "+ handler +" @connection "+ conn);
+			
 			a.reftype = "cashreceipt";
-			t.postPayment( a );
-		}
+			def rr = t.postPayment( a ); 
+			if ( rr ) a.putAll( rr ); 
+		} 
 	}
 
 	@After(pattern="CashReceiptVoidService.post", eval="#{result?.receipt?.collectiontype?.handler != null}", index=10000 )
@@ -47,20 +46,43 @@ class CashReceiptPluginInterceptor {
 		def a = evt.result;
 		def handler = a.receipt.collectiontype.handler;
 		def p = pluginEm.find( [objid: handler] ).first();
-		if( p ) {
+		if ( p ) {
 			def conn = p.connection;
 			def serviceName = p.servicename;
-			if(!conn) {
+			if ( !conn ) {
 				conn = p.objid;
 			}
-			if(!serviceName) {
+			if ( !serviceName ) {
 				serviceName = "PaymentService";
 			}
+
 			def t = svc.lookup(serviceName, conn );
-			if(!t) throw new Exception(serviceName + " not found for "+handler +" @connection "+conn);
+			if ( !t ) throw new Exception(serviceName +" not found for "+ handler +" @connection "+ conn);
+
 			t.voidPayment( a );
 		}
 	}
 
 
+	@After(pattern="CashReceiptVoidService.revert", index=10000 )
+	public void afterRevert( evt ) {
+		def a = evt.args[0]; 
+		def handler = a.receipt.collectiontype.handler; 
+		def p = pluginEm.find([ objid: handler ]).first(); 
+ 		if ( p ) {
+			def conn = p.connection;
+			def serviceName = p.servicename;
+			if ( !conn ) {
+				conn = p.objid;
+			}
+			if ( !serviceName ) {
+				serviceName = "PaymentService";
+			}
+
+			def t = svc.lookup(serviceName, conn );
+			if ( !t ) throw new Exception(serviceName +" not found for "+ handler +" @connection "+ conn);
+
+			t.revertVoidPayment( a );
+		}
+	}
 }

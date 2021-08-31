@@ -58,6 +58,9 @@ class FAASSyncDataService
     @DataContext('rpu')
     def em_rpu
 
+	@DataContext('sys_org')
+    def em_org
+
 
 	def getActions(){
 		return  [
@@ -308,9 +311,10 @@ class FAASSyncDataService
 	--------------------------------------------------------*/
 	def postRemoteFaas = {syncdata ->
 		def remoteFaas = syncdata.data 
-
+		syncdata.remote = em_org.find([objid: remoteFaas.originlguid]).first();
+		if (!syncdata.remote) throw new Exception('originlguid or remote is not specified');
 		saveFaas(remoteFaas)
-
+		
 		if ('PROVINCE'.equalsIgnoreCase(syncdata.remote.orgclass)){
 			faasSvc.approveFaasByMunicipality(remoteFaas)
 		} else if ('MUNICIPALITY'.equalsIgnoreCase(syncdata.remote.orgclass)) {

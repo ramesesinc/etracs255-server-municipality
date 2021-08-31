@@ -39,7 +39,13 @@ class FAASSyncDataInterceptor
     @After(pattern="MunicipalityFAASService.resendToProvince", index=50000) 
     public void resendCaptureToProvince( evt ) {
         def faas = evt.result 
-        mainSyncSvc.createDataForSync(getDataForSync(faas, 'FAAS-DATACAPTURE'))
+        if (faas.state == 'CURRENT') {
+            mainSyncSvc.createDataForSync(getDataForSync(faas, 'FAAS-DATA'))
+        } else if (faas.datacapture || faas.datacapture == 1) {
+            mainSyncSvc.createDataForSync(getDataForSync(faas, 'FAAS-DATACAPTURE'))
+        } else {
+            mainSyncSvc.createDataForSync(getDataForSync(faas, 'FAAS-PROVINCE-APPROVAL'))
+        }
     }   
 
     @After(pattern="FAASWorkflowService.signal", eval="#{args[0].state == 'approver' && args[0].action == 'approve'}", index=50000) 

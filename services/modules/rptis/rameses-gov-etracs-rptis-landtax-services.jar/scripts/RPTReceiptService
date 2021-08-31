@@ -459,9 +459,9 @@ class RPTReceiptService
 			pmt.postedbytitle = receipt.collector.title 
 			pmt.dtposted = receipt.txndate 
 			pmt.fromyear = ledger.fromyear 
-			pmt.fromqtr = ledger.fromqtr 
+			pmt.fromqtr = ledger.fromqtr ? ledger.fromqtr : 1 
 			pmt.toyear = ledger.toyear 
-			pmt.toqtr = ledger.toqtr 
+			pmt.toqtr = ledger.toqtr ? ledger.toqtr : 4 
 			pmt.amount = ledger.total 
 			pmt.collectingagency = getCollectingAgency()
 			pmt.voided = false 

@@ -205,7 +205,7 @@ from (
 	select 
 		1 as isitem, 
 		71 as idx, 
-		ISNULL(case when ft.objid is not null then  ft.name else ctd.name end, 'OTHER') as title,
+		IFNULL(case when ft.objid is not null then  ft.name else ctd.name end, 'OTHER') as title,
 		-1 as rpucount,
 		(r.totalav * -1) as totalav,
 		(r.totalmv * -1) as totalmv  

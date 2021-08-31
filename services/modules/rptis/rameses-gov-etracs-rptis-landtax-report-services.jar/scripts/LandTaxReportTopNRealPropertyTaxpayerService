@@ -20,6 +20,8 @@ class LandTaxReportTopNRealPropertyTaxpayerService
 	public def buildReport(params){
 		params._limit = params.topn 
 		params.type = '%'
+		params.startdate = params.year + '-01-01';
+		params.enddate = (params.year+1) + '-01-01';
 
 		if (params.rputype) 
 			params.type = params.rputype

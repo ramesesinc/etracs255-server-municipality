@@ -17,6 +17,7 @@ public class RPTLedgerFaasFact
     Integer toqtr
     Double assessedvalue
     Boolean idleland
+    String txntype
 
     def entity
 
@@ -40,5 +41,6 @@ public class RPTLedgerFaasFact
         this.classification = new Classification(ledgerfaas.classification);
         this.actualuse = new ActualUse(ledgerfaas.actualuse);
         this.idleland = (ledgerfaas.idleland ? ledgerfaas.idleland : false)
+        this.txntype = ledgerfaas.txntype?.objid
     }
 }

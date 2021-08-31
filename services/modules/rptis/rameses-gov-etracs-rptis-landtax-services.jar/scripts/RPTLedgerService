@@ -166,7 +166,7 @@ class RPTLedgerService
 
     @ProxyMethod
     public def postNewLedger(faas){
-        def ledgers = em_rptledger.find([tdno:faas.tdno]).list()
+        def ledgers = em_rptledger.find([faasid:faas.objid]).list()
         def ledger = null
         if (!checkFaasHasLedger(faas, ledgers)){
             ledger = createLedgerInfo(faas)

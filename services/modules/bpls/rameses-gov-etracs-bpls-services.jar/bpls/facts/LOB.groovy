@@ -23,15 +23,4 @@ public class LOB {
         println "assessment type " + this.assessmenttype;  
     }
 
-
-    public Map toMap() {
-        return [
-            objid: objid, 
-            lobid: lobid,
-            name : name, 
-            attributes: attributes, 
-            classification: classification, 
-            assessmenttype: assessmenttype
-        ]; 
-    }
 }

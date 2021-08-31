@@ -145,19 +145,27 @@ class FAASService
 	public def initNewDiscovery( info ) {
 		if (info.rputype != 'land'){
 			checkLandTxnReference(info.rp)
-			if (info.suffix == null ) 
+			if (info.suffix == null ) {
 				throw new Exception('Suffix is required.')
+			}
 
 			def faas_new_discovery_validate_suffix = var.faas_new_discovery_validate_suffix
 			if (faas_new_discovery_validate_suffix == null || util.isTrue(faas_new_discovery_validate_suffix)){
 				def nextsuffix = rpuSvc.getNextSuffix([rputype:info.rputype, realpropertyid:info.rp.objid])
-				if (nextsuffix != null &&  info.suffix < nextsuffix)
-					throw new Exception('Suffix must be greater than or equal to ' + nextsuffix + '.')
+				
+				if (info.subsuffix) {
+					if (info.subsuffix < nextsuffix.subsuffix) {
+						throw new Exception('Post Script must be greater than or equal to ' + nextsuffix.subsuffix + '.')
+					}
+				} else if (info.suffix < nextsuffix.suffix) {
+					throw new Exception('Suffix must be greater than or equal to ' + nextsuffix.suffix + '.')
+				}
 			}
 
 			rpuSvc.validateSuffix( info.rputype, info.suffix )
 			info.fullpin = info.rp.pin + '-' + info.suffix 
 		}
+
 		def faas = initCapture(info)
 		faas.txntype = getTxnType(faas.txntype.objid)
 		faas.datacapture = false
@@ -1054,13 +1062,9 @@ class FAASService
 
 	void createRpu(faas){
 		if (allowSaveRpu(faas) && rpuSvc.findRpuInfoById(faas.rpu.objid) == null){
-			try{
-				rpuSvc.createRpu(faas.rpu)
-			}
-			catch(e){
-				e.printStackTrace()
-				rpuSvc.updateRpu(faas.rpu)	
-			}
+			rpuSvc.createRpu(faas.rpu)
+		} else {
+			rpuSvc.updateRpu(faas.rpu)	
 		}
 	}
 

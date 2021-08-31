@@ -61,6 +61,6 @@
 		<field name="landadjustmentid" required="true"/>
 		<field name="landrpuid"/>
 		<field name="param_objid" required="true"/>
-		<field name="value" required="true"/>
+		<field name="value" />
 	</element>
 </schema>

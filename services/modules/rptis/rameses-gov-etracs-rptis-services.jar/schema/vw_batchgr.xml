@@ -16,6 +16,7 @@
 		<field name="section" caption="Section" searchable="true" indexed="true" />
 		<field name="lgu_name" caption="LGU" indexed="true" />
 		<field name="barangay_name" caption="Barangay" indexed="true" />
+		<field name="barangay_pin" caption="PIN" searchable="true" indexed="true" />
 		<field name="classification_name" caption="Class" indexed="true" />
 		<field name="taskid" />
 		<field name="taskstate" />

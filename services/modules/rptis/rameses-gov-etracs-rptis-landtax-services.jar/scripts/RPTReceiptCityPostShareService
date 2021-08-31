@@ -48,6 +48,8 @@ class RPTReceiptCityPostShareService
 	@ProxyMethod
 	public void postShares(receipt) {
 		def ledger = em.findPaidLedger(receipt)
+		if (!ledger) ledger = em.findPaidCompromise(receipt)
+		if (!ledger) throw new Exception('Unable to load ledger. Check cashreceipt_rpt_share_forposting entry.')
 		buildShares(receipt, ledger)
 		saveShares(ledger)
 	}

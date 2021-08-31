@@ -23,15 +23,3 @@ where b.businessid = $P{businessid}
 	and a.appyear = $P{appyear} 
 	and a.state = 'COMPLETED' 
 order by a.txndate 
-
-
-[getPreviousTaxes]
-select 
-	alob.lobid as lob_objid, alob.name as lob_name, sum(br.amount) as amount 
-from business_application ba 
-	inner join business_application_lob alob on alob.applicationid = ba.objid 
-	inner join business_receivable br on (br.businessid = ba.business_objid and br.iyear = ba.appyear-1)  
-where ba.objid = $P{applicationid} 
-	and br.lob_objid = alob.lobid 
-	and br.taxfeetype = 'TAX' 
-group by alob.lobid, alob.name 

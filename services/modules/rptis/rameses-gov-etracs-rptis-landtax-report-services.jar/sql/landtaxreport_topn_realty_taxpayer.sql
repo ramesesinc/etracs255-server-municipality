@@ -18,7 +18,7 @@ from (
         inner join remittance rem on rem.objid = c.remittanceid 
         inner join collectionvoucher l on l.objid = rem.collectionvoucherid 
         left join cashreceipt_void cv on c.objid = cv.receiptid
-    where year(l.dtposted) = $P{year}
+    where l.controldate >= $P{startdate} and l.controldate < $P{enddate}
         and rl.rputype like $P{type}
         and cv.objid is null 
     group by case when c.payer_objid is null or c.payer_name = 'UNKNOWN' then c.paidby else c.payer_objid end
@@ -50,7 +50,7 @@ from (
         inner join remittance rem on rem.objid = c.remittanceid 
         inner join collectionvoucher l on l.objid = rem.collectionvoucherid 
         left join cashreceipt_void cv on c.objid = cv.receiptid
-    where year(l.dtposted) = $P{year}
+    where l.controldate >= $P{startdate} and l.controldate < $P{enddate}
         and rl.rputype like $P{type}
         and cv.objid is null 
     group by 

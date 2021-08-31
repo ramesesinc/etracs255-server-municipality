@@ -203,7 +203,11 @@ class LandTaxReportTaxClearanceService
                 it.ordate = dtSvc.parse('yyyy-MM-dd', it.ordate)
             }
 
-            if (it.minqtr == it.maxqtr) 
+            if ( it.minqtr == null && it.maxqtr == null ) 
+                it.period = 'FULL YEAR ' + it.year 
+            else if ( it.minqtr == 0 && it.maxqtr == 0 ) 
+                it.period = 'FULL YEAR ' + it.year 
+            else if (it.minqtr == it.maxqtr) 
                 it.period = it.minqtr + 'Q, ' + it.year 
             else if (it.minqtr == 1 && it.maxqtr == 4 || (it.minqtr == 0 || it.maxqtr == 0))
                 it.period = it.year + ''

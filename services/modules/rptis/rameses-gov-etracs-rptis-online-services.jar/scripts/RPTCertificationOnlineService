@@ -30,6 +30,9 @@ class RPTCertificationOnlineService {
 	@DataContext('faas')
 	def em_faas
 
+	@DataContext('faas_previous')
+	def em_faas_previous
+
 	@DataContext('rptcertification')
 	def em_cert
 
@@ -239,7 +242,7 @@ class RPTCertificationOnlineService {
 
 		params.faases.each {
 			validateFaas(it)
-			def ledger = em_ledger.select('lastyearpaid,lastqtrpaid,taxable,totalav,txntype.objid').find([faasid: it.objid]).first()
+			def ledger = getLedger(it)
 			if (ledger) {
 				it.rptcertificationid = params.certid 
 				it.refid = it.objid
@@ -258,11 +261,13 @@ class RPTCertificationOnlineService {
 		}
 
 		def faasledger = params.faases[0];
-		if (faasledger.lastyearpaid < currdate.year) {
-			throw new Exception('Ledger is not yet paid for the current year.')
-		}
-		if (faasledger.lastqtrpaid < currdate.qtr) {
-			throw new Exception('Ledger is not yet paid for the current quarter.')
+		if (reporttype.name == "fullypaid") {
+			if (faasledger.lastyearpaid < currdate.year) {
+				throw new Exception('Ledger is not yet paid for the current year.')
+			}
+			if (faasledger.lastqtrpaid < currdate.qtr) {
+				throw new Exception('Ledger is not yet paid for the current quarter.')
+			}
 		}
 
 		def treasurer = getTreasurer()
@@ -287,7 +292,29 @@ class RPTCertificationOnlineService {
         	reporttype		 : reporttype,
         	properties 		 : [reporttype: reporttype],
 			entityid 		 : params.faases[0].taxpayer.objid,
+			addlinfo		 : reporttype.title,
 		]
+	}
+
+	def getLedger(faas) {
+		def ledger = findLedger([faasid: faas.objid])
+		if (ledger) return ledger
+
+		//try ledger by prevfaas 
+		def prevfaas = em_faas_previous.find([faasid: faas.objid]).first();
+		if (prevfaas) {
+			ledger = findLedger([faasid: prevfaas.prevfaasid])
+			if (ledger) return ledger
+		}
+
+		//try faas.prevtdno 
+		return findLedger([prevtdno: faas.tdno])
+	}
+
+	def findLedger(findBy) {
+		return em_ledger.select('lastyearpaid,lastqtrpaid,taxable,totalav,txntype.objid')
+				.find(findBy)
+				.first()
 	}
 
 	def initNoa(params) {
@@ -329,7 +356,7 @@ class RPTCertificationOnlineService {
 	}
 
 	void validateFaas(entity) {
-		def fields = 'objid,state,effectivityyear,taxpayer.objid,taxpayer.name,taxpayer.address.text,administrator.name,administrator.address'
+		def fields = 'objid,state,tdno,effectivityyear,taxpayer.objid,taxpayer.name,taxpayer.address.text,administrator.name,administrator.address'
 		def faas = em_faas.select(fields).find([objid: entity.objid]).first()
 		if (!faas) {
 			//resolve faas by tdno

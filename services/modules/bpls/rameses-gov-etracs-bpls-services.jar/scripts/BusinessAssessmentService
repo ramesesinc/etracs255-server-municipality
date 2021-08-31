@@ -32,9 +32,6 @@ public class BusinessAssessmentService  {
 	@ActiveDB("business_application")
 	def bapp;
 
-	@ActiveDB("business_application_lob")
-	def business_application_lob;
-
 	@Service 
 	def self;
 
@@ -54,18 +51,6 @@ public class BusinessAssessmentService  {
 		//this is so we will not process derived infos.	
 		o.infos?.removeAll( o.infos.findAll{it.phase==null || it.phase > 1} );	
 		factBuilder.build(o, facts );
-
-		def lobFacts = facts.findAll{( it instanceof LOB )} 
-		if ( lobFacts ) {
-			// load previous tax per LOB to a new BusinessInfo fact 
-			business_application_lob.getPreviousTaxes([ applicationid: o.objid.toString() ]).each{ pp-> 
-				def ff = new BusinessInfo( 'decimal', pp.amount );
-				ff.objid = new java.rmi.server.UID().toString(); 
-				ff.name = 'PREV_BUSINESS_TAX'; 
-				ff.lob = lobFacts.find{( it.lobid == pp.lob?.objid )}
-				facts << ff; 
-			}
-		}
 
 		def req = [entity:o, facts: facts, taxfees: []];
 		//*********************************************************************

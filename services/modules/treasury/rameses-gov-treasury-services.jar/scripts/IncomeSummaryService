@@ -25,4 +25,11 @@ class IncomeSummaryService  {
 			income_summary_db.postItem( o ); 
 		} 
 	} 
+
+	@ProxyMethod
+	public void removeItems( param ) { 
+		if ( param.refid ) { 
+			income_summary_db.removeItemsByRef([ refid: param.refid ]); 
+		}
+	} 
 }

@@ -39,7 +39,7 @@ rpt.app.context=etracs25
   <module version="2.50" file="core/rameses-common2.jar"  />
   <module version="2.50" file="core/rameses-custom-impl.jar"  />
   <module version="2.50" file="core/rameses-jdbc16.jar"  />
-  <module version="2.51" file="core/rameses-seti.jar"  />
+  <module version="2.52" file="core/rameses-seti.jar"  />
 
   <module version="2.50" file="shared/client-system.jar"  />
   <module version="2.50" file="shared/client-ui-extended.jar"  />
@@ -48,8 +48,8 @@ rpt.app.context=etracs25
   <module version="2.50" file="shared/rameses-rules-mgmt.jar"  />
   <module version="2.50" file="shared/rameses-workflow-mgmt.jar"  />
   <module version="2.50" file="shared/rameses-enterprise.jar"  />
-  <module version="2.50" file="shared/rameses-enterprise-admin.jar"  />
-  <module version="2.50" file="shared/rameses-enterprise-admin-plugin.jar"  />
+  <module version="2.51" file="shared/rameses-enterprise-admin.jar"  />
+  <module version="2.51" file="shared/rameses-enterprise-admin-plugin.jar"  />
   <module version="2.50" file="shared/rameses-enterprise-financial.jar"  />
   <module version="2.50" file="shared/rameses-client-notification2.jar"  />
   <module version="2.50" file="shared/rameses-email-client.jar"  />

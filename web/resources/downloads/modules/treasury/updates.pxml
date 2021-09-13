@@ -1,0 +1,12 @@
+<app>
+<env>
+
+</env>
+<modules>
+  <module version="2.03" file="treasury/rameses-treasury-common.jar"  />
+  <module version="2.02" file="treasury/rameses-gov-depositslip.jar"  />
+  <module version="2.05" file="treasury/rameses-gov-treasury.jar"  />
+  <module version="2.03" file="treasury/rameses-gov-treasury-report.jar"  />
+  <module version="2.03" file="treasury/rameses-gov-treasury-tool.jar"  />
+</modules>
+</app>

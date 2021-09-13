@@ -15,13 +15,20 @@ class CashbookLiquidationReportService {
 	public def getReport( params ) { 
 		buildParams( params ); 
 
+		int includebalance = (params.includebalance.toString().matches('0|false') ? 0 : 1);
+		params.filter.includebalance = includebalance; 
+
 		def result = [:]; 
 		result.items = reportdb.getDetails( params.filter ); 
 
 		def header = params.remove('header'); 
 		header.BEGBALDR = header.BEGBALCR = header.BEGBALANCE = 0.0; 
 
-		def balinfo = reportdb.findBeginBalance( params.filter ); 
+		def balinfo = null; 
+		if ( includebalance == 1 ) {
+			balinfo = reportdb.findBeginBalance( params.filter ); 
+		}
+		
 		if ( balinfo?.balance ) { 
 			header.BEGBALDR = (balinfo.dr ? balinfo.dr : 0.0);
 			header.BEGBALCR = (balinfo.cr ? balinfo.cr : 0.0);

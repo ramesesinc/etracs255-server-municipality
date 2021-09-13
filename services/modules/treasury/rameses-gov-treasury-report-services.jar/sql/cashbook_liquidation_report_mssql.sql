@@ -33,6 +33,21 @@ from (
 		and r.liquidatingofficer_objid = $P{accountid} 
 		and rf.fund_objid = $P{fundid} 
 		and r.state = 'POSTED' 
+		and 1 = $P{includebalance} 
+	union all 
+	select 
+		r.controldate as refdate, r.collector_objid as userid, r.collector_name as username, 
+		r.controlno as refno, 'remittance' as reftype, rf.fund_objid as fundid, 
+		rf.amount as dr, 0.0 as cr, rf.amount, r.dtposted as sortdate, 0 as idx   
+	from collectionvoucher cv 
+		inner join remittance r on r.collectionvoucherid = cv.objid 
+		inner join remittance_fund rf on rf.remittanceid = r.objid 
+	where cv.controldate >= $P{startdate} 
+		and cv.controldate <  $P{enddate} 
+		and cv.liquidatingofficer_objid = $P{accountid} 
+		and rf.fund_objid = $P{fundid} 
+		and cv.state = 'POSTED' 
+		and 0 = $P{includebalance} 
 	union all 
 	select 
 		cv.controldate as refdate, cv.liquidatingofficer_objid as userid, cv.liquidatingofficer_name as username, 

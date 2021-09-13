@@ -3,6 +3,7 @@
 
 </env>
 <modules>
+  <module version="2.01" file="core/osiris2-client-themes.jar"  />
   <module version="2.01" file="core/osiris2-client-ui.jar"  />
   <module version="2.01" file="core/osiris2-draw.jar"  />
   <module version="2.01" file="core/osiris2-framework.jar"  />

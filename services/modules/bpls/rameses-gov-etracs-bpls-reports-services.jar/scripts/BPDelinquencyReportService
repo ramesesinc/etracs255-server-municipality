@@ -1,0 +1,109 @@
+import com.rameses.annotations.*; 
+
+class BPDelinquencyReportService {
+	
+	@DataContext('report_bpdelinquency') 
+	def reportdb; 
+
+	@DataContext('barangay') 
+	def brgydb; 
+
+	@Env 
+	def env; 
+
+	@Service('DateService') 
+	def dateSvc; 
+
+	@ProxyMethod
+	public def getStatus() { 
+		return [
+			current : reportdb.find([ state: 'APPROVED' ]).orderBy('dtfiled desc').first(), 
+			pending : reportdb.where(" state NOT IN ('APPROVED') ").orderBy('dtfiled desc').first() 
+		]; 		
+	} 
+
+	@ProxyMethod 
+	public def init( params ) { 
+		def o = [ 
+			username : (env.FULLNAME ? env.FULLNAME : params.username),  
+			userid   : (env.USERID ? env.USERID : params.userid), 
+			objid    : 'REPORT'+ new java.rmi.server.UID(), 
+			dtfiled  : dateSvc.getServerDate(),
+			state    : 'DRAFT' 
+		]; 
+		reportdb.create( o ); 
+		return o; 
+	} 
+
+	@ProxyMethod 
+	public def open( params ) {
+		return reportdb.find([ objid: params.objid ]).first(); 
+	}
+
+	@ProxyMethod
+	public void removeReport( params ) {
+		reportdb.clearItems([ reportid: params.objid ]); 
+		reportdb.find([ objid: params.objid ]).delete();
+	}
+
+	@ProxyMethod
+	public def approve( params ) {
+		if ( !params.objid ) throw new Exception('objid parameter is required');
+
+		def o = reportdb.find([ objid: params.objid ]).first(); 
+		if ( o.state.toString().toUpperCase() == 'COMPLETED' ) { 
+			reportdb.find([ objid: params.objid ]).update([ state: 'APPROVED' ]);
+			return reportdb.find([ objid: params.objid ]).first(); 			
+		} 
+
+		throw new Exception('The build report must be in COMPLETED state'); 
+	} 
+
+	@ProxyMethod 
+	public def build( params ) { 
+		if ( !params.reportid ) throw new Exception('reportid parameter is required');
+
+		def o = reportdb.find([ objid: params.reportid ]).first(); 
+		if ( !o ) throw new Exception('Report data does not exist'); 
+
+		o.reportid = params.reportid; 
+		reportdb.build( o ); 
+		o.barangays = reportdb.getBarangays(); 
+		return o; 
+	} 
+
+
+	@ProxyMethod 
+	public def initReport( params ) {
+		return [ 
+			barangays: brgydb.select('objid,name,pin').where(' 1=1 ').orderBy(' pin ').list()  
+		]; 
+	}	
+
+	@ProxyMethod 
+	public def getReport( params ) { 
+		def builddate = null; 
+		if ( !params.reportid ) {
+			def o = reportdb.find([ state: 'APPROVED' ]).orderBy(' dtfiled desc').first(); 
+			if ( o ) { 
+				builddate = o.dtfiled; 
+				params.reportid = o.objid; 
+			} 
+		}
+
+		if ( params.barangay?.objid ) {
+			params.barangayid = params.barangay.objid; 
+		}
+
+		params.filter = ''; 
+		if ( params.barangayid ) {
+			params.filter = ''' AND baddr.barangay_objid=$P{barangayid} ''';
+		}
+
+		params.currentyear = dateSvc.getServerYear(); 
+		return [ 
+			reportdata: reportdb.getReport( params ), 
+			builddate : builddate 
+		]; 
+	} 
+}

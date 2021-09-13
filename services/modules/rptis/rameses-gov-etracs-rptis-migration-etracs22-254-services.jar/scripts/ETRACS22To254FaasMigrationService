@@ -1,0 +1,685 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import java.rmi.server.UID;
+import com.rameses.util.*;
+
+class ETRACS22To254FaasMigrationService 
+{
+
+	@ActiveDB('etracs254rpt')
+	def em254
+
+	@ActiveDB(value='etracs22rpt', em='etracs22')
+	def em22
+
+	@DataContext('faas')	
+	def em_faas
+
+	@DataContext('faas_list')	
+	def em_faas_list
+
+	@DataContext('faas_previous')	
+	def em_faas_previous
+
+	@DataContext('faas_task')
+	def em_faas_task
+
+	@DataContext('faas_signatory')
+	def em_faas_signatory
+
+	@DataContext('realproperty')
+	def em_realproperty
+
+	@DataContext('rpu')
+	def em_rpu
+
+	@Service('DateService')
+	def dtSvc 
+
+	@Service()
+	def self 
+
+	@Service('ETRACS22To254UtilService')
+	def util 
+
+	@DataContext('propertyclassification')
+	def em_classification
+
+	@DataContext('exemptiontype')
+	def em_exemptiontype 
+
+	@ActiveDB('faasannotation')
+	def em_annotation
+
+	@Service('NumberService')
+	def numSvc 
+
+	@Service('OrgService')
+	def orgSvc 
+
+
+	@ProxyMethod
+	public void initMigrationTables(  ) {
+		try{
+			try{ em22.dropXFaasTable() }catch(e){}
+			try{ em22.createXFaasTable() }catch(e){}
+			try{ em22.createXFaasRpuTypeIndex() }catch(e){}
+			try{ em22.createXFaasRyIndex() }catch(e){}
+		}
+		catch(e){
+			println 'XFAAS table already exist.'
+		}
+	}
+
+	@ProxyMethod
+	public void insertXFaasData(  ) {
+		println 'Transferring FAAS for migration to XFAAS table.'
+		em22.insertXFaasData()
+	}
+
+	@ProxyMethod
+	public void deleteXFaasMigratedData(  ) {
+		println 'Deleting mgirated FAAS from XFAAS table.'
+		em22.deleteXFaasMigratedData()
+		println 'Migration initialized.'
+	}
+
+
+
+	@ProxyMethod
+	public List getFaasesForMigration(params){
+		if (!params.count) 
+			throw new Exception('Count is required')
+
+		params._limit = params.count 
+	 	return em22.getFaasesForMigration(params)
+	}
+
+
+    @ProxyMethod
+    public def migrateFaasData(params) {
+		if (!params.rputype) throw new Exception('RPU Type is required')
+		if (!params.count) throw new Exception('Count is required')
+
+	    def faases = getFaasesForMigration(params);
+    	println 'Migrating ' + params.rputype + ' FAAS.... ' + faases.size()
+
+        faases.each{it->
+			try{
+				self.migrateFaas(it);
+			}
+			catch(e){
+				util.logFaasError(it, e)
+			}
+			finally{
+				util.deleteMigratedXFaas(it)
+			}
+        }
+        return faases.size()
+    }  
+
+
+	@ProxyMethod
+	public def migrateFaasByTdNo(tdno) {
+		println 'tdno => ' + tdno 
+		def faas = em22.findFaasByTdno([tdno:tdno])
+		if (!faas)
+			throw new Exception('FAAS does not exist for TD No. ' + tdno + '.')
+		self.migrateFaas(faas)
+	}
+
+    /*================================================================================
+    * Migrates FAAS to v2.5. This method is also  intercepted
+    * by helper service to migrate rpu related data.
+    *================================================================================*/
+	@ProxyMethod
+	public def migrateFaas( faas ) {
+		def faas22 = em22.findFaasByid([objid:faas.objid.trim()])	
+		faas22.info = em22.serializer.read(faas22.info)
+		faas22.extended = em22.serializer.read(faas22.extended)
+		faas22.rp = em22.serializer.read(faas22.rp)
+		faas22.rpu = em22.serializer.read(faas22.rpu)
+		faas22.previousfaases = em22.serializer.read( faas22.previousfaases == null ? [] : faas22.previousfaases) 
+		doMigrateRealProperty(faas22)
+		doMigrateRpu(faas22)
+		doMigrateFaas(faas22)
+		doMigrateFaasTasks(faas22)
+		return faas22 
+	}
+
+
+	@ProxyMethod
+    public def migratePreviousFaasData(params) {
+		if (!params.count) 
+			throw new Exception('Count is required')
+
+		def faases = []
+		if (params.faases){
+			faases = params.faases
+		}
+		else{
+			params._limit = params.count 
+		    faases = em22.getPrevFaasesForMigration(params);
+	    	println 'Migrating Previous FAAS.... ' + faases.size()
+		}
+
+        faases.each{it->
+        	println 'Migrating Previous FAAS ' + it.objid 
+			def faas22 = em22.findFaasPrevInfoById(it)	
+			if (faas22.previousfaases == null ) 
+				faas22.previousfaases = '[]'
+
+			try{
+				faas22.previousfaases = em22.serializer.read(faas22.previousfaases)
+				faas22.previousfaases.each{
+					def prevfaas = [faasid:faas22.objid, prevfaasid:it.faasid]
+					if (!existPreviousFaas(prevfaas)){
+						def pf = em22.findPreviousFaas([objid:it.faasid])
+						if (pf){
+							prevfaas.putAll(pf)
+						}
+						em_faas_previous.create(prevfaas)
+					}
+				}
+				em22.logMigratedPreviousFaas(faas22)
+			}
+			catch(e){
+				util.logPrevFaasError(faas22, e)
+			}
+        }
+        return faases.size()
+    }  
+
+
+	/*==============================================================
+	*
+	*  MIGRATE REAL PROPERTY
+	*
+	*==============================================================*/
+	void doMigrateRealProperty(faas22){
+		def rpid = faas22.rp.objid 
+		if ( ! rpid ){
+			rpid = faas22.objid 
+			if (faas22.rpu.realpropertyid)
+				rpid = faas22.rpu.realpropertyid
+		}
+
+		//fix rp not updated during GR 
+		rpid += ('-'+faas22.rpu.ry )
+
+		faas22.rp.objid = rpid 
+		faas22.rpu.realpropertyid = rpid 
+		faas22.realpropertyid = rpid 		
+
+		if (faas22.rpu.rputype != 'land')
+			return 
+
+		if (existRealProperty(faas22.rp))
+			return 
+
+		def rp = faas22.rp 
+		def newrp = [
+			objid 			: rp.objid,
+			state 			: faas22.docstate,
+			autonumber 		: 0,
+			pintype 		: rp.pintype,
+			pin 			: rp.pin,
+			section 		: rp.section, 
+			parcel 			: rp.parcel, 
+			ry 				: faas22.rpu.ry, 
+			claimno  		: (faas22.info.claimno != '-' ? faas22.info.claimno : null),  
+			purok 			: rp.purok, 
+			surveyno 		: rp.surveyno, 
+			cadastrallotno  : rp.cadastrallotno,
+			blockno 		: rp.blockno, 
+			street 			: rp.street, 
+			barangayid 		: rp.barangayid.replace('-',''),
+			barangay 		: [objid:rp.barangayid.replace('-','')],
+			north 			: rp.north, 
+			east			: rp.east, 
+			south			: rp.south, 
+			west			: rp.west, 
+			lgutype			: rp.lgutype, 
+			lguid			: orgSvc.getRoot().objid,
+			previd			: rp.previd, 
+		]
+		em_realproperty.create(newrp)
+	}
+
+	boolean existRealProperty(rp){
+		return em_realproperty.find([objid:rp.objid]).first() != null 
+	}
+
+
+	/*==============================================================
+	*
+	*  MIGRATE RPU 
+	*
+	*==============================================================*/
+	void doMigrateRpu(faas22){
+		def rpu = faas22.rpu 
+		rpu.realpropertyid = faas22.rp.objid 
+
+		if (!rpu.objid){
+			rpu.objid = faas22.objid 
+		}
+		rpu.objid += ('-' + rpu.ry)
+		faas22.rpuid = rpu.objid 
+
+		if (existRpu(faas22.rpu))
+			return 
+
+		resolveClassification(rpu)
+		resolveExemptionType(rpu)
+
+		def newrpu = [
+			objid 			: rpu.objid,
+			state 			: faas22.docstate,
+			realpropertyid 	: rpu.realpropertyid,
+			rputype 		: rpu.rputype,
+			ry 				: rpu.ry,
+			fullpin 		: rpu.fullpin,
+			suffix 			: rpu.suffix,
+			subsuffix 		: rpu.subsuffix,
+			classification	: [objid:rpu.classid],
+			exemptiontype   : (rpu.exemptid ? [objid:rpu.exemptid] : null),
+			taxable 		: rpu.taxable,
+			totalareaha 	: rpu.totalareaha,
+			totalareasqm 	: rpu.totalareasqm,
+			totalbmv 		: rpu.totalbmv,
+			totalmv 		: rpu.totalmv,
+			totalav 		: rpu.totalav,
+			hasswornamount 	: util.toBoolean(rpu.info.swornstatement, false),
+			swornamount 	: (rpu.info.swornamount == null ? 0.0 : util.toDecimal(rpu.info.swornamount)),
+			useswornamount 	: util.toBoolean(rpu.info.useswornamount, false),
+			previd 			: rpu.previd,
+			rpumasterid 	: rpu.rpumasterid,
+			reclassed 		: false,
+		]
+		em_rpu.create(newrpu)
+	}
+
+
+	boolean existRpu(rpu){
+		return em_rpu.find([objid:rpu.objid]).first() != null 
+	}
+
+
+	void resolveClassification(rpu){
+		def cls = null
+
+		if (rpu.classid) {
+			cls = em_classification.read([objid:rpu.classid])
+			if (!cls)
+				cls = em_classification.find([code:rpu.classcode]).first()
+			if (!cls)
+				cls = em_classification.find([name:rpu.classname]).first()
+
+			if (!cls){
+				cls = [:]
+				if (rpu.classid){
+					cls = [
+						objid	: rpu.classid, 
+						state   : 'APPROVED',
+						code    : rpu.classcode,
+						name 	: rpu.classname,
+						special : 0,
+						orderno : 100,
+					]
+					try{
+						em_classification.create(cls)
+					}
+					catch(e){
+						cls.code += '.'
+						cls.name += '.'
+						em_classification.create(cls)
+					}
+				}
+			}
+		}
+		else {
+			cls = em_classification.find([name:'RESIDENTIAL']).first()
+		}
+		rpu.classid = cls.objid 
+		rpu.classcode = cls.code 
+		rpu.classname = cls.name
+	}
+
+	def findClass(rpu, searchtext){
+		def list = em_classification.getList([searchtext:searchtext])
+		if (list)
+			return list[0]
+		return null 
+	}
+
+
+	void resolveExemptionType(rpu){
+		if (!rpu.exemptid)
+			return 
+
+		def exempt = em_exemptiontype .read([objid:rpu.exemptid])
+		if (!exempt){
+			exempt = [
+				objid	: rpu.exemptid,
+				state 	: 'APPROVED',
+				code 	: rpu.exemptcode,
+				name 	: rpu.exemptname,
+				order 	: 100, 
+			]
+			em_exemptiontype .create(exempt)
+		}
+	}
+
+
+	/*==============================================================
+	*
+	*  MIGRATE FAAS 
+	*
+	*==============================================================*/
+	void doMigrateFaas(faas22)	{
+		if (existFaas(faas22))
+			return 
+		
+		def taxpayer = migrateEntity(faas22)
+		def addr = taxpayer.address 
+		taxpayer.address = addr.text 
+
+		if (faas22.rpu.rputype != 'land')
+			updateFaasRealPropertyInfo(faas22)
+
+		def pdate = dtSvc.parseDate(faas22.info.dtapproved, null)
+		def newfaas = [
+			objid 			: faas22.objid,
+			state 			: faas22.docstate,
+			datacapture 	: faas22.info.datacapture,
+			autonumber 		: 0, 
+			tdno 			: faas22.info.tdno,
+			utdno 			: (faas22.info.tdno ? faas22.info.tdno : faas22.objid[-20..-1]), 
+			txntype 		: [objid:getTxnType(faas22)],
+			effectivityyear : faas22.info.effectivityyear,
+			effectivityqtr 	: faas22.info.effectivityqtr,
+			titletype 		: faas22.titletype,
+			titleno 		: faas22.titleno,
+			titledate 		: faas22.titledate,
+			rpuid 			: faas22.rpu.objid,
+			realpropertyid 	: faas22.rp.objid,
+			fullpin 		: faas22.rpu.fullpin,
+			taxpayer 	    : taxpayer,
+			owner    		: [name:faas22.info.ownername, address:faas22.info.owneraddress],
+			administrator  	: getAdministratorInfo(faas22),
+			beneficiary  	: null,
+			memoranda 		: faas22.info.memoranda,
+			cancelnote 		: faas22.info.cancelnote,
+			restrictionid 	: faas22.info.restrictionid,
+			backtaxyrs 		: faas22.info.backtaxyrs,
+			prevtdno 		: faas22.info.prevtdno,
+			prevpin 		: faas22.info.prevpin,
+			prevowner 		: faas22.info.prevowner,
+			prevadministrator 	: faas22.info.prevadministrator,
+			prevav 			: faas22.info.prevav,
+			prevmv 			: faas22.info.prevmv,
+			prevareasqm 	: faas22.info.prevareasqm == null ? 0.0 : faas22.info.prevareasqm,
+			prevareaha 		: faas22.info.prevareaha == null ? 0.0 : faas22.info.prevareaha,
+			preveffectivity : faas22.info.preveffectivity,
+			cancelreason 	: faas22.info.cancelreason,
+			canceldate 		: faas22.info.canceldate,
+			cancelledbytdnos : faas22.info.cancelledbytdnos,
+			lguid 			: orgSvc.getRoot().objid ,
+			originlguid     : orgSvc.getRoot().objid,
+			lgutype 		: faas22.extended.lgutype,
+			txntimestamp 	: faas22.info.txntimestamp,
+			cancelledtimestamp 	: faas22.info.cancelledtimestamp,
+			name 			: getNameInfo(faas22),
+			dtapproved 		: faas22.info.dtapproved,
+			ryordinanceno 	: (faas22.info.ryordinanceno == null ? '-' : faas22.info.ryordinanceno),
+			ryordinancedate : faas22.info.ryordinancedate,
+			year 			: pdate.year,
+			qtr 			: pdate.qtr,
+			month 			: pdate.month,
+			day 			: pdate.day,
+		]
+
+		newfaas.prevav 		= numSvc.format('#,##0.00', newfaas.prevav)
+		newfaas.prevmv 		= numSvc.format('#,##0.00', newfaas.prevmv)
+		newfaas.prevareasqm = numSvc.format('#,##0.00', newfaas.prevareasqm)
+		newfaas.prevareaha 	= numSvc.format('#,##0.000000', newfaas.prevareaha)
+
+		if (faas22.docstate=='CANCELLED'){
+			if (faas22.info.canceldate && faas22.info.canceldate.trim().length() > 0){
+				def cdate = dtSvc.parseDate(faas22.info.canceldate, null)
+				newfaas.cancelledyear = cdate.year
+				newfaas.cancelledqtr = cdate.qtr
+				newfaas.cancelledmonth = cdate.month 
+				newfaas.cancelledday = cdate.day
+				newfaas.canceldate = cdate.date 
+			}
+		}
+		else{
+			newfaas.canceldate = null
+		}
+		em_faas.create(newfaas)
+		em254.insertFaasList(newfaas)
+		migrateSignatory(newfaas)
+
+		if (faas22.info.datacapture == true || faas22.info.datacapture == 1){
+			migratePreviousFaas(newfaas)
+		}
+	}
+
+	void migratePreviousFaas(newfaas){
+		def pf = [:]
+		pf.objid = newfaas.objid 
+		pf.faasid = newfaas.objid 
+		pf.prevfaasid = null 
+		pf.prevrpuid = null 
+		pf.prevtdno = newfaas.prevtdno
+		pf.prevpin = newfaas.prevpin
+		pf.prevowner = newfaas.prevowner
+		pf.prevadministrator = newfaas.prevadministrator
+		pf.prevav = newfaas.prevav
+		pf.prevmv = newfaas.prevmv
+		pf.prevareasqm = newfaas.prevareasqm
+		pf.prevareaha = newfaas.prevareaha
+		pf.preveffectivity = newfaas.preveffectivity
+		em_faas_previous.create(pf)
+	}
+
+	def getTxnType(faas22){
+		if (faas22.info.txn)
+			return faas22.info.txn.txntype 
+		if (faas22.info.txnype)
+			return faas22.info.txnype
+		return 'DC'
+	}
+
+	void updateFaasRealPropertyInfo(faas22){
+		def rp = em_realproperty.select('objid').find([objid:faas22.rp.objid]).first()
+		if (!rp)
+			rp = em_realproperty.select('objid').find([pin:faas22.rp.pin]).first()
+		if (!rp){
+			println 'RealProperty -> ' + faas22.rp.objid + ' : ' + faas22.rp.pin 
+			throw new Exception('Real Property does not exists')
+		}
+		faas22.rp.objid = rp.objid 
+		faas22.realpropertyid = rp.objid 
+	}
+
+	
+	void migrateSignatory(faas){
+		def sig = em_faas_signatory.find([objid:faas.objid]).first()
+		if (!sig){
+			sig = em22.findSignatoryFromFaasList(faas)
+			sig.objid = faas.objid
+			em_faas_signatory.create(sig)
+		}
+	}
+
+
+	def getNameInfo(faas22){
+		def len = faas22.info.ownername.length()
+		if (len >= 25) len = 25
+		return faas22.info.ownername.substring(0,len)
+	}
+
+	def getAdministratorInfo(faas22){
+		if (faas22.info.administratorname)
+			return [
+				objid : faas22.info.administratorid,
+				name : faas22.info.administratorname,
+				address : faas22.info.administratoraddress,
+			]
+	}
+
+
+	boolean existPreviousFaas(prevfaas){
+		return em_faas_previous.find([faasid:prevfaas.faasid]).first() != null
+	}
+
+	void doMigrateFaasTasks(faas22){
+		def faaslist = em22.findFaasListById(faas22)
+		if (faaslist){
+			def task = [refid:faaslist.objid, dtsigned:faaslist.issuedate]
+			task.assignee = [name:faaslist.appraisedby, title:faaslist.appraisedbytitle]
+			task.type = 'appraiser'
+			migrateTask(task)
+
+			task.assignee = [name:faaslist.approvedby, title:faaslist.approvedbytitle]
+			task.type = 'approver'
+			migrateTask(task)
+		}
+	}
+
+	void migrateTask(task){
+		def sid = task.refid + task.type
+		if (!existTask(sid)){
+			def t = [
+				objid  : sid,
+				refid  : task.refid, 
+				state  : task.type, 
+				startdate : task.dtsigned, 
+				enddate : task.dtsigned, 
+				assignee_name : task.assignee.name,
+				assignee_title : task.assignee.title,
+				actor_name    : task.assignee.name,
+				actor_title    : task.assignee.title
+			]
+			em_faas_task.create(t)
+		}
+	}
+
+	boolean existTask(sid){
+		return em_faas_task.find([objid:sid]).first() != null 
+	}
+
+	boolean existFaas(faas){
+		return em_faas.select('objid').find([objid:faas.objid]).first() != null 
+	}
+
+
+
+	/*======= ENTITY ===========================================*/
+
+	@DataContext('entity')
+	def em_entity 
+
+	@DataContext('entityindividual')
+	def em_individual 
+
+	@ActiveDB('entityjuridical')
+	def em_juridical
+
+	@ActiveDB('entitymultiple')
+	def em_multiple 
+
+
+	def migrateEntity(faas22){
+		def taxpayer = [objid:faas22.info.taxpayerid]
+		def entity = em_entity.find([objid:taxpayer.objid]).first() 
+		if (!entity){
+			entity = em22.findEntityById(taxpayer)
+			if (entity.info == null || entity.info.toString().trim().length()==0 || entity.info == '"[:]"') {
+				entity.info = '[:]'
+			}
+			entity.info = em22.serializer.read(entity.info)
+
+			entity.lastname = entity.info.lastname
+			entity.firstname = entity.info.firstname
+			entity.middlename = entity.info.middlename
+			entity.fullname = entity.info.fullname 
+			entity.type = entity.type.toUpperCase()
+			if ('individual'.equalsIgnoreCase(entity.type)){
+				if (!entity.lastname || !entity.firstname)
+					entity.type = 'MULTIPLE'
+			}
+
+			if (!entity.address || 	!entity.address.text?.trim() ){
+				entity.address = [objid:entity.objid, street:'-', text:'-']
+			}
+
+			entity.address.type = 'local'
+
+			if ('individual'.equalsIgnoreCase(entity.type))
+				em_individual.create(entity)
+			else if ('juridical'.equalsIgnoreCase(entity.type))
+				em_juridical.create(entity)
+			else if ('multiple'.equalsIgnoreCase(entity.type))
+				em_multiple.create(entity)
+			else 
+				throw new Exception('Invalid entity type')
+		}
+
+		return entity 
+	}	
+
+
+	/* ============== ANNOTATION ===================*/
+	@ProxyMethod
+	public void initAnnotationMigrationTables(  ) {
+		try{
+			try{ em22.dropFaasAnnotationMigrateTable() }catch(e){}
+			try{ em22.dropFaasAnnotationMigrateLogTable() }catch(e){}
+			try{ em22.dropXFaasAnnotationTable() }catch(e){}
+			try{ em22.createFaasAnnotationMigrateTable() }catch(e){}
+			try{ em22.createFaasAnnotationMigrateLogTable() }catch(e){}
+			try{ em22.createXFaasAnnotationTable() }catch(e){}
+			em22.insertXFaasAnnotation()
+		}
+		catch(e){
+			println 'XFAAS table already exist.'
+		}
+	}
+
+
+	@ProxyMethod
+	public def migrateFaasAnnotations( params ) {
+		if (!params.count) throw new Exception('Count is required')
+
+	    def annotations = em22.getAnnotationsForMigration(params)
+    	println 'Migrating Annotations .... ' + annotations.size()
+
+        annotations.each{it->
+			try{
+				def annotation = em22.findAnnotationById(it)
+				if (annotation){
+					resolveAnnotationType(annotation.annotationtype)
+					em_annotation.save(annotation)
+				}
+			}
+			catch(e){
+				em22.logAnnotationError([objid:it.objid, log:e.message])
+			}
+			finally{
+				em22.deleteXFaasAnnotation(it)
+			}
+        }
+        return annotations.size()
+	}
+
+	void resolveAnnotationType(annotationtype){
+		def annotype = em254.findAnnotationTypeById(annotationtype)
+		if (!annotype){
+			em254.insertAnnotationType(annotationtype)
+		}
+	}
+	
+}

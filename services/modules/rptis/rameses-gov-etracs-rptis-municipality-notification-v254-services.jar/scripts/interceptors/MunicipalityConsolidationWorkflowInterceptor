@@ -1,0 +1,25 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+
+class MunicipalityConsolidationWorkflowInterceptor
+{
+	@Env
+	def env
+
+    @Service('MunicipalityConsolidationSupportService')
+    def svc 
+
+	@Service('ConsolidationSupportService')
+	def supportSvc	
+
+
+	@After(pattern="ConsolidationWorkflowService.signal", eval="#{args[0].state=='forprovsubmission' && args[0].action=='completed'}", index=10000) 
+	public void submitToProvince( evt ) {
+        def consolidation = evt.args[0].data;
+        def consolidationdata = supportSvc.buildConsolidationData(consolidation)
+        svc.submitToProvince(consolidationdata)
+        println 'Submitted consolidation to province.'
+	}
+
+}
+

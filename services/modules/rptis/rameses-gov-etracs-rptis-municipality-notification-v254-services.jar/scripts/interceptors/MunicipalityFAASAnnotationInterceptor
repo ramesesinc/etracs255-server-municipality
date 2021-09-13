@@ -1,0 +1,47 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+
+class MunicipalityFAASAnnotationInterceptor
+{
+	@Env
+	def env
+
+    @Service('RPTNotificationService')
+    def svc 
+
+    @Service('FAASAnnotationService')
+    def annotationSvc 
+
+	@After(pattern="FAASAnnotationService.approve", eval="#{result.isremote==null}") 
+	public void submitAnnotationToProvince( evt ) {
+		def annotation = evt.result
+        annotation.image = annotationSvc.getImage(annotation)
+        annotation.isremote = true
+        
+		def asyncreq = svc.createAsyncRequest('ProvinceFAASAnnotationRemoteService', 'postAnnotation', annotation, svc.buildEnvMap(env))
+        def msg = svc.createAsyncMessage(asyncreq[0])
+        msg.filetype    = 'faasannotation'
+        msg.message     = 'Create FAAS annotation.'
+        msg.messagetype = 'create-annotation'
+        svc.sendAsyncMessage(msg)
+        println 'Submit municipality approved annotation to Province....'
+	}
+
+
+    @After(pattern="CancelAnnotationService.approve", eval="#{result.isremote==null}") 
+    public void submitCancelAnnotationToProvince( evt ) {
+        def annotation = evt.result
+        annotation.isremote = true
+        
+        def asyncreq = svc.createAsyncRequest('ProvinceFAASAnnotationRemoteService', 'postCancelAnnotation', annotation, svc.buildEnvMap(env))
+        def msg = svc.createAsyncMessage(asyncreq[0])
+        msg.filetype    = 'cancelannotation'
+        msg.message     = 'Create FAAS annotation cancellation.'
+        msg.messagetype = 'create-cancelannotation'
+        msg.txnid = annotation.objid
+        msg.txnno = annotation.txnno
+        svc.sendAsyncMessage(msg)
+        println 'Submit municipality approved cancel annotation to Province....'
+    }    
+}
+

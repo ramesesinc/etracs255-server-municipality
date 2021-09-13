@@ -1,0 +1,20 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+
+class MunicipalityBatchGRWorkflowInterceptor
+{
+	@Env
+	def env
+
+    @Service('MunicipalityBatchGRSupportService')
+    def svc 
+
+    @After(pattern="BatchGRWorkflowService.signal", eval="#{args[0].state=='forprovsubmission' && args[0].action=='completed'}", index=10000) 
+	public void submitToProvince( evt ) {
+		def batchgr = evt.args[0].data;
+        svc.submitToProvince(batchgr)
+        println 'Submitted batchgr to province.'
+	}
+
+}
+

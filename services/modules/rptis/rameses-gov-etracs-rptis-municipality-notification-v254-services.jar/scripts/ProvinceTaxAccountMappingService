@@ -1,0 +1,36 @@
+import com.rameses.annotations.*;
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+class ProvinceTaxAccountMappingService
+{
+	@ActiveDB('province_taxacct_mapping')
+	def em
+
+	@ProxyMethod
+	public def open(  ) {
+		def entity = em.findById([:])
+		if (!entity)
+			entity = [objid:'PROVINCE']
+		return entity
+	}
+
+	@ProxyMethod
+	public void save( mapping ) {
+		mapping.objid = 'PROVINCE'
+		em.save(mapping)	
+	}
+
+	
+	@ProxyMethod 
+	public void buildAccounts( params ) {
+		def stats = em.findProvinceStats(); 
+		if ( stats?.totalcount > 0 ) { 
+			em.buildItemAccounts(); 
+			em.removeAccountMappings(); 
+			em.buildAccountMappings(); 
+		} else { 
+			throw new Exception( 'No available province' ); 
+		}
+	}
+}

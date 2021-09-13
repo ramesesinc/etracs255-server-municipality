@@ -1,0 +1,33 @@
+import com.rameses.annotations.*; 
+
+class BusinessPermitInterceptor { 
+
+	@ActiveDB('business') 
+	def business_db; 
+
+	@ActiveDB('business_application') 
+	def app_db;
+
+	@Service('BusinessPermitService') 
+	def permitSvc; 
+
+
+	@After( pattern="BusinessPermitService.create", index=-9999 )
+	public void afterCreate( evt ) { 
+		def perm = evt.result; 
+		perm.lobs = permitSvc.buildPermitLOB([ permitid: perm.objid ]); 
+
+		def p = [ objid: perm.objid ];
+		def o = app_db.read([ objid: perm.applicationid ]); 
+		if ( o ) {
+			o.permit = p; 
+			app_db.update( o );   
+		} 
+
+		o = business_db.read([ objid: perm.businessid ]); 
+		if ( o ) {
+			o.permit = p; 
+			business_db.update( o );  
+		} 
+	}
+}

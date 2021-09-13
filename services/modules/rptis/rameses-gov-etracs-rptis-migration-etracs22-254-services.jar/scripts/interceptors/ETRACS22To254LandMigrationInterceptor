@@ -1,0 +1,395 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import java.rmi.server.UID;
+import com.rameses.util.*;
+
+class ETRACS22To254LandMigrationInterceptor 
+{
+	@ActiveDB('landrpu')	
+	def landrpuEm 
+
+	@ActiveDB('planttreerpu')
+	def plantTreeEm 
+
+	@ActiveDB('etracs254rpt')
+	def em254
+
+	@ActiveDB('etracs254rpt_land')
+	def em254land
+
+	@ActiveDB(value='etracs22rpt', em='etracs22')
+	def em22
+
+	@Service('ETRACS22To254UtilService')
+	def util
+
+	
+
+	@After(pattern="ETRACS22To254FaasMigrationService.migrateFaas", eval="#{result.rpu.rputype == 'land'}")
+	public void migrateLandRpu(evt){
+		def faas22 = evt.result 
+		try{
+			doMigrateLandRpu(faas22.rpu)
+			doMigrateLandDetail(faas22.rpu)
+			doMigrateLandAdjustments(faas22.rpu, faas22.rpu.info.adjustments, faas22.rpu.objid, null, 'LV')
+			doMigratePlantTrees(faas22.rpu)		
+			doMigrateAssessment(faas22.rpu)
+			util.logMigratedFaas(faas22)
+			println 'Land FAAS ' + faas22.objid + ' successfully migrated.'
+		}
+		catch(e){
+			util.logFaasError(faas22, e)
+		}
+		finally{
+			util.deleteMigratedXFaas(faas22)
+		}
+	}
+
+	void doMigrateLandRpu(rpu){
+		if (!existLandRpu(rpu)){
+			def newrpu = [
+				objid 			: rpu.objid,
+				idleland 		: util.toBoolean(rpu.info.idleland, false),
+				totallandbmv 	: rpu.info.landtotal.basemarketvalue,
+				totallandmv 	: rpu.info.landtotal.marketvalue,
+				totallandav 	: rpu.info.landtotal.assessedvalue,
+				totalplanttreebmv 	: rpu.info.planttotal.basemarketvalue,
+				totalplanttreeadjustment : rpu.info.planttotal.adjustment,
+				totalplanttreemv 	: rpu.info.planttotal.marketvalue,
+				totalplanttreeav 	: rpu.info.planttotal.assessedvalue,
+				landvalueadjustment : rpu.info.landvalueadjustment,
+			]
+
+			newrpu.totallandbmv = (newrpu.totallandbmv == null ? 0.0 : newrpu.totallandbmv)
+			newrpu.totallandmv = (newrpu.totallandmv == null ? 0.0 : newrpu.totallandmv)
+			newrpu.totallandav = (newrpu.totallandav == null ? 0.0 : newrpu.totallandav)
+			newrpu.totalplanttreebmv = (newrpu.totalplanttreebmv == null ? 0.0 : newrpu.totalplanttreebmv)
+			newrpu.totalplanttreeadjustment = (newrpu.totalplanttreeadjustment == null ? 0.0 : newrpu.totalplanttreeadjustment)
+			newrpu.totalplanttreemv = (newrpu.totalplanttreemv == null ? 0.0 : newrpu.totalplanttreemv)
+			newrpu.totalplanttreeav = (newrpu.totalplanttreeav == null ? 0.0 : newrpu.totalplanttreeav)
+			newrpu.landvalueadjustment = (newrpu.landvalueadjustment == null ? 0.0 : newrpu.landvalueadjustment)
+			newrpu.publicland = false 
+
+			landrpuEm.create(newrpu)
+		}
+	}
+
+	boolean existLandRpu(rpu){
+		return em254.findLandRpuById(rpu) != null 
+	}
+
+	void doMigrateLandDetail(rpu){
+		rpu.info.landdetails.each{ld ->
+			if (!existLandDetail(ld)){
+
+				resolveActualUse(rpu, ld)
+				resolveSpecificClass(rpu, ld)
+				resolveSubClass(rpu, ld)
+				resolveStripping(rpu, ld)
+
+				def newld = [
+					objid  			: ld.objid, 
+					landrpuid 		: rpu.objid, 
+					subclass 	 	: [objid:ld.subclassid],
+					specificclass   : [objid:ld.specificclassid], 
+					actualuse 		: [objid:ld.assesslevelid], 
+					stripping 		: [objid:ld.strippingid], 
+					landspecificclass : ld.spc.landspecificclass,
+					addlinfo 		: ld.addlinfo, 
+					striprate 		: (ld.striprate == null ? 0.0 : ld.striprate), 
+					areatype 		: ld.areatype, 
+					area 			: ld.area, 
+					areasqm 		: ld.areasqm, 
+					areaha 			: ld.areaha, 
+					basevalue 		: ld.basevalue, 
+					unitvalue 		: ld.unitvalue, 
+					taxable 		: util.toBoolean(ld.taxable, true), 
+					basemarketvalue : ld.basemarketvalue, 
+					adjustment 		: ld.adjustment, 
+					landvalueadjustment : ld.landvalueadjustment, 
+					actualuseadjustment : ld.actualuseadjustment, 
+					marketvalue 		: ld.marketvalue, 
+					assesslevel 		: ld.assesslevel, 
+					assessedvalue 		: ld.assessedvalue, 
+				]
+				landrpuEm.create(newld, 'landdetail')
+				doMigrateLandAdjustments(rpu, ld.adjustments, null, ld.objid, 'AU')
+			}
+		}
+	}
+
+	boolean existLandDetail(ld){
+		return em254.findLandDetailById(ld) != null 
+	}
+
+	void doMigrateLandAdjustments(rpu, adjustments, landrpuid, landdetailid, type){
+		adjustments.each{adj ->
+			if (!existLandAdjustment(adj)){
+				
+				resolveAdjustmentType(rpu, adj)
+
+				def newadj = createAdjustment(adj, type)
+				newadj.landrpuid = landrpuid 
+				newadj.landdetailid = landdetailid 
+				landrpuEm.create(newadj, 'landadjustment')
+				doMigrateAdjustmentParams(rpu, adj, newadj)
+			}
+		}
+		em254land.updateLandAdjustments(rpu)
+		em254land.updateLandDetailAdjustments(rpu)
+	}
+
+	void resolveAdjustmentType(rpu, adj){
+		def la = em254.findLandAdjustmentTypeById([objid:adj.adjtypeid])
+		if (!la){
+			def rysetting = em254.findLandRySettingByRy(rpu)
+			la = [
+				objid 			: adj.adjtypeid,
+				landrysettingid	: rysetting.objid,
+				code 			: adj.adjtypecode,
+				name 			: adj.adjtypename,
+				expr 			: adj.expr,
+				appliedto 		: rpu.classcode,
+				idx 			: 0,
+			]
+			landEm.create(la, 'landadjustmenttype')
+		}
+	}
+
+
+	def createAdjustment(adj, type){
+		return [
+			objid 			: adj.objid,
+			adjustmenttype  : [objid:adj.adjtypeid],
+			expr 			: adj.expr,
+			adjustment 		: adj.adjustment,
+			type 			: type, 
+		]
+	}
+
+	boolean existLandAdjustment(adj){
+		return em254.findLandAdjustmentById(adj) != null 
+	}
+
+	void doMigrateAdjustmentParams(rpu, adj, newadj){
+		adj.params.each{p ->
+			if (!existAdjustmentParam(adj, p)){
+				def newparam = [
+					objid 				: 'P' + new java.rmi.server.UID(),
+					landadjustmentid 	: adj.objid, 
+					landrpuid 			: rpu.objid,
+					param 				: [objid:p.paramid],
+					value 				: p.paramvalue,
+				]
+				landrpuEm.create(newparam, 'parameter')
+			}
+		}
+	}
+
+	boolean existAdjustmentParam(adj, p){
+		return em254.findLandAdjustmentById([objid:adj.objid+p.paramid]) != null 
+	}
+
+	void doMigratePlantTrees(rpu){
+		rpu.info.planttrees.each{pt->
+			if (!existPlantTreeDetail(pt)){
+				println 'Migrating planttreedetail ' + pt.objid
+
+				resolvePlantTree(rpu, pt)
+				resolvePlantTreeUnitValue(rpu, pt)
+				resolvePlantTreeActualuse(rpu, pt)
+
+				def newpt = [
+					objid 				: pt.objid,
+					planttreerpuid 		: null,
+					landrpuid 			: rpu.objid,
+					planttreeunitvalue  : [objid:pt.unitvalueid],
+					planttree  			: [objid:pt.planttreeid],
+					actualuse  			: [objid:pt.assesslevelid],
+					productive 			: util.toDecimal(pt.bearing),
+					nonproductive 		: util.toDecimal(pt.nonbearing),
+					nonproductiveage 	: util.toDecimal(pt.nonbearingage),
+					unitvalue 			: pt.unitvalue,
+					basemarketvalue 	: pt.basemarketvalue,
+					adjustment 			: pt.adjustment,
+					adjustmentrate 		: pt.adjustmentrate,
+					marketvalue 		: pt.marketvalue,
+					assesslevel 		: pt.assesslevel,
+					assessedvalue 		: pt.assessedvalue,
+					areacovered 		: 0.0,
+				]
+				plantTreeEm.create(newpt, 'planttreedetail')
+			}
+		}
+	}
+
+	boolean existPlantTreeDetail(pt){
+		return em254.findPlantTreeDetailById(pt) != null
+	}
+
+
+
+	void doMigrateAssessment(rpu){
+		em254.getLandRpuAssessments(rpu).each{
+			try{
+				if (!existRpuAssessment(it)){
+					it.classification_objid = it.classification.objid 
+					it.actualuse_objid = it.actualuse.objid 
+					it.taxable = 1
+					em254.insertLandRpuAssessment(it)
+				}
+			}
+			catch(e){
+				//ignore possible dup
+			}
+		}
+
+		em254.getPlantTreeDetailAssessments(rpu).each{
+			if (!existRpuAssessment(it)){
+				it.classification_objid = it.classification.objid 
+				it.actualuse_objid = it.actualuse.objid 
+				em254.insertLandRpuAssessment(it)
+			}	
+		}
+	}
+
+	boolean existRpuAssessment(assessment){
+		return em254.findRpuAssessmentById(assessment) != null 
+	}
+
+
+
+
+
+	/*===== RESOLVE MISSING MASTER ==========================================*/
+	@ActiveDB('landrysetting')
+	def landEm 
+
+
+	void resolveActualUse(rpu, ld){
+		def au = em254.findLandAssessLevelById([objid:ld.assesslevelid])
+		if (!au){
+			def rysetting = em254.findLandRySettingByRy(rpu)
+			au = [
+				objid 			: ld.assesslevelid,
+				landrysettingid	: rysetting.objid,
+				classification  : [objid:rpu.classid],
+				code 			: ld.assesslevelcode,
+				name 			: ld.assesslevelname,
+				fixrate			: true,
+				rate 			: ld.assesslevel,
+			]
+			landEm.create(au, 'landassesslevel')
+		}
+	}
+
+	void resolveSpecificClass(rpu, ld){
+		def spc = em254.findSpecificClassById([objid:ld.specificclassid])
+		if (!spc){
+			def rysetting = em254.findLandRySettingByRy(rpu)
+			spc = [
+				objid 			: ld.specificclassid,
+				landrysettingid	: rysetting.objid,
+				classification  : [objid:rpu.classid],
+				code 			: ld.specificclasscode,
+				name 			: ld.specificclassname,
+				areatype 		: ld.subclass.areatype,
+			]
+			landEm.create(spc, 'lcuvspecificclass')
+		}
+		ld.spc = spc 
+	}
+
+	void resolveSubClass(rpu, ld){
+		def sub = em254.findSubClassById([objid:ld.subclassid])
+		if (!sub){
+			def rysetting = em254.findLandRySettingByRy(rpu)
+			sub = [
+				objid 			: ld.subclassid,
+				landrysettingid	: rysetting.objid,
+				specificclass  	: [objid:ld.specificclassid],
+				code 			: ld.subclasscode,
+				name 			: ld.subclassname,
+				unitvalue 		: ld.subclass.basevalue,
+			]
+			landEm.create(sub, 'lcuvsubclass')
+		}
+	}
+
+	void resolveStripping(rpu,ld){
+		if (!ld.strippingid)
+			return 
+
+		def strip = em254.findStrippingById([objid:ld.strippingid])
+		if (!strip){
+			def rysetting = em254.findLandRySettingByRy(rpu)
+			strip = [
+				objid 			: ld.strippingid,
+				landrysettingid	: rysetting.objid,
+				classification	: [objid:rpu.classid],
+				striplevel		: ld.stripping.striplevel,
+				rate 			: ld.stripping.striprate,
+			]
+			landEm.create(strip, 'lcuvstripping')
+		}
+	}
+
+
+
+	/*===== RESOLVE MISSING PLANT/TREE MASTER ==========================================*/
+	@ActiveDB('planttreerysetting')
+	def planttreeSettingEm
+
+	@ActiveDB('planttree')
+	def planttreeEm
+
+
+	void resolvePlantTree(rpu, pt){
+		def p = em254.findPlantTreeById([objid:pt.planttreeid])
+		if (!p){
+			p = [
+				objid 		: pt.planttreeid,
+				state 		: 'APPROVED',
+				code 		: pt.planttreecode,
+				name 		: pt.planttreename
+			]
+			plantTreeEm.create(p)
+		}
+	}
+
+	void resolvePlantTreeUnitValue(rpu, pt){
+		def ptuv = em254.findPlantTreeUnitValueById([objid:pt.unitvalueid])
+		if (!ptuv){
+			def rysetting = em254.findPlantTreeRySettingByRy(rpu)
+			ptuv = [
+				objid 		: pt.unitvalueid,
+				planttreerysettingid : rysetting.objid,
+				planttree 	: [objid:pt.planttreeid],
+				code 		: pt.unitvaluecode,
+				name 		: pt.unitvaluename,
+				unitvalue   : pt.unitvalue,
+			]
+			planttreeSettingEm.create(ptuv, 'planttreeunitvalue')
+		}
+	}
+
+	void resolvePlantTreeActualuse(rpu, pt){
+		def al = em254.findPlantTreeAssessLevelById([objid:pt.assesslevelid])
+		if (!al){
+			def rysetting = em254.findPlantTreeRySettingByRy(rpu)
+			al = [
+				objid 		: (pt.assesslevelid ? pt.assesslevelid : pt.al?.objid),
+				planttreerysettingid : rysetting.objid,
+				code 		: (pt.assesslevelcode ? pt.assesslevelcode : pt.al.code),
+				name 		: (pt.assesslevelname ? pt.assesslevelname : pt.al.name),
+				rate 		: pt.assesslevel,
+				classification : [objid:rpu.classid],
+			]
+			planttreeSettingEm.save(al, 'assesslevel')
+
+			if (!pt.assesslevelid) pt.assesslevelid = al.objid 
+			if (!pt.assesslevelcode) pt.assesslevelcode = al.code 
+			if (!pt.assesslevelname) pt.assesslevelname = al.name 
+		}
+	}
+}

@@ -1,0 +1,193 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import java.rmi.server.UID;
+import com.rameses.util.*;
+
+class ETRACS22To254MachMigrationInterceptor 
+{
+	@ActiveDB('machrpu')	
+	def rpuEm 
+
+	@ActiveDB('etracs254rpt')
+	def em254
+
+	@ActiveDB(value='etracs22rpt', em='etracs22')
+	def em22
+
+	
+	@Service('ETRACS22To254UtilService')
+	def util
+
+
+	@After(pattern="ETRACS22To254FaasMigrationService.migrateFaas", eval="#{result.rpu.rputype == 'mach'}")
+	public void migrateMachRpu(evt){
+		def faas22 = evt.result 
+		try{
+			doMigrateMachRpu(faas22)
+			doMigrateMachUses(faas22.rpu)
+			doMigrateAssessment(faas22.rpu)
+			util.logMigratedFaas(faas22)
+			println 'Machine FAAS ' + faas22.objid + ' successfully migrated.'
+		}
+		catch(e){
+			util.logFaasError(faas22, e)
+		}
+		finally{
+			util.deleteMigratedXFaas(faas22)
+		}
+	}
+
+	void doMigrateMachRpu(faas22){
+		def rpu = faas22.rpu 
+		if (!existMachRpu(rpu)){
+			def landfaas254 = util.findLandFaas254(rpu)
+			def newrpu = [
+				objid 			: rpu.objid,
+				landrpuid 		: landfaas254.rpuid,
+			]
+			rpuEm.create(newrpu)
+		}
+	}
+
+	boolean existMachRpu(rpu){
+		return em254.findMachRpuById(rpu) != null 
+	}
+
+	void doMigrateMachUses(rpu){
+		rpu.info.machuses.each{
+			if (!existMachUse(it)){
+				resolveMachAssessLevel(rpu, it)
+
+				def newmu = [
+					objid 			: it.objid,
+					machrpuid 		: rpu.objid,
+					basemarketvalue : it.basemarketvalue,
+					marketvalue 	: it.marketvalue,
+					assesslevel 	: it.assesslevel,
+					assessedvalue 	: it.assessedvalue,
+					actualuse 		: [objid:it.actualuseid],
+				]
+				rpuEm.create(newmu, 'machuse')
+			}
+			doMigrateMachDetails(rpu, it)
+		}
+	}
+
+	boolean existMachUse(mu){
+		return em254.findMachUseById(mu) != null 
+	}
+
+	void doMigrateMachDetails(rpu, mu){
+		mu.machdetails.each{md->
+			if (!existMachDetail(md)){
+				
+				resolveMachine(rpu, md)
+
+				def newmd = [
+					objid 			: md.objid,
+					machuseid 		: mu.objid, 
+					machrpuid 		: rpu.objid, 
+					machine  		: [objid:md.machineid],
+					operationyear 	: md.operationyear,
+					replacementcost : md.replacementcost,
+					depreciation 	: md.depreciation,
+					depreciationvalue : md.depreciationvalue,
+					basemarketvalue : md.basemarketvalue,
+					marketvalue 	: md.marketvalue,
+					assesslevel 	: md.assesslevel,
+					assessedvalue 	: md.assessedvalue,
+					brand 			: md.brand,
+					capacity 		: md.capacity,
+					model 			: md.model,
+					serialno 		: md.serialno,
+					status 			: md.status,
+					yearacquired 	: md.yearacquired,
+					estimatedlife 	: md.estimatedlife,
+					remaininglife 	: md.remaininglife,
+					yearinstalled 	: md.yearinstalled,
+					yearsused 		: md.yearsused,
+					originalcost 	: md.originalcost,
+					freightcost 	: md.freightcost,
+					insurancecost 	: md.insurancecost,
+					installationcost : md.installationcost,
+					brokeragecost 	: md.brokeragecost,
+					arrastrecost 	: md.arrastrecost,
+					othercost 		: md.othercost,
+					acquisitioncost : md.acquisitioncost,
+					feracid 		: md.feracid,
+					ferac 			: md.ferac,
+					forexid 		: md.forexid,
+					forex 			: md.forex,
+					residualrate 	: md.residualrate,
+					conversionfactor : md.conversionfactor,
+					useswornamount 	: util.toBoolean(md.useswornamount, false),
+					swornamount 	: md.swornamount,
+					imported 		: util.toBoolean(md.imported, false),
+					newlyinstalled 	: util.toBoolean(md.newlyinstalled, false),
+					autodepreciate	: util.toBoolean(md.autodepreciate, true),
+					taxable : true,
+				]
+				rpuEm.create(newmd, 'machdetail')
+			}
+		}
+	}
+
+	void doMigrateAssessment(rpu){
+		try{
+			em254.insertMachRpuAssessment(rpu)
+		}
+		catch(e){
+			//ignore 
+		}
+	}
+
+
+	boolean existMachDetail(md){
+		return em254.findMachDetailById(md) != null 
+	}
+
+
+	/*==== RESOLVE ===========================*/
+	@DataContext('rysetting_mach')
+	def em_mach
+
+	@DataContext('rysetting_mach_assesslevel')
+	def em_mach_assesslevel
+
+	@DataContext('machine')
+	def em_machine
+
+	void resolveMachAssessLevel(rpu, mu){
+		def setting = em254.findMachSettingByRy([ry:rpu.ry])
+		def auinfo = mu.actualuse
+
+		def au = em_mach_assesslevel.find([objid:auinfo.actualuseid]).first()
+		if (!au){
+			au = [
+				objid 			: auinfo.actualuseid,
+				machrysettingid : setting.objid,
+				classification 	: [objid:rpu.classid],
+				code 			: auinfo.actualusecode,
+				name 			: auinfo.actualusename,
+				fixrate 		: util.toBoolean(auinfo.fixrate, true),
+				rate 			: auinfo.rate,
+				previd 			: auinfo.previd,
+			]
+			em_mach_assesslevel.create(au)
+		}
+	}
+
+
+	void resolveMachine(rpu, md){
+		def mach = em_machine.read([objid:md.machineid])
+		if (!mach){
+			mach = [
+				objid 	: md.machineid,
+				state 	: 'APPROVED',
+				code 	: md.machinecode,
+				name 	: md.machinename,
+			]
+			em_machine.create(mach)
+		}
+	}
+}

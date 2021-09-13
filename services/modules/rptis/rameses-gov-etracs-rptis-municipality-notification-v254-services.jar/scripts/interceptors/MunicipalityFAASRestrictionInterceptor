@@ -1,0 +1,55 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+
+class MunicipalityFAASRestrictionInterceptor
+{
+	@Env
+	def env
+
+    @Service('RPTNotificationService')
+    def svc 
+
+	@Service('RPTUtil')
+    def util
+
+
+	@After(pattern="FAASRestrictionService.approve", index=50000) 
+    public void submitApprovedRestrictionToProvince( evt ) {
+        def restriction = evt.result 
+        def asyncreq = svc.createAsyncRequest('ProvinceFAASRestrictionRemoteService', 'postRestriction', restriction, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.txnid       = restriction.objid 
+        msg.filetype    = 'faas_restriction'
+        msg.messagetype = 'faasrestriction-post-approved'
+        msg.message     = 'Restriction for FAAS ' + restriction.parent.tdno + '.' 
+        svc.sendAsyncMessage(msg)        
+        println 'FAAS Restriction has been successfully submitted to province.'
+    }   
+
+    @After(pattern="FAASRestrictionService.removeRestriction", eval="#{args[0].state != 'DRAFT'}", index=50000) 
+    public void submitRemoveRestrictionToProvince( evt ) {
+        def restriction = evt.args[0]
+        def asyncreq = svc.createAsyncRequest('ProvinceFAASRestrictionRemoteService', 'postRemoveRestriction', restriction, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.txnid       = restriction.objid 
+        msg.filetype    = 'faas_restriction'
+        msg.messagetype = 'faasrestriction-post-removed'
+        msg.message     = 'Remove restriction for FAAS ' + restriction.parent.tdno + '.' 
+        svc.sendAsyncMessage(msg)        
+        println 'Remove FAAS Restriction has been successfully submitted to province.'
+    }   
+
+    @After(pattern="RPTReceiptService.cancelRestriction", eval="#{result.restrictions.size() > 0}", index=50000) 
+    public void submitCancelRestrictionToProvince( evt ) {
+        def restrictions = evt.result
+        def asyncreq = svc.createAsyncRequest('ProvinceFAASRestrictionRemoteService', 'postCancelRestrictions', restrictions, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.filetype    = 'faas_restriction'
+        msg.messagetype = 'faasrestriction-post-cancellation'
+        msg.message     = 'Post restriction cancellation for FAAS ' + restrictions[0].parent.tdno + '.' 
+        svc.sendAsyncMessage(msg)        
+        println 'FAAS restriction cancellation has been successfully submitted to province.'
+    }   
+
+}
+

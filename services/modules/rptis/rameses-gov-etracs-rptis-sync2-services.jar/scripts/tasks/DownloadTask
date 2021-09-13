@@ -1,0 +1,87 @@
+import com.rameses.annotations.*;
+import java.io.File;
+import com.rameses.fileupload.*;
+import org.apache.commons.lang.exception.ExceptionUtils;
+
+class DownloadTask {
+    @XConnection('fileupload')
+    def fu;
+
+    @Service('RPTMainSyncDataService')
+    def svc
+
+    @Service('RPTSyncDataManagementService')
+    def mgmtSvc
+
+    @DataContext('rpt_syncdata_completed')
+    def em_sync_completed
+
+    @DataContext('rpt_syncdata_error')
+    def em_sync_error
+
+    @Service('Var')
+    def var;
+
+    @Service('DateService')
+    def dtSvc;
+
+    def DOWNLOAD_FLAG = "fileserver_download_task_active"
+
+    @Schedule(interval=300)
+    public void doDownload( evt ) {
+        if (!downloaderActive()) return
+
+        try {
+            fu.getList().each{
+                download(it);
+            }
+        } catch ( e ) {
+            println "DownlaodTask [ERROR] " + e.message;
+        }
+    }
+
+    @Schedule(interval=900)
+    public void rescheduleErrors( evt ) {
+        mgmtSvc.rescheduleErrors();
+    }
+
+    void download(downloadinfo) {
+        def reader = null;
+        def syncdata = null;
+        try {
+            syncdata = em_sync_error.find([filekey: downloadinfo.Key]).first();
+            if (syncdata) {
+                println 'DownloadTask [HOLD] Key ' + downloadinfo.Key
+                return;
+            }
+            reader = fu.getObject(downloadinfo.Key);
+            syncdata = reader.read();
+            syncdata.data = reader.read(); 
+            svc.receive(syncdata);
+            syncdata.dtcreated = dtSvc.serverDate;
+            em_sync_completed.save(syncdata);
+            reader.close();
+            fu.delete(downloadinfo.Key);
+        } catch (e) {
+            println 'DownloadTask [ERROR] ' + e.message
+            if (syncdata) {
+                syncdata.filekey = downloadinfo.Key;
+                syncdata.error = ExceptionUtils.getStackTrace(e);
+                syncdata.info = syncdata.info ? syncdata.info : [:]
+                syncdata.remote = syncdata.parent.remote
+                em_sync_error.create(syncdata);
+            }
+            if (reader) reader.close();
+        }
+    }
+
+    def downloaderActive() {
+        def status = var.getProperty(DOWNLOAD_FLAG, 0).toString();
+        if (status.matches("1|y|yes|t|true")) {
+            return true;
+        }
+        println 'DownloadTask [INFO] inactive' ;
+        return false;
+    }
+
+}

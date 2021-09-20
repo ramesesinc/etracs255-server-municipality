@@ -13,7 +13,7 @@ select
 	o.name as lguname, b.name as barangay, 
 	f.tdno, f.fullpin, f.owner_name, f.owner_address, f.administrator_name, f.titleno, 
 	rp.cadastrallotno, rp.blockno, rp.surveyno,
-	lspc.name as specificclass, spc.areatype, 
+	lspc.name as specificclass, spc.areatype, ld.taxable,
 	sum(ld.areasqm) as areasqm, sum(ld.areaha) as areaha, 
 	sum(ld.marketvalue) as mv, sum(ld.assessedvalue) as av
 from faas f
@@ -35,5 +35,5 @@ group by
 	o.name, b.name, 
 	f.tdno, f.fullpin, f.titleno, f.owner_name, f.owner_address, f.administrator_name,
 	rp.cadastrallotno, rp.blockno, rp.surveyno, rp.pin, r.suffix, 
-	lspc.name, spc.areatype
+	lspc.name, spc.areatype, ld.taxable
 order by o.name, b.name, rp.pin, r.suffix 

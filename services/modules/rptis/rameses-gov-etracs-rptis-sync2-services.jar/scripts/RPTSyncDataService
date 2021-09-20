@@ -77,7 +77,7 @@ class RPTSyncDataService
     public def getRemoteOrg(entity){
     	def rootorg = em_org.find([root: 1]).first() 
     	if (!rootorg) throw new Exception('Root ORG is not set.')
-
+		if (entity.lgu?.objid) entity.lguid = entity.lgu.objid;
     	if (!entity.lguid) entity.lguid = env.ORGID 
 
     	def org = em_org.find([objid: entity.lguid]).first()

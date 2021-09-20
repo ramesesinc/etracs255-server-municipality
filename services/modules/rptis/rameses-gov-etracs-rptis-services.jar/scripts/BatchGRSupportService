@@ -53,7 +53,6 @@ class BatchGRSupportService
     def em_faas_task
 
 
-
     @ProxyMethod
     public def buildData(batchgr){
         batchgr.putAll(batchSvc.open(batchgr))
@@ -79,6 +78,15 @@ class BatchGRSupportService
     @ProxyMethod
     public def getRequirements(batchgr){
         return reqSvc.getRequirements(batchgr.objid)
+    }
+    
+    @ProxyMethod
+    public def getApprovedFaas(faas){
+        faas = faasSvc.openFaas(faas)
+        faas.taxpayer = entitySvc.open(faas.taxpayer)
+        faas.tasks = em_faas_task.where('refid = :refid AND enddate IS NOT NULL', [refid: faas.objid]).list()
+        return faas
+
     }
 
     @ProxyMethod
@@ -182,6 +190,36 @@ class BatchGRSupportService
         saveImageData(faas.image)
     }
 
+    @ProxyMethod
+    public def postApprovedFaas(faas){
+        def currfaas = em_faas.select('state').find([objid:faas.objid]).first()
+        if (currfaas && currfaas.state == 'CURRENT') {
+            saveFaasTask(faas)
+            return
+        }
+        faas.state = 'PENDING'
+        postFaasData(faas)
+        faasSvc.approveFaas(faas)
+        saveFaasTask(faas)
+    }
+
+    @ProxyMethod
+    public def postApprovedBatchGr(batchgr){
+        def state = em_batchgr.select("state").find([objid: batchgr.objid]).val();
+        if (!state) {
+            postData(batchgr)
+        } else if (! state.equalsIgnoreCase('APPROVED')){
+            batchgr.tasks.each{
+                em_batchgr_task.save(it)
+            }
+            em_batchgr_task.where('refid = :objid and enddate is null', batchgr).delete()
+            batchSvc.insertFaasSignatories(batchgr)
+            batchSvc.approve(batchgr)
+
+            notifyRecommender(batchgr)
+        } 
+    }
+
     void saveImageData(image){
         if (!image) return
         
@@ -201,6 +239,34 @@ class BatchGRSupportService
             chunks += imageSvc.getImageItems(it)
         }       
         return [headers:headers, chunks:chunks]
+    }
+
+    void notifyRecommender(batchgr){
+        def recommendertask = em_batchgr_task.where('refid = :objid and state = :state', [objid:batchgr.objid, state:'recommender'])
+                                        .orderBy('enddate desc')
+                                        .first()
+
+        def approvertask = batchgr.tasks.find{it.state.matches('approver|provapprover')}
+        if (recommendertask && approvertask){
+            def sendername = (approvertask.actor.name ? approvertask.actor.name : 'Province')
+            def msg = [
+                objid     : recommendertask.refid,
+                recipientid : (recommendertask.assignee.objid ? recommendertask.assignee.objid : '-'),
+                recipienttype : 'user',
+                senderid  : '-',
+                sender    : sendername,
+                message   : 'Batch GR' + batchgr.txnno + ' has already been approved by ' + sendername + '.',
+                filetype  : 'batchgr',
+                data      : [:],
+            ]
+            notifySvc.addMessage(msg)
+        }       
+    }
+
+    void saveFaasTask(faas) {
+        faas.tasks.each{
+            em_faas_task.save(it)
+        }
     }
 
 }

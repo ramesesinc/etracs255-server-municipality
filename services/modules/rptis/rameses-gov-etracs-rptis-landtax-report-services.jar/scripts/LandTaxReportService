@@ -118,31 +118,29 @@ class LandTaxReportService
 
 		def period = ''
 		if ( periodcode == 'yearly' ) {
-			params.fromdate = params.year + "-01-01 00:00:00";
-			params.todate   = params.year + "-12-31 23:59:59";
+			params.fromdate = dateSvc.parse('yyyy-MM-dd', params.year + '-01-01');
+			params.todate = dateSvc.parse('yyyy-MM-dd', params.year + '-12-31') + 1;
 			period = 'FOR THE YEAR ' + params.year;
-
-		} else if ( periodcode == 'quarterly' ) {
-			if ( !params.qtr ) throw new Exception('qtr parameter is required')
-
-			def fromdate = dateSvc.getBeginningQtrDate( params.qtr, params.year, 1 ); 
-			def todate  =  dateSvc.getQtrEndDate( params.qtr, params.year );
-
-			params.fromdate = dateSvc.format('yyyy-MM-dd', fromdate )  + " 00:00:00";
-			params.todate =  dateSvc.format('yyyy-MM-dd', todate )  + " 23:59:59";
-			period = 'FOR THE ' + util.getQuarterName( params.qtr ) + ' OF ' + params.year 
-
+		} else if ( periodcode.matches('quarterly|asofqtr') ) {
+			if ( !params.qtr ) throw new Exception('qtr parameter is required');
+			params.fromdate = dateSvc.getBeginningQtrDate( (periodcode == 'asofqtr' ? 1 : params.qtr), params.year, 1 ); 
+			params.todate  =  dateSvc.getQtrEndDate( params.qtr, params.year ) + 1;
+			period = (periodcode == 'asofqtr' ? '1ST QUARTER - ' : 'FOR THE ') + util.getQuarterName( params.qtr ) + ' OF ' + params.year 
+		} else if ( periodcode == 'asofday' ) {
+			params.fromdate = dateSvc.parse('yyyy-MM-dd', params.year + '-01-01');
+			params.todate   = dateSvc.parse('yyyy-MM-dd', params.date) + 1;
+			period = 'As of ' + dateSvc.format('MMMMM dd, yyyy', params.date);
 		} else {
 			if ( !params.month ) throw new Exception('month parameter is required ')
-
-			params.fromdate = params.year + '-' + params.month.index + '-01 00:00:00'
-			params.todate = dateSvc.format( 'yyyy-MM-dd', dateSvc.getMonthEndDate( dateSvc.parse('yyyy-MM-dd', params.fromdate)) )  + " 23:59:59"
-			period = 'FOR THE MONTH OF ' + util.getMonthName( params.month.index ) + ', ' + params.year  
+			params.fromdate = dateSvc.parse('yyyy-MM-dd', params.year + '-' + (periodcode == 'asofmon' ? '01' : params.month.index) + '-01');
+			def todate = dateSvc.parse('yyyy-MM-dd', params.year + '-' + params.month.index + '-01');
+			params.todate = dateSvc.getMonthEndDate(todate) + 1;
+			period = (periodcode == 'asofmon' ? 'JANUARY - ' : 'FOR THE MONTH OF ') + util.getMonthName( params.month.index ) + ', ' + params.year  
 		} 
 
 		params.filter = ' cv.controldate >= $P{fromdate} AND cv.controldate < $P{todate} '
 		if (params.postingtype && params.postingtype.code == 'byrem'){
-			params.filter = ' rem.controldate between $P{fromdate} AND $P{todate} '
+			params.filter = ' rem.controldate >= $P{fromdate} AND rem.controldate < $P{todate} '
 		}
 
 		def data = [:]
@@ -155,7 +153,7 @@ class LandTaxReportService
 			buildAdvanceReport(data, params)
 		} 
 
-		data.title = periodcode.toUpperCase() + " REPORT ON REAL PROPERTY TAX COLLECTIONS"; 
+		data.title = "REPORT ON REAL PROPERTY TAX COLLECTIONS"; 
 		data.period = period; 
 		return [reportdata : data]; 
 	} 

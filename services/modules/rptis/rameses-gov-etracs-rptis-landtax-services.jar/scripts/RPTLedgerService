@@ -274,7 +274,7 @@ class RPTLedgerService
 
     @ProxyMethod
     public def getTaxableFaases(ledger){
-        return em_rptledger_faas.find([rptledgerid:ledger.objid,state:'APPROVED',taxable:true])
+        return em_rptledger_faas.find([rptledgerid:ledger.objid,state:'APPROVED',taxable: 1])
                                 .orderBy('fromyear,fromqtr')
                                 .list()
     }
@@ -434,6 +434,39 @@ class RPTLedgerService
         updatePaidLedgerItems(payment)
         em_rptledger.find([objid:payment.refid]).update([lastyearpaid:payment.toyear, lastqtrpaid:payment.toqtr])
         return payment
+    }
+
+    @ProxyMethod
+    public def postPreviousPayment(payment) {
+        payment.dtposted = dtSvc.serverDate 
+        payment.postedby = env.NAME
+        payment.postedbytitle = env.JOBTITLE
+        payment.voided = false 
+        payment.rptledger = [objid:payment.refid]
+        em_rptpayment.create(payment)
+        return payment
+    }
+
+    @ProxyMethod
+    public def getOldestPayment(ledger) {
+        ledger = em_rptledger.select('objid,lastyearpaid,lastqtrpaid').find([objid: ledger.objid]).first();
+        if (!ledger) throw new Exception('Ledger does not exist or has already been deleted.');
+        
+        def oldestpmt = [:];
+        def pmt  = em_rptpayment.find([refid: ledger.objid]).select('fromyear,fromqtr,toyear,toqtr').orderBy('fromyear,fromqtr desc').first();
+        if (pmt) {
+            oldestpmt.fromyear = pmt.toqtr == 4 ? pmt.fromyear - 1 : pmt.fromyear;
+            oldestpmt.fromqtr = pmt.toqtr == 4 ? 1 : pmt.toqtr + 1;
+            oldestpmt.toyear = pmt.toqtr == 4 ? pmt.fromyear - 1 : pmt.fromyear;
+            oldestpmt.toqtr = 4;
+        } else {
+            oldestpmt.fromyear = ledger.lastyearpaid - 1;
+            oldestpmt.fromqtr = 1
+            oldestpmt.toyear = ledger.lastyearpaid - 1;
+            oldestpmt.toqtr = 4
+        }
+
+        return oldestpmt;
     }
 
     @ProxyMethod

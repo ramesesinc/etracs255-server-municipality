@@ -21,6 +21,7 @@ public class CancelledFAASListService extends ActiveCrudListService {
     public def getColumns(params) {
         return [
             [name:"state", caption:"State"],
+            [name:"txnno", caption:"Txn No."],
             [name:"faas.tdno", caption:"TD No."],
             [name:"faas.fullpin", caption:"PIN"],
             [name:"faas.owner.name", caption:"Owner Name"],

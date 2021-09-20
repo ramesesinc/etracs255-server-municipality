@@ -390,6 +390,8 @@ class FAASSyncDataService
 	}
 
 	void saveFaas( faas ) {
+		faas._checkTxnRef = false;
+		
 		saveEntity(faas)
 
 		if (faasSvc.faasExist(faas)){

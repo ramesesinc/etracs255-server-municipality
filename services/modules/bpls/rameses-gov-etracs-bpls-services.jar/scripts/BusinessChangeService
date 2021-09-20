@@ -36,11 +36,11 @@ class BusinessChangeService  {
 	@ProxyMethod
 	public def getColumns(def m) {
 		return [
-			[name:"changetype", caption:"Change Type", maxWidth:150, width:250],
-			[name:"dtfiled", caption:"Date Filed", maxWidth:150, width:120],
-			[name:"filedby.name", caption:"Filed By", maxWidth:150, width:120],
+			[name:"changetype", caption:"Change Type", width:150, maxWidth:250],
+			[name:"dtfiled", caption:"Date Filed", width:120, maxWidth:140],
+			[name:"filedby.name", caption:"Filed By", width:120, maxWidth:200],
 			[name:"particulars", caption:"Particulars"],
-			[name:"reason", caption:"Reason"],
+			[name:"reason", caption:"Reason"]
 		];
 	}
 

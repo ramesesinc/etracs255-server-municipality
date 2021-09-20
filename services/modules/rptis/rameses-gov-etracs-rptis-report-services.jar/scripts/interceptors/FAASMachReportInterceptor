@@ -17,7 +17,7 @@ class FaasMachReportInterceptor
 	@Service('FAASReportService')
 	def faasReportSvc 
 
-	def MACH_DETAIL_ROWS = 15
+	def MACH_DETAIL_ROWS = 12
 
 
 	@After(pattern="FAASReportService.getReportData", eval="#{result.rpu.rputype=='mach'}")

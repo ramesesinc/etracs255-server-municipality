@@ -6,8 +6,8 @@
 		<field name="txntype_objid" required="true" />
 		<field name="txnno" required="true" caption="Txn No." searchable="true" indexed="true" />
 		<field name="txndate" required="true" caption="Txn Date" />
-		<field name="effectivityyear" required="true" type="integer" />
-		<field name="effectivityqtr" required="true" type="integer" />
+		<field name="effectivityyear" required="true" type="integer" caption="Effectivity Year" />
+		<field name="effectivityqtr" required="true" type="integer" caption="Effectivity Qtr" />
 		<field name="memoranda" />
 		<field name="rputype"  caption="Kind" searchable="true" indexed="true" />
 		<field name="section" caption="Section" searchable="true"  />

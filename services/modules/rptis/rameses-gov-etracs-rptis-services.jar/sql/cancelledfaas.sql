@@ -34,12 +34,16 @@ FROM cancelledfaas cf
 	LEFT JOIN canceltdreason ctr ON cf.reason_objid = ctr.objid 
 	LEFT JOIN cancelledfaas_task tsk ON cf.objid = tsk.refid AND tsk.enddate IS NULL
 where 1=1 ${filters}	
-	and f.objid in (
-		select objid from faas where tdno like $P{searchtext}
-		union 
-		select objid from faas where name like $P{searchtext}
-		union 
-		select f.objid from faas f, realproperty rp where f.realpropertyid = rp.objid and rp.pin like $P{searchtext}
+	and (
+		f.objid in (
+			select objid from faas where tdno like $P{searchtext}
+			union 
+			select objid from faas where name like $P{searchtext}
+			union 
+			select f.objid from faas f, realproperty rp where f.realpropertyid = rp.objid and rp.pin like $P{searchtext}
+		)
+		or 
+		cf.txnno like $P{searchtext}
 	)
 
 [findById]

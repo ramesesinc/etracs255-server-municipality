@@ -85,7 +85,9 @@ class GeneralRevisionService
 		utilSvc.required('Property to process', info.faas)
 		utilSvc.required('New Revision Year', info.newry)
 		info.txntype = faasSvc.getTxnType('GR');
-		def faas = faasSvc.initTransaction(info)
+		def faas = faasSvc.initTransaction(info);
+		if (info.effectivityyear) faas.effectivityyear = info.effectivityyear;
+		if (info.effectivityqtr) faas.effectivityqtr = info.effectivityqtr;
 		
 		if (faas.rpu.rputype == 'land'){
 			faas.rpu.realpropertyid = faas.rp.objid

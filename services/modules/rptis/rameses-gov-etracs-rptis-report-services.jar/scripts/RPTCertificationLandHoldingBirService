@@ -36,13 +36,13 @@ class RPTCertificationLandHoldingBirService
 	
 	@ProxyMethod
 	public def createCertification( cert ) {
-		certSvc.createCertification(cert)
-		cert.properties.each{
-			em.createItem([objid:cert.objid, refid:it.objid])
+		def newcert = certSvc.createCertification(cert)
+		cert.items.each{
+			em.createItem([objid: newcert.objid, refid:it.objid])
 		}
-		cert.items = getLandHoldingItems(cert)
-		certSvc.makeHtmlSafe(cert)
-		return cert 
+		cert.items = getLandHoldingItems(newcert)
+		certSvc.makeHtmlSafe(newcert)
+		return newcert 
 	}
 
 

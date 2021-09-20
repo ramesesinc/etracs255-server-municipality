@@ -6,8 +6,8 @@
 		<field name="txntype_objid" caption="" searchable="true" indexed="true" />
 		<field name="txnno" caption="Txn No." searchable="true" indexed="true" />
 		<field name="txndate" />
-		<field name="effectivityyear" />
-		<field name="effectivityqtr" />
+		<field name="effectivityyear" type="integer" caption="Effectivity Year" />
+		<field name="effectivityqtr" type="integer" caption="Effectivity Qtr" />
 		<field name="memoranda" />
 		<field name="lguid" />
 		<field name="barangayid" />

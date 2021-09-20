@@ -35,11 +35,16 @@ where rp.barangayid = $P{barangayid}
 [findCounts]
 select 
   sum(1) as count,
+  sum(case when rputype = 'land' then 1 else 0 end) as land,
+  sum(case when rputype <> 'land' then 1 else 0 end) as improvement,
   sum(case when state = 'REVISED' then 1 else 0 end) as revised,
   sum(case when state = 'CURRENT' then 1 else 0 end) as currentcnt,
   sum(case when state = 'ERROR' then 1 else 0 end) as error
 from batchgr_item 
 where parent_objid = $P{objid}
+and pin like $P{pin}
+and rputype like $P{rputype}
+and state like $P{state}
 
 
 [getFaasListing]

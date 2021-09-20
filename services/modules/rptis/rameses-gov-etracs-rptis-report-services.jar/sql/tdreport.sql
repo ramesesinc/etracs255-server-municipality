@@ -228,6 +228,7 @@ SELECT
 	dc.name AS dominantclassification,
 	pc.code AS classcode,
 	pc.name AS classification,
+	bal.objid as actualuseid,
 	bal.code AS actualusecode,
 	bal.name AS actualuse,
 	r.areasqm AS area,
@@ -518,6 +519,23 @@ from faas f
 where f.objid = $P{objid}
 and bi.addareatobldgtotalarea = 1
 and param_objid = 'AREA_SQM'
+
+
+[getActualUseAdditionalAreas]
+select 
+	bu.actualuse_objid as actualuseid,
+	SUM( case when decimalvalue is not null then decimalvalue else intvalue end ) as area 
+from faas f 
+	inner join bldguse bu on f.rpuid = bu.bldgrpuid 
+	inner join bldgfloor bf on bu.objid = bf.bldguseid
+	inner join bldgflooradditional bfa on bf.objid = bfa.bldgfloorid
+	inner join bldgadditionalitem bi on bfa.additionalitem_objid = bi.objid 
+	inner join bldgflooradditionalparam p on bfa.objid = p.bldgflooradditionalid
+where f.objid = $P{objid}
+and bi.addareatobldgtotalarea = 1
+and param_objid = 'AREA_SQM'
+group by bu.actualuse_objid
+
 
 
 [findEsigned]

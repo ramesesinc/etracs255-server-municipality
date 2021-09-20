@@ -14,7 +14,7 @@ class RPTReportFieldInspectionDataService
 
     @Async
 	@ProxyMethod
-	public def generateFieldInspectionDataBuilding( params )  {
+	public def getReportData( params )  {
 		params.barangayid = params.barangay?.objid
 
 		params.orderby = ''

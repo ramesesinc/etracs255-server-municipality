@@ -49,13 +49,15 @@ public class BatchGRService
 
     @ProxyMethod
     public def create(entity) {
+        if (entity.effectivityyear && entity.effectivityyear < entity.ry) {
+            throw new Exception("Effectivity year should be greater than or equal to " + entity.ry);
+        }
+
         entity.state = 'DRAFT'
         entity.txnno = util.getNextSequence('BATCHGR')
         def pdate = dtSvc.parseCurrentDate()
         entity.txntype = [objid: 'GR']
         entity.txndate = pdate.date
-        entity.effectivityyear = pdate.year + 1
-        entity.effectivityqtr = 4
         entity.originlgu = (entity.originlgu ?entity.originlgu : [objid: env.ORGID])
         entity.section = entity.section ? entity.section : '%'
         entity = em_batchgr.create(entity)
@@ -187,6 +189,8 @@ public class BatchGRService
                 def params = [:]
                 params.faas = [objid: batchitem.objid]
                 params.newry = entity.ry 
+                params.effectivityyear = entity.effectivityyear
+                params.effectivityqtr = entity.effectivityqtr
                 params.datacapture = true 
                 params.batchgr = entity 
                 def grfaas = svc.createOnlineGeneralRevision(params)
@@ -210,7 +214,16 @@ public class BatchGRService
 
     @ProxyMethod
     public def getItems(entity) {
-        return em_batchgr_item.find([parent_objid: entity.objid])
+        def findby = [parent_objid: entity.objid];
+        
+        if (entity._query) {
+            def query = entity._query;
+            if (query.landpin) findby.pin = query.landpin.pin;
+            if (query.rputype) findby.rputype = query.rputype;
+            if (query.state) findby.state = query.state;
+        }
+
+        return em_batchgr_item.find(findby)
                 .orderBy('pin,suffix,subsuffix')
                 .list()
     }
@@ -331,8 +344,23 @@ public class BatchGRService
 
     @ProxyMethod
     public def getCounts(entity){
-        def cnt = em_batchgr.findCounts(entity)
+        def findby = [:];
+        findby.objid = entity.objid;
+        findby.pin = '%'
+        findby.rputype = '%'
+        findby.state = '%'
+        
+        if (entity._query) {
+            def query = entity._query;
+            if (query.landpin) findby.pin = query.landpin.pin;
+            if (query.rputype) findby.rputype = query.rputype;
+            if (query.state) findby.state = query.state;
+        }
+
+        def cnt = em_batchgr.findCounts(findby)
         if (cnt.count == null) {
+            cnt.land = 0
+            cnt.improvement = 0
             cnt.count = 0
             cnt.revised = 0
             cnt.currentcnt = 0

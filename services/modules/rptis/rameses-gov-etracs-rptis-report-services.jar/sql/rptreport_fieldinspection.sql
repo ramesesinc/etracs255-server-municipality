@@ -50,7 +50,8 @@ FROM (
 	FROM faas f
 		INNER JOIN rpu r ON f.rpuid = r.objid 
 		INNER JOIN bldgrpu b ON r.objid = b.objid 
-		INNER JOIN bldgkindbucc bucc ON b.bldgkindbucc_objid = bucc.objid 
+		INNER JOIN bldgrpu_structuraltype st ON b.objid = st.bldgrpuid
+		INNER JOIN bldgkindbucc bucc ON st.bldgkindbucc_objid = bucc.objid 
 		INNER JOIN bldgkind bk ON bucc.bldgkind_objid = bk.objid 
 		INNER JOIN realproperty rp ON f.realpropertyid = rp.objid 
 		INNER JOIN barangay brgy ON rp.barangayid = brgy.objid 

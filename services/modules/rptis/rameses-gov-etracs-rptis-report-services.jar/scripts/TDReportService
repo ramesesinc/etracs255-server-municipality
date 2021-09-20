@@ -60,6 +60,11 @@ class TDReportService
 
 		return adb.getFaasIds(params)
 	}
+
+	@ProxyMethod
+	public def getData(faas) {
+		return buildTaxDec(faas.objid);
+	}
 	
 
 	@ProxyMethod
@@ -281,9 +286,14 @@ class TDReportService
 		td.buildings = em.sqlContext.createNamedQuery('tdreport:getBldgAssessments')
 								.setParameter('faasid', td.faasid).resultList
 
-		def addlitem = adb.findTotalAdditionlItemArea([objid:td.faasid])
-		if (addlitem && addlitem.additionalarea != null && td.buildings){
-			td.buildings.first().area += addlitem.additionalarea
+		def actualuseareas = adb.getActualUseAdditionalAreas([objid:td.faasid])
+		actualuseareas.each{addlarea -> 
+			def bldg = td.buildings.find{it.actualuseid == addlarea.actualuseid}
+			if (bldg) {
+				bldg.area += addlarea.area
+				bldg.areasqm += addlarea.area
+				bldg.areaha += addlarea.area / 10000.0
+			}
 		}
 
 		//adjust pin based on additional bldg lands

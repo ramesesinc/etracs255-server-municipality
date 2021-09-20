@@ -36,7 +36,7 @@ class RPTReceiptMunicipalityPostShareService
 		[sharetype: 'province', revtype: 'basic', revperiod: 'advance', rate: 0.35],
 		[sharetype: 'province', revtype: 'basic', revperiod: 'current', rate: 0.35],
 		[sharetype: 'province', revtype: 'basic', revperiod: 'previous', rate: 0.35],
-		[sharetype: 'province', revtype: 'basic', revperiod: 'prior', rate: 0.35],
+		[sharetype: 'province', revtype: 'basic', revperiod: 'prior', rate: 0.45],
 		[sharetype: 'province', revtype: 'sef', revperiod: 'advance', rate: 0.50],
 		[sharetype: 'province', revtype: 'sef', revperiod: 'current', rate: 0.50],
 		[sharetype: 'province', revtype: 'sef', revperiod: 'previous', rate: 0.50],
@@ -45,7 +45,7 @@ class RPTReceiptMunicipalityPostShareService
 		[sharetype: 'barangay', revtype: 'basic', revperiod: 'advance', rate: 0.25],
 		[sharetype: 'barangay', revtype: 'basic', revperiod: 'current', rate: 0.25],
 		[sharetype: 'barangay', revtype: 'basic', revperiod: 'previous', rate: 0.25],
-		[sharetype: 'barangay', revtype: 'basic', revperiod: 'prior', rate: 0.25],
+		[sharetype: 'barangay', revtype: 'basic', revperiod: 'prior', rate: 0.10],
 	]
 
 

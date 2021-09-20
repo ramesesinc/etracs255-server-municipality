@@ -775,15 +775,14 @@ class FAASService
 
 	@ProxyMethod
 	public def formalizeOwnerInfo(entityid){
-		def t = em_faas.findIndividualEntity([objid:entityid])
-		def name = '';
-		if (t){
-			name = t.firstname 
-			if (t.middlename) 
-				name += ' ' + t.middlename 
-			name += ' ' + t.lastname 
+		def individual = em_faas.findIndividualEntity([objid:entityid])
+		def names = [];
+		if (individual){
+			names << individual.firstname;
+			if (individual.middlename) names << individual.middlename;
+			names << individual.lastname;
 		}
-		return name;
+		return names.join(" ");
 	}
 
 	/*------------------------------------------------------------------------

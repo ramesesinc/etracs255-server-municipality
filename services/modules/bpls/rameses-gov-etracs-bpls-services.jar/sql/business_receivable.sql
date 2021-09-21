@@ -3,12 +3,12 @@ SELECT
    br.*, 
    r.code AS account_code, 
    br.taxfeetype AS account_taxfeetype, 
-   br.amount - br.amtpaid - br.discount AS balance,
+   br.amount - br.amtpaid AS balance,
    app.appno, br.iyear AS year
 FROM business_receivable br 
 LEFT JOIN itemaccount r ON  r.objid=br.account_objid 
 LEFT JOIN business_application app ON app.objid=br.applicationid
-WHERE ${filter} AND ((br.amount-br.amtpaid-br.discount) > 0) 
+WHERE ${filter} AND ((br.amount-br.amtpaid) > 0) 
 ORDER BY br.iyear DESC, br.lob_name DESC, r.code ASC
 
 [getAllReceivables]
@@ -16,10 +16,10 @@ SELECT br.*,
   r.code AS account_code, 
   br.taxfeetype AS account_taxfeetype, 
   case 
-    when br.amount <> br.amtpaid then br.amount-br.amtpaid-br.discount else 0.0 
+    when br.amount <> br.amtpaid then br.amount-br.amtpaid else 0.0 
   end as total, 
   case 
-    when br.amount <> br.amtpaid then br.amount-br.amtpaid-br.discount else 0.0 
+    when br.amount <> br.amtpaid then br.amount-br.amtpaid else 0.0 
   end as balance, 
   app.appno, br.iyear AS year
 FROM business_receivable br 
@@ -131,12 +131,12 @@ WHERE objid = $P{receivableid}
 [getOpenReceivablesByBusinessX]
 SELECT br.applicationid, br.iyear AS appyear, br.businessid, ba.appno,
 CASE WHEN ba.objid IS NULL THEN b.apptype ELSE ba.apptype END AS apptype,
-SUM( amount - amtpaid - discount ) AS balance, b.businessname, b.address_text
+SUM( amount - amtpaid ) AS balance, b.businessname, b.address_text
 FROM business_receivable br
 LEFT JOIN business_application ba ON ba.objid=br.applicationid
 INNER JOIN business b ON b.objid=br.businessid
 WHERE ${filter} 
-AND (br.amount-br.amtpaid-br.discount > 0)
+AND (br.amount-br.amtpaid) > 0
 GROUP BY br.applicationid, br.iyear
 
 [getOpenReceivablesByOwner]
@@ -147,12 +147,12 @@ FROM (
   SELECT 
     br.applicationid, br.iyear AS appyear, b.objid AS businessid, ba.appno,
     CASE WHEN ba.objid IS NULL THEN b.apptype ELSE ba.apptype END AS apptype,
-    ( amount - amtpaid - discount ) AS balance, b.businessname, b.address_text 
+    ( amount - amtpaid ) AS balance, b.businessname, b.address_text 
   FROM business_receivable br 
     INNER JOIN business b ON b.objid=br.businessid
     LEFT JOIN business_application ba ON ba.objid=br.applicationid
   WHERE b.owner_objid = $P{ownerid} 
-    AND (br.amount-br.amtpaid-br.discount) > 0  
+    AND (br.amount-br.amtpaid) > 0  
 )xx 
 GROUP BY 
   applicationid, appyear, businessid, appno, 
@@ -199,6 +199,6 @@ from (
 
 
 [findUnpaidBalance]
-select sum(amount-amtpaid-discount) as balance 
+select sum(amount-amtpaid) as balance 
 from business_receivable 
 where applicationid=$P{applicationid}

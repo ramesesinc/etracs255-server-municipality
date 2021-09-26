@@ -1,97 +1,160 @@
 [findBeginBalance]
 select sum(dr) as dr, sum(cr) as cr, sum(dr)-sum(cr) as balance 
 from ( 
-	select sum(rf.amount) as dr, 0.0 as cr 
+	select sum(ci.amount) as dr, 0.0 as cr
 	from remittance r 
-		inner join remittance_fund rf on rf.remittanceid = r.objid 
+		inner join remittance_fund ci on ci.remittanceid = r.objid 
+		inner join fund on fund.objid = ci.fund_objid 
 	where r.controldate < $P{startdate} 
 		and r.liquidatingofficer_objid = $P{accountid} 
-		and rf.fund_objid = $P{fundid} 
 		and r.state = 'POSTED' 
+		and ${filter} 
 	union all 
-	select 0.0 as dr, sum(cvf.amount) as cr 
+	select sum(ci.amount) as dr, 0.0 as cr
+	from remittance r 
+		inner join collectionvoucher cv on cv.objid = r.collectionvoucherid 
+		inner join remittance_fund ci on ci.remittanceid = r.objid 
+		inner join fund on fund.objid = ci.fund_objid 
+	where r.controldate < $P{startdate} 
+		and cv.liquidatingofficer_objid = $P{accountid} 
+		and cv.liquidatingofficer_objid <> r.liquidatingofficer_objid 
+		and r.state = 'POSTED' 
+		and ${filter} 
+	union all 
+	select 0.0 as dr, sum(ci.amount) as cr 
 	from collectionvoucher cv 
-		inner join collectionvoucher_fund cvf on cvf.parentid = cv.objid 
+		inner join collectionvoucher_fund ci on ci.parentid= cv.objid 
+		inner join fund on fund.objid = ci.fund_objid 
 	where cv.controldate < $P{startdate} 
 		and cv.liquidatingofficer_objid = $P{accountid} 
-		and cvf.fund_objid = $P{fundid} 
 		and cv.state = 'POSTED' 
-)t1 
-
-
-[getDetails]
-select * 
-from ( 
-	select 
-		r.controldate as refdate, r.collector_objid as userid, r.collector_name as username, 
-		r.controlno as refno, 'remittance' as reftype, rf.fund_objid as fundid, 
-		rf.amount as dr, 0.0 as cr, rf.amount, r.dtposted as sortdate, 0 as idx   
-	from remittance r 
-		inner join remittance_fund rf on rf.remittanceid = r.objid 
-	where r.controldate >= $P{startdate} 
-		and r.controldate <  $P{enddate} 
-		and r.liquidatingofficer_objid = $P{accountid} 
-		and rf.fund_objid = $P{fundid} 
-		and r.state = 'POSTED' 
-		and 1 = $P{includebalance} 
-	union all 
-	select 
-		r.controldate as refdate, r.collector_objid as userid, r.collector_name as username, 
-		r.controlno as refno, 'remittance' as reftype, rf.fund_objid as fundid, 
-		rf.amount as dr, 0.0 as cr, rf.amount, r.dtposted as sortdate, 0 as idx   
-	from collectionvoucher cv 
-		inner join remittance r on r.collectionvoucherid = cv.objid 
-		inner join remittance_fund rf on rf.remittanceid = r.objid 
-	where cv.controldate >= $P{startdate} 
-		and cv.controldate <  $P{enddate} 
-		and cv.liquidatingofficer_objid = $P{accountid} 
-		and rf.fund_objid = $P{fundid} 
-		and cv.state = 'POSTED' 
-		and 0 = $P{includebalance} 
-	union all 
-	select 
-		cv.controldate as refdate, cv.liquidatingofficer_objid as userid, cv.liquidatingofficer_name as username, 
-		cv.controlno as refno, 'liquidation' as reftype, cvf.fund_objid as fundid, 
-		0.0 as dr, cvf.amount as cr, cvf.amount, cv.dtposted as sortdate, 1 as idx  
-	from collectionvoucher cv 
-		inner join collectionvoucher_fund cvf on cvf.parentid = cv.objid 
-	where cv.controldate >= $P{startdate} 
-		and cv.controldate <  $P{enddate} 
-		and cv.liquidatingofficer_objid = $P{accountid} 
-		and cvf.fund_objid = $P{fundid} 
-		and cv.state = 'POSTED' 
-)t1 
-order by refdate, idx, sortdate 
+		and ${filter} 
+)t0 
 
 
 [getReport]
 select * 
 from ( 
 	select 
-		convert(cv.controldate, DATE) as refdate, rem.collector_name as username, 
-		rem.controlno as refno, 'remittance' as reftype, remf.amount as dr, 0.0 as cr, 
-		remf.amount as amount, 0 as sortindex 
+		cv.controldate as refdate, r.controlno as refno, 
+		r.collector_name as particulars, r.dtposted as sortdate, 
+		sum(ci.amount) as dr, 0.0 as cr, 'remittance' as reftype, 
+		r.collector_objid as userid, r.collector_name as username, 
+		1 as groupindexno 
 	from collectionvoucher cv 
-		inner join collectionvoucher_fund cvf on cvf.parentid = cv.objid 
-		inner join remittance rem on rem.collectionvoucherid = cv.objid 
-		inner join remittance_fund remf on remf.remittanceid = rem.objid 
-	where cv.liquidatingofficer_objid = $P{accountid}  
-		and cv.controldate >= $P{startdate} 
+		inner join remittance r on r.collectionvoucherid = cv.objid 
+		inner join remittance_fund ci on ci.remittanceid = r.objid 
+		inner join fund on fund.objid = ci.fund_objid 
+	where cv.controldate >= $P{startdate} 
+		and cv.controldate < $P{enddate} 
+		and cv.liquidatingofficer_objid = $P{accountid} 
+		and cv.state = 'POSTED' 		
+		and ${filter} 
+	group by 
+		cv.controldate, r.controldate, r.controlno, r.collector_name, 
+		r.dtposted,	r.collector_objid 
+	union all 
+	select 
+		cv.controldate as refdate, cv.controlno as refno, 
+		cv.liquidatingofficer_name as particulars, cv.dtposted as sortdate, 
+		0.0 as dr, sum(ci.amount) as cr, 'liquidation' as reftype, 
+		cv.liquidatingofficer_objid as userid, cv.liquidatingofficer_name as username, 
+		2 as groupindexno 
+	from collectionvoucher cv 
+		inner join collectionvoucher_fund ci on ci.parentid = cv.objid 
+		inner join fund on fund.objid = ci.fund_objid 
+	where cv.controldate >= $P{startdate} 
+		and cv.controldate < $P{enddate} 
+		and cv.liquidatingofficer_objid = $P{accountid} 
+		and cv.state = 'POSTED' 		
+		and ${filter} 
+	group by 
+		cv.controldate, cv.controlno, cv.liquidatingofficer_name, 
+		cv.dtposted, cv.liquidatingofficer_objid 
+)t0 
+order by t0.refdate, t0.groupindexno, t0.refno 
+
+
+[getReportTemplateB]
+select 
+		controldate as refdate, refno, reftype, particulars, 
+		sortdate, dr, cr, groupindexno, userid, username 
+from ( 
+	select 
+		cv.controldate, r.controldate as refdate, r.controlno as refno, 
+		r.collector_name as particulars, r.dtposted as sortdate, 
+		sum(ci.amount) as dr, 0.0 as cr, 'remittance' as reftype, 
+		(case when cv.controldate = r.controldate then 1 else 0 end) as groupindexno, 
+		r.collector_objid as userid, r.collector_name as username 
+	from collectionvoucher cv 
+		inner join remittance r on r.collectionvoucherid = cv.objid 
+		inner join remittance_fund ci on ci.remittanceid = r.objid 
+		inner join fund on fund.objid = ci.fund_objid 
+	where cv.controldate >= $P{startdate} 
 		and cv.controldate <  $P{enddate} 
-		and cvf.fund_objid = $P{fundid} 
-		and remf.fund_objid = cvf.fund_objid 
-	
+		and cv.state = 'POSTED' 		
+		and cv.liquidatingofficer_objid = $P{accountid}  
+		and ${filter} 
+	group by 
+		cv.controldate, r.controldate, r.controlno, r.collector_name, 
+		r.dtposted,	r.collector_objid 
+
 	union all 
 
 	select 
-		convert(cv.controldate, DATE) as refdate, cv.liquidatingofficer_name as username, 
-		cv.controlno as refno, 'liquidation' as reftype, 0.0 as dr, cvf.amount as cr, 
-		(cvf.amount * -1.0) as amount, 1 as sortindex 
-	from collectionvoucher cv  
-		inner join collectionvoucher_fund cvf on cvf.parentid = cv.objid 
-	where cv.liquidatingofficer_objid = $P{accountid}  
-		and cv.controldate >= $P{startdate} 
+		cv.controldate, cv.controldate as refdate, cv.controlno as refno, 
+		cv.liquidatingofficer_name as particulars, cv.dtposted as sortdate, 
+		0.0 as dr, sum(ci.amount) as cr, 'liquidation' as reftype, 1 as groupindexno, 
+		cv.liquidatingofficer_objid as userid, cv.liquidatingofficer_name as username 
+	from collectionvoucher cv 
+		inner join collectionvoucher_fund ci on ci.parentid = cv.objid 
+		inner join fund on fund.objid = ci.fund_objid 
+	where cv.controldate >= $P{startdate} 
 		and cv.controldate <  $P{enddate} 
-		and cvf.fund_objid = $P{fundid} 
-)tmp1 
-order by refdate, sortindex, username, refno  
+		and cv.state = 'POSTED' 
+		and cv.liquidatingofficer_objid = $P{accountid}  
+		and ${filter} 
+	group by 
+		cv.controldate, cv.controlno, cv.liquidatingofficer_name, 
+		cv.dtposted, cv.liquidatingofficer_objid
+
+	union all 
+
+	select 
+		r.controldate, r.controldate as refdate, r.controlno as refno, 
+		r.collector_name as particulars, r.dtposted as sortdate, 
+		sum(ci.amount) as dr, 0.0 as cr, 'remittance' as reftype, 2 as groupindexno, 
+		r.collector_objid as userid, r.collector_name as username 
+	from remittance r 
+		inner join remittance_fund ci on ci.remittanceid = r.objid 
+		inner join fund on fund.objid = ci.fund_objid 
+	where r.controldate >= $P{startdate} 
+		and r.controldate <  $P{enddate} 
+		and r.state = 'POSTED' 
+		and r.liquidatingofficer_objid = $P{accountid} 
+		and r.collectionvoucherid is null 
+		and ${filter} 
+	group by 
+		r.controldate, r.controlno, r.collector_name, r.dtposted, r.collector_objid
+
+	union all 
+
+	select 
+		r.controldate, r.controldate as refdate, r.controlno as refno, 
+		r.collector_name as particulars, r.dtposted as sortdate, 
+		sum(ci.amount) as dr, 0.0 as cr, 'remittance' as reftype, 2 as groupindexno, 
+		r.collector_objid as userid, r.collector_name as username 
+	from remittance r 
+		inner join remittance_fund ci on ci.remittanceid = r.objid 
+		inner join collectionvoucher cv on cv.objid = r.collectionvoucherid
+		inner join fund on fund.objid = ci.fund_objid 
+	where r.controldate >= $P{startdate} 
+		and r.controldate <  $P{enddate} 
+		and r.state = 'POSTED' 
+		and r.liquidatingofficer_objid = $P{accountid}  
+		and cv.controldate <> r.controldate 
+		and ${filter} 
+	group by 
+		r.controldate, r.controlno, r.collector_name, r.dtposted, r.collector_objid
+)t0 
+order by t0.controldate, t0.groupindexno, t0.refno

@@ -3,11 +3,14 @@
 		<field name="objid" primary="true"/> 
 		<field name="parentid" required="true"/> 
 		<field name="applicationid" required="true"/> 
-		<field name="amount" /> 
-		<field name="amtpaid" /> 
-		<field name="surcharge" /> 
-		<field name="interest" /> 
-		<field name="balance" /> 
-		<field name="total" /> 		
+		<field name="tax" required="true" /> 
+		<field name="regfee" required="true" /> 
+		<field name="othercharge" required="true" /> 
+		<field name="surcharge" required="true" /> 
+		<field name="interest" required="true" /> 
+		<field name="total" required="true" /> 		
+		<field name="duedate" /> 
+		<field name="year" required="true" /> 
+		<field name="qtr" required="true" /> 
 	</element>
 </schema>

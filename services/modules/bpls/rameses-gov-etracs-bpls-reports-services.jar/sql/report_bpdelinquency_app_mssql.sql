@@ -3,7 +3,7 @@ insert into report_bpdelinquency_app (
 	objid, parentid, applicationid, appdate, appyear 
 ) 
 select 
-	UUID() as objid, $P{reportid} as parentid, 
+	NEWID() as objid, $P{reportid} as parentid, 
 	t0.applicationid, t0.appdate, t0.appyear 
 from ( 
 	select 

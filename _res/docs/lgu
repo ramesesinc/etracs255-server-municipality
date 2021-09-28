@@ -1,0 +1,14 @@
+[App Server]
+IP  : 192.168.1.250
+User: ict-admin
+Pass: 
+
+
+[DB Access]
+IP   : localhost
+User : root
+Pass : mysqllibmanan
+
+
+[GitHub]
+git clone -b camsur-libmanan https://github.com/ramesesinc/etracs255-server-municipality.git

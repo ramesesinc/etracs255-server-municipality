@@ -82,7 +82,7 @@ class CashbookReportService {
 			funds = params.fund;
 		}
 
-		if ( funds && (funds instanceof java.util.List)) {
+		if ( funds instanceof java.util.List ) {
 			params.fundfilter = funds.collect{( "'"+ it.objid +"'" )}.join(","); 
 			params.fundtitle = funds.collect{ it.title }.join(", ");
 			params.fundgroupname = funds.collect{ it.group?.title }.findAll{( it )}.unique().join(', '); 

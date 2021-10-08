@@ -1,0 +1,20 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+
+class AsyncSyncTask {
+
+	@Service('RPTMainSyncService')
+	def svc 
+
+	@Schedule(interval=2)
+	public void processPending(task) {
+		svc.getForProcessItems().each {syncdata ->
+			svc.sendAsyncData(syncdata)
+		}
+	}
+
+	@Schedule(interval=60)
+	public void reschedulePendingTask(task) {
+		svc.movePendingToForProcess()
+	}
+}

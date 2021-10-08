@@ -1,0 +1,145 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+
+/*----------------------------------------------------------------
+* Ledger Synchronization support shared 
+* between province and municipalities 
+-----------------------------------------------------------------*/
+class RPTLedgerSyncInterceptor
+{
+   @Env
+    def env
+
+    @Service('DateService')
+    def dtSvc
+
+    @Service('RPTMainSyncService')
+    def syncSvc 
+
+    @Service('RPTLedgerService')
+    def ledgerSvc
+
+    @Service('RPTLedgerSyncService')
+    def  ledgerSyncSvc
+
+    @DataContext('rptledger')
+    def em_rptledger
+
+    @DataContext('rptledger_item')
+    def em_rptledger_item
+
+    @DataContext('rptpayment')
+    def em_rptpayment
+
+    @DataContext('rptpayment_item')
+    def em_rptpayment_item
+
+    @DataContext('remote_mapping')
+    def em_remote
+
+    /*---------------------------------------------------------
+    *
+    * POST PAYMENT SUPPORT
+    *
+    ---------------------------------------------------------*/
+
+    @After(pattern="RPTReceiptService.create", index=50000) 
+    public void schedulePostPayment( evt ) {
+        def receipt = evt.result 
+        
+        def data = [:]
+        data.parentid = receipt.objid 
+        data.refid = receipt.objid 
+        data.reftype = 'rptreceipt'
+        data.action = 'POSTPAYMENT'
+        data.dtfiled = dtSvc.serverDate 
+        data.idx = 0
+        syncSvc.create(data)
+    }   
+
+
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.reftype == 'rptreceipt' && 'POSTPAYMENT'.equalsIgnoreCase(result.action)}") 
+    public void sendPostPayment( evt ) {
+        def syncdata = evt.result 
+
+        def payments = em_rptpayment.find([receiptid: syncdata.refid]).list()
+        payments.each{pmt -> 
+            def mapping = em_remote.find([objid: pmt.refid, doctype:'rptledger']).first()
+            if (mapping){
+                pmt.rptledger = em_rptledger.find([objid:pmt.refid]).first()
+                pmt.ledgeritems = em_rptledger_item.find([parentid: pmt.refid]).list()
+                pmt.items = em_rptpayment_item.find([parentid: pmt.objid]).list()
+
+                pmt.refid = mapping.remote.objid 
+                pmt.rptledger.objid = mapping.remote.objid 
+                pmt.ledgeritems.each{ it.parentid = mapping.remote.objid }
+
+                //syncdata required fields 
+                syncdata.remote = mapping.remote 
+                syncdata.data = pmt
+                syncSvc.send(syncdata)
+            }
+        }
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].reftype == 'rptreceipt' && 'POSTPAYMENT'.equalsIgnoreCase(args[0].action)}") 
+    public void postPayment(evt){
+        def payment = evt.args[0].data
+        ledgerSyncSvc.postPayment(payment)
+        evt.result.status = 'OK'
+    }
+
+
+
+    /*---------------------------------------------------------
+    *
+    * VOID PAYMENT SUPPORT
+    *
+    ---------------------------------------------------------*/
+
+    @After(pattern="RPTReceiptService.voidReceipt", index=50000) 
+    public void scheduleVoidPayment( evt ) {
+        def receipt = evt.args[0]
+        
+        def data = [:]
+        data.refid = receipt.objid 
+        data.reftype = 'rptreceipt'
+        data.action = 'VOIDPAYMENT'
+        data.dtfiled = dtSvc.serverDate 
+        syncSvc.create(data)
+    }   
+
+
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.reftype == 'rptreceipt' && 'VOIDPAYMENT'.equalsIgnoreCase(result.action)}") 
+    public void sendVoidPayment( evt ) {
+        def syncdata = evt.result 
+
+        def voidedpayments = em_rptpayment.find([receiptid: syncdata.refid, voided: 1]).list()
+        voidedpayments.each{pmt -> 
+            def mapping = em_remote.find([objid: pmt.refid, doctype:'rptledger']).first()
+            if (mapping){
+                pmt.rptledger = em_rptledger.find([objid:pmt.refid]).first()
+                pmt.ledgeritems = em_rptledger_item.find([parentid: pmt.refid]).list()
+
+                pmt.refid = mapping.remote.objid 
+                pmt.rptledger.objid = mapping.remote.objid 
+                pmt.ledgeritems.each{ it.parentid = mapping.remote.objid }
+
+                //syncdata required fields 
+                syncdata.remote = mapping.remote 
+                syncdata.data = pmt
+                syncSvc.send(syncdata)
+            }
+        }
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].reftype == 'rptreceipt' && 'VOIDPAYMENT'.equalsIgnoreCase(args[0].action)}") 
+    public void postVoidPayment(evt){
+        def payment = evt.args[0].data
+        ledgerSyncSvc.postVoidPayment(payment)
+        evt.result.status = 'OK'
+    }
+}
+

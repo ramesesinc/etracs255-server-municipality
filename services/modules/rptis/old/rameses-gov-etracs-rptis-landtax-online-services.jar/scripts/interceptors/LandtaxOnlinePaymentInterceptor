@@ -1,0 +1,156 @@
+import com.rameses.annotations.* 
+import com.rameses.services.extended.*
+
+class LandtaxOnlinePaymentInterceptor 
+{
+	@Env
+	def env 
+
+	@Service('RPTBillingService')
+    def billSvc
+
+    @DataContext('entity')
+    def em_entity 
+
+    @Service('RPTLedgerPostPaymentService')
+    def postPaymentSvc
+
+    def BARCODE_PREFIX = '56001:'
+
+
+
+    @After(pattern="OnlinePaymentService.getBilling", eval="#{args[0].txntype=='rptcol'}")
+    public void afterBilling( def evt ) { 
+        def params = evt.args[0]
+        def result = evt.result 
+
+        def bill = getBilling(params)
+        def rptledger = bill.rptledger
+
+        def data = [:]
+        data.info = [
+            billid: bill.objid,
+            billno: bill.barcode,
+            billdate: bill.billdate,
+            billtoyear: bill.billtoyear,
+            billtoqtr: bill.billtoqtr,
+            billperiod: buildPeriod(rptledger),
+            rptledgerid: rptledger.objid,
+            taxpayer: rptledger.taxpayer,
+            tdno: rptledger.tdno, 
+            fullpin: rptledger.fullpin, 
+            rputype: rptledger.rputype, 
+            administrator: rptledger.administrator, 
+            totalareasqm: rptledger.totalareasqm, 
+            totals: bill.totals,
+            items: rptledger.items,
+            amount: bill.totals.total,
+            fromyear: rptledger.fromyear,
+            fromqtr: rptledger.fromqtr,
+            toyear: rptledger.toyear,
+            toqtr: rptledger.toqtr,
+        ]
+        data.amount = bill.totals.total 
+        result.putAll(data)
+    }
+
+
+    @Before(pattern="OnlinePaymentService.createPaymentOrder", eval="#{args[0].txntype=='rptcol'}")
+    public void createPaymentOrder( def evt ) { 
+        def po = evt.args[0]
+
+        def bill = getBilling(po)
+        def rptledger = bill.rptledger
+
+        def data = [:]
+        data.payer = rptledger.taxpayer 
+        data.paidby = rptledger.taxpayer.name 
+        data.paidbyaddress = (rptledger.taxpayer.address instanceof String ? rptledger.taxpayer.address : rptledger.taxpayer.address.text)
+        data.collectiontype = [objid:'RPT_COLLECTION']
+        data.particulars = 'Real Property Tax'
+        data.refid = rptledger.objid 
+        data.refno = rptledger.tdno 
+        data.amount = bill.totals.total
+        data.txntype = 'rptcol'
+        data.txntypename = 'Real Property Tax'
+
+        def contact = em_entity.select('mobileno,phoneno,email').find([objid:rptledger.taxpayer.objid]).first()
+        data.putAll(contact)
+
+        data.info = [billid:bill.objid, barcode:bill.barcode, rptledgerid:rptledger.objid]
+
+        po.info = data 
+    }
+
+
+    @Before(pattern="EORService.post", eval="#{args[0].txntype=='rptcol'}")
+    public void postPayment( evt ) { 
+        def eor = evt.args[0]
+        def bill = getBilling([refno:eor.info.barcode])
+        eor.ledgers = [bill.rptledger]
+        eor.rptledger = bill.rptledger 
+        postPaymentSvc.buildCashReceiptItemsAndShares(eor)
+    }    
+
+    @After(pattern="EORService.post", eval="#{args[0].txntype=='rptcol'}")
+    public void afterPostPayment( def evt ) { 
+        def eor = evt.args[0] 
+        def res = evt.result 
+        eor.receiptno = res.receiptno 
+        eor.receiptdate = res.receiptdate
+        postPaymentSvc.postPayment(eor) 
+    }     
+
+
+    def getBilling(params){
+        def bill = [:]
+        if (!env.ORGID) env.ORGID = params.orgcode 
+
+        if (params.refno.startsWith(BARCODE_PREFIX)){
+            params.barcodeid = params.refno 
+            bill = billSvc.getBillByBarcode(params)
+            bill._forpayment = true
+            bill = billSvc.generateBill(bill)
+        }
+        else{
+            params.tdno = params.refno 
+            if (params.billtoyear) params.billtoyear = toInt(params.billtoyear)
+            if (params.billtoqtr) params.billtoqtr = toInt(params.billtoqtr)
+            bill = billSvc.generateBillByTdNo(params)
+        }
+        bill.rptledger = bill.remove('ledgers')[0]
+        return bill 
+    }
+
+
+    def buildPeriod(rptledger){
+        def period = ''
+        if (rptledger.fromyear == rptledger.toyear && rptledger.fromqtr == 1 && rptledger.toqtr == 4){
+            period = '' + rptledger.fromyear 
+        } 
+        else if (rptledger.fromyear == rptledger.toyear && rptledger.fromqtr == rptledger.toqtr){
+            period = rptledger.fromqtr + 'Q, ' + rptledger.fromyear 
+        }
+        else if (rptledger.fromyear == rptledger.toyear){
+            period = rptledger.fromqtr + '' + rptledger.toqtr +  'Q, ' + rptledger.fromyear 
+        }
+        else if (rptledger.fromqtr == 1 && rptledger.toqtr == 4){
+            period = 'FULL ' + rptledger.fromyear + ' - ' + rptledger.toyear
+        }
+        else {
+            period = rptledger.fromqtr + 'Q, ' + rptledger.fromyear + ' - ' + rptledger.toqtr + 'Q, ' + rptledger.toyear
+        }
+
+        return period
+    }
+
+    int toInt(val){
+        if (val instanceof Integer) return val 
+        try{
+            return new BigDecimal(val+'').intValue()
+        }
+        catch(e){
+            return 0 
+        }
+    }
+}

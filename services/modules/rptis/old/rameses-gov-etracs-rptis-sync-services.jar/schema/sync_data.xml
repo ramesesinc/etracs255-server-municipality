@@ -1,0 +1,28 @@
+<schema>
+	<element tablename="sync_data">
+		<field name="objid" primary="true" prefix="MSG"/>
+		<field name="parentid" required="true" />
+		<field name="refid" required="true" />
+		<field name="reftype" required="true" />
+		<field name="orgid" />
+		<field name="remote_orgid" />
+		<field name="remote_orgcode" />
+		<field name="remote_orgclass" />
+		<field name="action" required="true" />
+		<field name="dtfiled" required="true" />
+		<field name="idx" required="true" type="integer" />
+		<field name="sender_objid" />
+		<field name="sender_name" />
+
+		<complex name="forprocess" ref="sync_data_forprocess" jointype="many-to-one" required="false">
+			<key field="objid" target="objid" />
+		</complex>
+
+		<complex name="pending" ref="sync_data_pending" jointype="many-to-one" required="false">
+			<key field="objid" target="objid" />
+		</complex>
+	</element>
+</schema>
+
+
+

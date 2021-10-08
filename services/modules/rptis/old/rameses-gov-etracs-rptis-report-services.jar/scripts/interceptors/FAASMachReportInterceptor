@@ -1,0 +1,79 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.util.*;
+import com.rameses.services.extended.*;
+
+class FaasMachReportInterceptor
+{
+	@ActiveDB('faasreport_mach')
+	def em
+
+	@Service('RPTUtil')
+	def util 
+
+	@Service('NumberService')
+	def numberSvc
+
+	@Service('FAASReportService')
+	def faasReportSvc 
+
+	def MACH_DETAIL_ROWS = 13
+
+
+	@After(pattern="FAASReportService.getReportData", eval="#{result.rpu.rputype=='mach'}")
+	public void buildReport(evt){
+		def faas = evt.result
+		faas.rpu += em.findMachInfoById(faas.rpu)
+		faasReportSvc.buildLandReference( faas )
+		buildBldgReference(faas)
+		buildMachDetails(faas)
+		buildPropertyAppraisals(faas)
+		buildAssessments(faas)
+	}
+
+	void buildAssessments(faas){
+		faas.propertyassessments = em.getAssessments(faas.rpu)
+		util.buildEmptyRows( faas.propertyassessments, 5)
+	}
+
+	void buildPropertyAppraisals(faas) {
+		faas.propertyappraisals = em.getAppraisals(faas.rpu).each{
+			def additionalcost = new BigDecimal( 0.0 )
+			
+			if( it.freightcost )
+				additionalcost.add( it.freightcost )
+			
+			if( it.insurancecost )
+				additionalcost.add( it.insurancecost )
+				
+			if( it.installationcost )
+				additionalcost.add( it.installationcost )
+				
+			if( it.othercost )
+				additionalcost.add( it.othercost )
+				
+			def depreciation = numberSvc.format("#,##0.0000", it.depreciation) + ' %'
+			
+			it.machinename 		= it.machine.name 
+			it.additionalcost	= additionalcost
+			it.depreciation		= depreciation
+		}
+		util.buildEmptyRows( faas.propertyappraisals, MACH_DETAIL_ROWS)
+		faas.propertyappraisals.each{
+			it.useswornamount = util.toBoolean(it.useswornamount, false)
+		}
+	}
+
+	void buildMachDetails(faas) {
+		faas.machdetails = em.getMachDetails(faas.rpu).each{
+			it.brandmodel = (it.brand? it.brand : '') + (it.model ? '/' + it.model : '')
+		}
+		util.buildEmptyRows( faas.machdetails, MACH_DETAIL_ROWS )
+	}
+
+	void buildBldgReference(faas){
+		def bldginfo = em.findBldgInfoByPin(faas.rpu.bldgmaster)
+		if (bldginfo) faas.putAll(bldginfo)
+	}
+
+}

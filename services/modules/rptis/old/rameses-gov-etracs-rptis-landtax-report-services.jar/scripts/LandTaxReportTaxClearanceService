@@ -1,0 +1,184 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+class LandTaxReportTaxClearanceService 
+{
+    @ActiveDB('landtaxreport_taxclearance')
+    def em;
+
+    @Service('RPTCertificationService')
+    def certSvc 
+
+    @Service('SequenceService')
+    def seqSvc;
+
+    @Service('DateService')
+    def dtSvc 
+
+    @Service('RPTUtil')
+    def util
+
+    @Service('Var')
+    def var 
+
+    @Service('ReportParameterService')
+    def paramSvc 
+
+    @DataContext('cashreceipt')
+    def em_cashreceipt
+
+
+    @ProxyMethod
+    public def getReportTypes() {
+        return [
+            [name: 'fullypaid', title: 'FULL PAYMENT'],
+            [name: 'zerovalue', title: 'ZERO VALUE'],
+            [name: 'newdiscovery', title: 'NEW EFFECTIVE'],
+            [name: 'exempt', title: 'EXEMPT'],
+        ]
+    }
+    
+
+    @ProxyMethod
+    public def initClearance(  ) {
+        def cy = dtSvc.serverYear
+        return [
+            objid               : util.generateId('AN'),
+            opener              : 'rpttaxclearance',
+            year                : cy,
+            qtr                 : 4,
+            effectivityyear     : cy + 1,  
+            certifiedby         : var.treasurer_name,
+            certifiedbytitle    : var.treasurer_title,
+            purpose             : 'for whatever legal purpose it may serve him/her best',
+            oramount            : 0.0,
+            stampamount         : 0.0,
+            items               : [],
+            official            : false,
+            reporttype          : getReportTypes().first(),
+        ]
+    }
+
+    @ProxyMethod
+    public void checkDuplicateReceipt(entity) {
+        def onlinePaymentRequired = util.toBoolean(var.landtax_clearance_online_payment_required, false)
+        if (onlinePaymentRequired) {
+            def rct = em_cashreceipt.select('objid,void.objid,void.reason')
+                                    .find([receiptno: entity.orno, formno:'51'])
+                                    .first();
+            if (!rct) {
+                throw new Exception('O.R. No. ' + entity.orno + ' does not exist.')
+            } else if (rct.void?.objid) {
+                throw new Exception('O.R. No. ' + entity.orno + ' has already been voided.')
+            }
+            
+            def dup = em.findPaidClearance(entity)
+            if (dup) {
+                throw new Exception('O.R. No. ' + entity.orno + ' is already referenced by Clearance No. ' + dup.txnno + '.')
+            }
+        }
+
+
+    }
+
+
+    @ProxyMethod
+    public def createClearance( cert ) {
+        validate(cert)
+        def year = dtSvc.serverYear
+        cert.txnno = year + seqSvc.getNextFormattedSeries('RPTTAXCLEARANCE-' + year )
+        certSvc.createCertification(cert)
+        cert.items.each{
+            certSvc.createItem(it)
+        }
+        cert.reporttypename = cert.reporttype.name 
+        em.insertTaxClearance(cert)
+        return openClearance(cert.objid)
+    }
+
+    
+    @ProxyMethod
+    public def openClearance( objid ) {
+        def cert = certSvc.openCertification(objid)
+        cert.putAll(em.findInfo([objid:objid]))
+        buildIssuanceInfo(cert)
+        cert.items = em.getItems([rptcertificationid:objid])
+        buildEffectivityYear(cert)
+        buildAdministratorInfo(cert)
+        buildLguNameInfo(cert)
+        loadPaymentInfo(cert)
+        cert.reporttype = getReportTypes().find{it.name == cert.reporttype}
+        return cert 
+    }
+
+
+    @ProxyMethod
+    public def getClearedLedgers(cert) {
+        util.required('Taxpayer', cert.taxpayer.objid)
+        util.required('Year', cert.year)
+        util.required('Qtr', cert.qtr)
+        cert.taxpayerid = cert.taxpayer.objid 
+        return em.getClearedLedgers(cert)
+    }
+
+    void validate(cert) {
+        if (!cert.items) {
+            throw new Exception('At least one property must be included.')
+        }
+
+        if ('fullypaid' == cert.reporttype.name) {
+            cert.items.each{
+                if (it.lastyearpaid < cert.year) 
+                    throw new Exception('TD No. ' + it.tdno + ' is not cleared for the year ' + cert.year + '.')
+                if (it.lastyearpaid == cert.year && it.lastqtrpaid < cert.qtr) 
+                    throw new Exception('TD No. ' + it.tdno + ' is not cleared for the ' + util.formalizeNumber(cert.qtr) + ' qtr of ' + cert.year + '.' )
+            }
+        }
+    }    
+
+    void buildIssuanceInfo(cert){
+        def pdate = dtSvc.parseDate(cert.txndate, null)
+        cert.issueday      = util.formalizeNumber(pdate.day)
+        cert.issuemonth    = util.getMonthName(pdate.month)
+        cert.issueyear     = pdate.year +''
+        cert.issueplace    = paramSvc.standardParameter.LGUFORMALNAME
+    }
+
+    void loadPaymentInfo(cert){
+        cert.items.each{item ->
+            item.rptledgerid = item.refid 
+            def p = [
+                rptcertificationid : cert.objid,
+                rptledgerid : item.rptledgerid,
+                year : cert.year,
+                qtr : cert.qtr,
+            ]
+            item.payments = em.getPaymentInfo(p).findAll{it.rptledgerid == item.rptledgerid}
+            item.payments.each{
+                if (it.ordate){
+                    it.ordate = dtSvc.parse('yyyy-MM-dd', it.ordate)
+                }
+            }
+        }
+    }
+
+    void buildAdministratorInfo(cert){
+        if (cert.items && cert.items.size() == 1){
+            cert.administrator = cert.items[0].administrator 
+        }
+    }
+
+    void buildLguNameInfo(cert){
+        if (cert.items && cert.items.size() == 1){
+            cert.lguname = cert.items[0].lguname
+        }
+    }
+
+    void buildEffectivityYear(cert) {
+        cert.effectivityyear = cert.year 
+        if (cert.items){
+            cert.effectivityyear = cert.items[0].effectivityyear
+        }
+    }
+}

@@ -1,0 +1,202 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+public class BatchGRService
+{
+    @Env 
+    def env 
+
+    @Service('GeneralRevisionService')
+    def svc 
+
+    @DataContext('faas') 
+    def em_faas 
+
+    @DataContext('batchgr') 
+    def em_batchgr 
+
+    @DataContext('batchgr_item') 
+    def em_batchgr_item 
+
+
+    @ProxyMethod
+    public def create(entity) {
+        entity.state = 'DRAFT'
+        entity = em_batchgr.create(entity)
+
+        entity._barangayid = entity.barangay.objid
+        entity._classid = (entity.classification ? entity.classification.objid : '%')
+        entity._rputype = (entity.rputype ? entity.rputype : '%')
+        entity._section = (entity.section ? entity.section : '%')
+        em_batchgr.insertItems(entity)
+        
+        def counts = getCounts(entity)
+        if (counts.count == 0) {
+            throw new Exception('There are no records that match the specified criteria.')
+        }
+
+        em_batchgr.update(entity)
+        return open(entity)
+    }
+
+    @ProxyMethod
+    public def update(entity) {
+        def old = open(entity)
+        em_batchgr.update(entity)
+        return entity 
+    }
+
+    @ProxyMethod
+    public def open(entity) {
+        entity = em_batchgr.read(entity)
+        if (!entity) {
+            throw new Exception('Batch record does not exist or has been deleted.')
+        }
+        return entity
+    }
+
+    @ProxyMethod
+    public void delete(entity) {
+        if (checkHasRevisedItems(entity)) {
+            def msg = 'Batch revision cannot be deleted.\n'
+            msg += 'One or more FAAS has already been revised.'
+            throw new Exception(msg)
+        }
+        em_batchgr_item.find([parent_objid: entity.objid]).delete()
+        em_batchgr.delete(entity)
+    }
+
+
+    @ProxyMethod
+    public def revise(batchitem) {
+        def entity = open(batchitem.parent)
+        def info = [entity: entity, item: batchitem]
+
+        def olditem = em_batchgr_item.find([objid: batchitem.objid]).first()
+        if (!olditem) {
+            batchitem.state = 'ERROR'
+            batchitem.error = 'Batch Item does not exist or has been deleted.'
+            em_batchgr_item.update(batchitem)
+        } 
+        else if (olditem.state.matches('FORREVISION|ERROR')) {
+            try {
+                def params = [:]
+                params.faas = [objid: batchitem.objid]
+                params.newry = entity.ry 
+                params.datacapture = true 
+                params.batchgr = entity 
+                def grfaas = svc.createDataCaptureGeneralRevision(params)
+
+                batchitem.state = 'REVISED'
+                batchitem.error = null 
+                batchitem.newfaasid = grfaas.objid 
+                batchitem.newfaas = [tdno: grfaas.tdno, fullpin: grfaas.fullpin]
+                em_batchgr_item.update(batchitem)
+            } 
+            catch(e) {
+                handleError(info, e)
+            }
+        }
+        else {
+            // do nothing for cases
+            // where record was updated by another user
+        }
+        updateBatchStatus(entity)
+        return info 
+    }
+
+    @ProxyMethod
+    public def getItems(entity) {
+        return em_batchgr_item.find([parent_objid: entity.objid])
+                .orderBy('pin,suffix')
+                .list()
+    }
+
+    @ProxyMethod
+    public def getItem(item) {
+        return em_batchgr_item.find([objid: item.objid]).first()
+    }
+
+    /*-------------------------------------------------------------------
+    * Update the batchgr item status in cases where 
+    * an existing general revision has already benn created.
+    * Reflect the newfaasid and appropriate status of the item 
+    *-------------------------------------------------------------------*/
+    @ProxyMethod 
+    public def updateItemStatus(item) {
+        def newfaas = em_faas.select('objid,state').find([prevtdno: item.tdno]).first()
+        if (newfaas) {
+            item.state = (newfaas.state == 'CURRENT' ? 'CURRENT' : 'REVISED')
+            item.newfaasid = newfaas.objid
+            em_batchgr_item.update(item)
+        }
+        return item
+    }
+
+    /*-------------------------------------------------------
+    * Exclude the specified item from revision.
+    * If item is land, exclude also all of its improvement
+    -------------------------------------------------------*/
+    @ProxyMethod
+    public void excludeItem(item){
+        def old = em_batchgr_item.find([objid: item.objid]).first()
+        if (!old) {
+            throw new Exception('Item  does not exist or has been deleted.')
+        }
+        if (old.state != 'FORREVISION' || old.newfaasid ) {
+            throw new Exception('Item has already been revised.')
+        }
+
+        if (item.rputype == 'land') {
+            em_batchgr_item.find([parent_objid: item.parent.objid, pin: item.pin]).delete() 
+        } else {
+            em_batchgr_item.find([objid: item.objid]).delete() 
+        }
+    }
+
+    @ProxyMethod
+    public def getCounts(entity){
+        def cnt = em_batchgr.findCounts(entity)
+        cnt.current = cnt.currentcnt
+        return cnt 
+    }
+
+
+    def checkHasRevisedItems(entity) {
+        def reviseditem = em_batchgr_item.where('parent_objid = :objid and newfaasid is not null', entity).first()
+        return reviseditem != null 
+    }
+
+
+    void handleError(info, e) {
+        def sw = null 
+        def pw = null 
+        try {
+            sw = new StringWriter()
+            pw = new PrintWriter(sw)
+            e.printStackTrace( pw)
+
+            info.item.state = 'ERROR'
+            info.item.error = sw.toString()
+            em_batchgr_item.update(info.item)
+        }
+        catch( ex ) {
+            info.item.state = 'ERROR'
+            em_batchgr_item.update(info.item)
+            ex.printStackTrace()
+        }
+        finally{
+                if( sw ) try{ sw.close() } catch( ex ) {}
+                if( pw ) try{ pw.close() } catch( ex ){}
+        }
+    }
+
+    void updateBatchStatus(entity){
+        def counts = getCounts(entity)
+        if (counts.count == counts.current){
+            entity.state = 'COMPLETED'
+        }
+        em_batchgr.update(entity)
+    }
+}

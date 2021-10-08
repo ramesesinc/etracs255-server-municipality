@@ -1,0 +1,56 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+
+/*----------------------------------------------------------------
+* Red Flag Synchronization support shared 
+* between province and municipalities 
+-----------------------------------------------------------------*/
+class RedFlagSyncInterceptor
+{
+    @Env
+    def env
+
+    @Service('RedFlagSyncService')
+    def syncSvc 
+
+
+    /*---------------------------------------------------------
+    *
+    * SCHEDULING SUPPORT
+    *
+    ---------------------------------------------------------*/
+    @After(pattern="ProvinceRedFlagService.postRedFlag") 
+    public void scheduleSubmitToMunicipality( evt ) {
+        def redflag = evt.result
+        syncSvc.scheduleSubmitToMunicipality(redflag)
+    }
+
+    @After(pattern="MunicipalityRedFlagService.resolveRedFlag") 
+    public void scheduleResolvedRedFlag( evt ) {
+        def redflag = evt.result
+        syncSvc.scheduleResolvedRedFlag(redflag)
+    }
+
+    /*---------------------------------------------------------
+    *
+    * SEND/RECEIVE HANDLERS
+    *
+    ---------------------------------------------------------*/
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.reftype == 'redflag' && result.action.matches('REDFLAG-.*')}") 
+    public void sendData( evt ) {
+        def syncdata = evt.result 
+        syncSvc.send(syncdata)
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].reftype == 'redflag' && args[0].action.matches('REDFLAG-.*')}") 
+    public void receiveData(evt){
+        def syncdata = evt.args[0]
+        syncSvc.receive(syncdata)
+        evt.result.status = 'OK'
+    }
+
+
+}
+

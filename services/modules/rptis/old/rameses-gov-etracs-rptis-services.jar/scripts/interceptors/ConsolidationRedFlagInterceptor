@@ -1,0 +1,47 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+class ConsolidationRedFlagInterceptor
+{
+	@Service('ConsolidationService')
+	def svc 
+
+	@After(pattern="RPTRedFlagService.getEntity", index=3)
+	public void afterGetEntity(evt){
+		def redflag = evt.args[0]
+		def entity  = evt.result 
+		if (!entity.objid){
+			try {
+				def f = svc.open([objid:redflag.refid])
+				entity.putAll(f)
+			}
+			catch(Exception e) {
+				//ignore				
+			}
+			
+		}
+	}
+
+
+	@After(pattern="RPTRedFlagService.getCurrentTask", index=5)
+	public void afterGetCurrentTask(evt){
+		def redflag = evt.args[0]
+		def task = evt.result 
+		if (!task.objid){
+			try {
+				def t = svc.findOpenTask([objid:redflag.refid])
+				if (t){
+					t.filetype = 'consolidation'
+					task.putAll(t)
+				}
+			}
+			catch(Exception e) {
+				//ignore				
+			}
+			
+		}
+
+	}
+}
+

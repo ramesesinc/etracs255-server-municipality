@@ -1,0 +1,21 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+class RPTReportConsolidationService
+{
+    @ActiveDB('rptreport_consolidation')
+    def em
+
+    @ProxyMethod
+    public def buildSummaryData( consolidation ) {
+    	def items = em.getConsolidations(consolidation)
+    	def previtems = em.getConsolidatedLands(consolidation)
+        return [
+            txnno : items[0].txnno,
+            barangay : items[0].barangay,
+			items : items,
+			previtems : previtems 
+		]
+    }
+}

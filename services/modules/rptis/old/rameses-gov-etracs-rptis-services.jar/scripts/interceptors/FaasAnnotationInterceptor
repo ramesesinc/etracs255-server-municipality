@@ -1,0 +1,26 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+class FaasAnnotationInterceptor
+{
+	@Service('FAASAnnotationService')
+    def annotationSvc 
+
+
+	@After(pattern="FAASService.open") 
+	public void afterOpen( evt ) {
+		def faas = evt.result 
+		def annotations = annotationSvc.getAnnotationsByFaasId(faas.objid)
+		faas.annotated = annotations.size() > 0
+	}
+
+
+	@After(pattern="FAASService.approveFaas") 
+	public void afterApprove( evt ) {
+		def faas = evt.result 
+		annotationSvc.carryOverAnnotations(faas)
+	}
+
+}
+

@@ -1,0 +1,104 @@
+import com.rameses.annotations.*
+import com.rameses.util.*
+import com.rameses.services.extended.*
+
+class FAASAnnotationSyncService
+{
+	@Env
+	def env 
+
+	@Service('DateService')
+    def dtSvc
+
+	@Service('RPTMainSyncService')
+	def syncSvc 
+
+    @Service('RPTSyncService')
+    def rptSync
+
+    @Service('RPTSyncSupport')
+    def support
+
+    @Service('FAASAnnotationService')
+    def svc
+
+    @Service('CancelAnnotationService')
+    def cancelSvc
+
+
+
+	/*---------------------------------------------------------
+	*
+	* SCHEDULING SYNC SUPPORT 
+	*
+	---------------------------------------------------------*/
+
+	@ProxyMethod
+	public void schedulePostAnnotation(annotation){
+		def dtfiled = dtSvc.serverDate
+        def remoteOrg = rptSync.getRemoteOrg(annotation)
+        def idx = 1
+        syncSvc.schedule(annotation.objid, annotation.objid, 'faasannotation', 'FAAS-ANNOTATION-POST', dtfiled, idx, remoteOrg)
+        scheduleSharedData(annotation, dtfiled, remoteOrg, idx)
+	}
+
+	@ProxyMethod
+	public void scheduleCancelledAnnotation(cancelannotation){
+		def dtfiled = dtSvc.serverDate
+        def remoteOrg = rptSync.getRemoteOrg(cancelannotation)
+        def idx = 1
+        syncSvc.schedule(cancelannotation.objid, cancelannotation.objid, 'faasannotation', 'FAAS-ANNOTATION-CANCELLED', dtfiled, idx, remoteOrg)
+	}
+
+	void scheduleSharedData(annotation, dtfiled, remoteOrg, idx) {
+    	rptSync.scheduleImages(annotation.objid, 'faasannotation', dtfiled, remoteOrg, idx)
+    }	
+
+	
+	/*---------------------------------------------------------
+	*
+	* SEND/RECEIVE HANDLERS 
+	*
+	---------------------------------------------------------*/
+	@ProxyMethod
+	public void send(syncdata) {
+		rptSync.send(syncdata, getActions())
+	}
+
+	@ProxyMethod
+	public void receive(syncdata) {
+		rptSync.receive(syncdata, getActions())
+	}
+
+	def getActions(){
+		return  [
+	    	'FAAS-ANNOTATION-POST': [send: getAnnotation, receive: postAnnotation],
+	    	'FAAS-ANNOTATION-CANCELLED': [send: getCancelAnnotation, receive: postCancelAnnotation],
+	    ]
+	}
+
+	/*---------------------------------------------------------
+	*
+	* SUPPORT METHODS
+	*
+	---------------------------------------------------------*/
+	def getAnnotation = {annotation ->
+		return svc.open(annotation)
+	}
+
+	def postAnnotation = {syncdata ->
+		def annotation = syncdata.data 
+		svc.postRemote(annotation)
+	}
+
+
+	def getCancelAnnotation = {cancelannotation ->
+		return cancelSvc.open(cancelannotation)
+	}
+
+	def postCancelAnnotation = {syncdata ->
+		def cancelannotation = syncdata.data 
+		cancelSvc.postRemote(cancelannotation)
+	}
+}
+ 

@@ -1,0 +1,60 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.util.*
+import com.rameses.services.extended.*
+
+
+class RPTLedgerPaymentService
+{
+    @Env
+    def env
+
+    @DataContext('rptpayment')
+    def em_rptpayment
+
+    @DataContext('rptpayment_item')
+    def em_rptpayment_item
+
+    @DataContext('rptpayment_share')
+    def em_rptpayment_share
+
+    @DataContext('rptledger_credit')
+    def em_rptledger_credit
+
+
+
+    @ProxyMethod
+    public void delete( ledger ) {
+        def payments = em_rptpayment.select('objid').find([refid:ledger.objid]).list()
+        payments.each{
+            em_rptpayment_item.find([parentid:it.objid]).delete()
+            em_rptpayment_share.find([parentid:it.objid]).delete()
+        }
+        em_rptpayment.find([refid:ledger.objid]).delete() 
+        em_rptledger_credit.find([rptledgerid:ledger.objid]).delete() 
+    }
+
+
+    @ProxyMethod
+    public def getPayments(entity) {
+        def list = em_rptpayment.find([refid:entity.objid, voided:0])
+                        .orderBy('receiptdate desc,receiptno desc, fromyear desc,fromqtr desc')
+                        .list()
+        list.each{
+            it.partialled = em_rptpayment_item.select('objid')
+                                    .find([parentid:it.objid, partialled:1])
+                                    .first() != null
+        }
+        return list 
+    }
+
+    @ProxyMethod
+    public def getPaymentDetails( payment ) {
+        def data = [:]    
+        data.items = em_rptpayment_item.find([parentid:payment.objid]).orderBy('year desc,qtr desc, revtype').list()
+        data.shares = em_rptpayment_share.find([parentid:payment.objid]).orderBy('sharetype,revperiod,revtype').list()
+        return data 
+    }    
+}
+
+

@@ -1,0 +1,10 @@
+<schema>
+	<element tablename="sync_data_pending">
+		<field name="objid" primary="true" />
+		<field name="error" />
+		<field name="expirydate" />
+	</element>
+</schema>
+
+
+

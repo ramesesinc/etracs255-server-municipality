@@ -1,0 +1,64 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+
+/*----------------------------------------------------------------
+* Cancelled FAAS Synchronization support shared 
+* between province and municipalities 
+-----------------------------------------------------------------*/
+class CancelledFAASSyncInterceptor
+{
+    @Env
+    def env
+
+    @Service('CancelledFAASSyncService')
+    def syncSvc 
+
+
+    /*---------------------------------------------------------
+    *
+    * SCHEDULING SUPPORT
+    *
+    ---------------------------------------------------------*/
+    @After(pattern="CancelledFAASService.approve") 
+    public void scheduleManualApproved( evt ) {
+        def cancelledfaas = evt.result
+        syncSvc.scheduleManualApproved(cancelledfaas)
+    }
+
+    @After(pattern="CancelledFAASWorkflowService.signal", eval="#{args[0].state == 'recommender' && args[0].action == 'submit_to_province'}", index=50000) 
+    public void scheduleSubmitToProvince( evt ) {
+        def cancelledfaas = evt.args[0].data
+        syncSvc.scheduleSubmitToProvince(cancelledfaas)
+    }
+
+    @After(pattern="CancelledFAASService.onlineApprove") 
+    public void scheduleOnlineApproved( evt ) {
+        def cancelledfaas = evt.result
+        syncSvc.scheduleOnlineApproved(cancelledfaas)
+    }
+
+
+
+    /*---------------------------------------------------------
+    *
+    * SEND/RECEIVE HANDLERS
+    *
+    ---------------------------------------------------------*/
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.reftype == 'cancelledfaas' && result.action.matches('CANCELLEDFAAS-.*')}") 
+    public void sendData( evt ) {
+        def syncdata = evt.result 
+        syncSvc.send(syncdata)
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].reftype == 'cancelledfaas' && args[0].action.matches('CANCELLEDFAAS-.*')}") 
+    public void receiveData(evt){
+        def syncdata = evt.args[0]
+        syncSvc.receive(syncdata)
+        evt.result.status = 'OK'
+    }
+
+
+}
+

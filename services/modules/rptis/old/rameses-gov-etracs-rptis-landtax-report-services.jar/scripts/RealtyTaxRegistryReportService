@@ -1,0 +1,24 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+class RealtyTaxRegistryReportService
+{
+	@ActiveDB('landtaxreport_realtytaxregistry')
+    def em;
+
+    @Service('RPTUtil')
+    def util
+
+
+    @ProxyMethod
+    public def buildRealtyTaxRegistryData(params) {
+        def data = [:]
+        data.info = em.findLedgerInfo(params)
+        data.items = em.getLedgerCredits(params)
+        if (!data.items)
+            throw new Exception('There are no available credits for this ledger.')
+        util.buildPeriodCovered(data.items)
+        return data;
+    }
+}

@@ -1,0 +1,37 @@
+<schema>
+	<element tablename="batchgr">
+		<field name="objid" primary="true" prefix="BG" />
+		<!-- FORPROCESS, COMPLETED -->
+		<field name="state" required="true" caption="State" />
+		<field name="ry" required="true" caption="Revision Year" searchable="true" indexed="true"/>
+		<field name="lgu_objid" required="true" />
+		<field name="barangay_objid" required="true" />
+		<field name="rputype"  caption="Type" indexed="true"/>
+		<field name="classification_objid" />
+		<field name="section"  caption="Section" searchable="true" indexed="true"/>
+		<field name="memoranda" />
+		<field name="appraiser_name" />
+		<field name="appraiser_dtsigned" />
+		<field name="taxmapper_name" />
+		<field name="taxmapper_dtsigned" />
+		<field name="recommender_name" />
+		<field name="recommender_dtsigned" />
+		<field name="approver_name" />
+		<field name="approver_dtsigned" />
+
+		<complex name="lgu" ref="sys_org" jointype="many-to-one" 
+			required="true" includefields="code,name,orgclass" >
+				<key field="lgu_objid" target="objid" />
+		</complex>
+
+		<complex name="barangay" ref="barangay" jointype="many-to-one" 
+			required="true" includefields="code,name,indexno,pin" >
+				<key field="barangay_objid" target="objid" />
+		</complex>
+
+		<complex name="classification" ref="propertyclassification" jointype="many-to-one" 
+			required="false" includefields="code,name" >
+				<key field="barangay_objid" target="objid" />
+		</complex>
+	</element>
+</schema>

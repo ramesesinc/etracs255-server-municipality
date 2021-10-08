@@ -1,0 +1,131 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+
+/*----------------------------------------------------------------
+* General Synchronization support shared 
+* between province and municipalities 
+-----------------------------------------------------------------*/
+class RPTSyncInterceptor
+{
+    @Service('RPTMainSyncService')
+    def syncSvc 
+
+    @Service('ExaminationService')
+    def examinationSvc
+
+    @Service('RPTRequirementService')
+    def reqSvc 
+
+    @DataContext('dbimage_header')
+    def em_image_header
+
+    @DataContext('dbimage_chunk')
+    def em_image_chunk
+
+
+    /*----------------------------------------------------------
+    *
+    *  EXAMINATIONS SUPPORT
+    * 
+    ------------------------------------------------------------*/
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.action.matches('RPT-EXAMINATION')}") 
+    public void sendExamination( evt ) {
+        def syncdata = evt.result 
+        def examination = examinationSvc.open([objid: syncdata.refid])
+        if (examination) {
+            syncSvc.send2(syncdata, examination)
+        }
+        println 'Examination sent to remote.'        
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].action.matches('RPT-EXAMINATION')}") 
+    public void receiveExamination(evt){
+        def syncdata = evt.args[0]
+        def examination = syncdata.data 
+        examinationSvc.save(examination)
+        evt.result.status = 'OK'
+        println 'Examination posted.'
+    }
+
+
+
+    /*----------------------------------------------------------
+    *
+    *  REQUIREMENTS SUPPORT
+    * 
+    ------------------------------------------------------------*/
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.action.matches('RPT-REQUIREMENT')}") 
+    public void sendRequirement( evt ) {
+        def syncdata = evt.result 
+        def requirement = reqSvc.open([objid: syncdata.refid])
+        if (requirement) {
+            syncSvc.send2(syncdata, requirement)
+        }
+
+        println 'Requirement sent to remote.'        
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].action.matches('RPT-REQUIREMENT')}") 
+    public void receiveRequirement(evt){
+        def syncdata = evt.args[0]
+        def requirement = syncdata.data 
+        reqSvc.save(requirement)
+        evt.result.status = 'OK'
+        println 'Requirement posted.'
+    }
+
+
+    /*----------------------------------------------------------
+    *
+    *  IMAGE HEADER SUPPORT
+    * 
+    ------------------------------------------------------------*/
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.action.matches('RPT-IMAGE-HEADER')}") 
+    public void sendImageHeader( evt ) {
+        def syncdata = evt.result 
+        def header = em_image_header.find([objid: syncdata.refid]).first()
+        if (header) {
+            syncSvc.send2(syncdata, header)
+        }
+        
+        println 'Image Header sent to remote.'        
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].action.matches('RPT-IMAGE-HEADER')}") 
+    public void receiveImageHeader(evt){
+        def syncdata = evt.args[0]
+        def header = syncdata.data 
+        em_image_header.save(header)
+        evt.result.status = 'OK'
+        println 'Image Header posted.'
+    }
+
+    /*----------------------------------------------------------
+    *
+    *  IMAGE CHUNK SUPPORT
+    * 
+    ------------------------------------------------------------*/
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.action.matches('RPT-IMAGE-CHUNK')}") 
+    public void sendImageChunk( evt ) {
+        def syncdata = evt.result 
+        def chunk = em_image_chunk.find([objid: syncdata.refid]).first()
+        if (chunk) {
+            syncSvc.send2(syncdata, chunk)
+        }
+        
+        println 'Image Chunk sent to remote.'        
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].action.matches('RPT-IMAGE-CHUNK')}") 
+    public void receiveImageChunk(evt){
+        def syncdata = evt.args[0]
+        def chunk = syncdata.data 
+        em_image_chunk.save(chunk)
+        evt.result.status = 'OK'
+        println 'Image Chunk posted.'
+    }
+
+}
+

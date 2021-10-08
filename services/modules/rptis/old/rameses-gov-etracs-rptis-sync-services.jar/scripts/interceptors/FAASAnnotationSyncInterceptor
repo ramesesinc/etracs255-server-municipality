@@ -1,0 +1,58 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+
+/*----------------------------------------------------------------
+* FAAS Annotation Synchronization support shared 
+* between province and municipalities 
+-----------------------------------------------------------------*/
+class FAASAnnotationSyncInterceptor
+{
+    @Env
+    def env
+
+    @Service('FAASAnnotationSyncService')
+    def syncSvc 
+
+
+    /*---------------------------------------------------------
+    *
+    * SCHEDULING SUPPORT
+    *
+    ---------------------------------------------------------*/
+    @After(pattern="FAASAnnotationService.approve") 
+    public void schedulePostAnnotation( evt ) {
+        def annotation = evt.result
+        syncSvc.schedulePostAnnotation(annotation)
+    }
+
+    @After(pattern="CancelAnnotationService.approve") 
+    public void scheduleCancelledAnnotation( evt ) {
+        def cancelannotation = evt.result
+        syncSvc.scheduleCancelledAnnotation(cancelannotation)
+    }
+
+
+
+    /*---------------------------------------------------------
+    *
+    * SEND/RECEIVE HANDLERS
+    *
+    ---------------------------------------------------------*/
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.reftype == 'faasannotation' && result.action.matches('FAAS-ANNOTATION-.*')}") 
+    public void sendData( evt ) {
+        def syncdata = evt.result 
+        syncSvc.send(syncdata)
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].reftype == 'faasannotation' && args[0].action.matches('FAAS-ANNOTATION-.*')}") 
+    public void receiveData(evt){
+        def syncdata = evt.args[0]
+        syncSvc.receive(syncdata)
+        evt.result.status = 'OK'
+    }
+
+
+}
+

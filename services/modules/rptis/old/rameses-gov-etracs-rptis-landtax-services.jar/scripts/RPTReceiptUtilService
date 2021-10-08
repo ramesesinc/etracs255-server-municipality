@@ -1,0 +1,58 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+class RPTReceiptUtilService
+{
+	@Service('DateService')
+	def dtSvc 
+
+	@ActiveDB('rptreceipt_utility')
+	def em
+
+	@DataContext('cashreceiptitem')
+	def em_cashreceiptitem
+
+	@DataContext('rptpayment')
+	def em_rptpayment
+
+	@DataContext('rptpayment_share')
+	def em_rptpayment_share
+
+
+	@ProxyMethod
+	public void postShares( params ) {
+		if (!params.year) throw new Exception('year must be specified.')
+		if (!params.month) throw new Exception('mon must be specified.')
+
+		def remdate = params.year + '-' + params.month.index.toString().padLeft(2,'0') + '-01'
+		params.remfromdate = dtSvc.parse('yyyy-MM-dd', remdate)
+		params.remtodate = dtSvc.getMonthEndDate(params.remfromdate) + 1
+
+		def unpostedlist = em.getReceiptsWithUnpostedShares(params)
+		if (!unpostedlist) throw new Exception('There are no unposted shares for this period.')
+
+		unpostedlist.each{rct ->
+			em_rptpayment_share.find([parentid:rct.paymentid]).delete()
+
+			em_cashreceiptitem.find([receiptid:rct.objid]).list().each{item ->
+				createShare(rct, item)
+			}
+		}
+	}
+
+
+	void createShare(rct, item){
+		def share = em.findShareAccount([itemid:item.item.objid])
+		if (!share) throw new Exception('Share account ' + item.item.objid + ' does not exist.')
+
+		share.putAll(item) 
+		share.rptledgerid = rct.rptledgerid
+		share.parentid = rct.paymentid
+		share.rptreceiptid = rct.objid 
+		share.discount = 0.0 
+		if (!em_rptpayment_share.find([objid:item.objid]).first()){
+			em_rptpayment_share.create(share)
+		}
+	}
+}

@@ -1,0 +1,200 @@
+import com.rameses.annotations.*
+import com.rameses.eserver.*;
+import com.rameses.common.*;
+
+class RPTCertificationService 
+{
+    @PersistenceContext('main')
+    def em;
+    
+    @Env
+    def env 
+
+    @Service('DateService')
+    def dtSvc;
+	
+	@Service('SequenceService')
+	def seqSvc;
+
+	@Service('RPTUtil')
+	def util;
+
+	@Service('FAASService')
+    def faasSvc
+
+	
+
+	def SCHEMA_NAME = 'rptcertification'
+	def SCHEMA_ITEM = 'rptcertification:item'
+
+
+	@ProxyMethod
+	public def getList( params ) {
+    	params.searchtext = (params.searchtext ? params.searchtext : '') + '%'
+    	params.office = (params.office ? params.office : '') + '%'
+        def filters = [
+            ' and office LIKE $P{office} and txnno LIKE $P{searchtext}',
+            ' and office LIKE $P{office} and requestedby LIKE $P{searchtext}',
+            ' and office LIKE $P{office} and opener LIKE $P{searchtext}',
+        ]
+        return util.getListFromQuery( 'rptcertification:getList' , filters, params, 'objid' )
+	}
+
+
+	@ProxyMethod
+	public def createCertification( cert ) {
+		if (!cert.objid)
+			cert.objid = 'C' + new java.rmi.server.UID()
+		if (!cert.txnno){
+			cert.txnno = env.ORGCODE.replaceAll('-', '') + seqSvc.getNextFormattedSeries('RPTCERTIFICATION')
+		}
+		cert.txndate = dtSvc.serverDate
+		cert.createdbyid = env.USERID
+		cert.createdby = (env.FULLNAME ? env.FULLNAME : 'system')
+		cert.createdbytitle = (env.JOBTITLE ? env.JOBTITLE : 'system')
+		if (cert.official) {
+			cert.amount = 0.0
+			cert.stampamount = 0.0
+		}
+		if (cert.taxpayer){
+			if (cert.taxpayer.address)
+				cert.taxpayer.address = cert.taxpayer.address.replaceAll('[^\\S]',' ')
+			else 
+				cert.taxpayer.address = ''
+		}
+		cert.givenday = util.formalizeDate(cert.txndate, 'd' )
+		cert.givenmonth = util.formalizeDate(cert.txndate, 'MMMMM' )
+		cert.givenyear = util.formalizeDate(cert.txndate, 'yyyy' )
+		validate(cert)
+		em.create(SCHEMA_NAME, cert)
+		return openCertification(cert.objid)
+	}
+
+	@ProxyMethod
+	public def createItem( item ) {
+		em.create(SCHEMA_ITEM, item)	
+	}
+
+
+	@ProxyMethod
+	public def openCertification(objid) {
+		def cert = em.read(SCHEMA_NAME, [objid:objid])
+		if (!cert) throw new Exception('Record does not exist or has already been deleted.')
+		cert.official = util.toBoolean(cert.official, false)
+		cert.givenday = util.formalizeDate(cert.txndate, 'd' )
+		cert.givenmonth = util.formalizeDate(cert.txndate, 'MMMMM' )
+		cert.givenyear = util.formalizeDate(cert.txndate, 'yyyy' )
+		if (cert.ordate){
+			cert.ordate = dtSvc.parse('yyyy-MM-dd', cert.ordate)
+		}
+		makeHtmlSafe(cert)
+		return cert 
+	}
+
+	@ProxyMethod
+	public void makeHtmlSafe(cert){
+		if (cert.owner?.name) {
+			cert.owner.name = htmlSafe(cert.owner.name)
+		}
+		if (cert.taxpayer?.name) {
+			cert.taxpayer.name = htmlSafe(cert.taxpayer.name)
+		}
+		
+		cert.requestedby = htmlSafe(cert.requestedby)
+		cert.purpose = htmlSafe(cert.purpose)
+		cert.addlinfo = htmlSafe(cert.addlinfo)
+	}
+
+	@ProxyMethod
+	public def getFaasInfo(faasid){
+		return em.sqlContext.createNamedQuery('rptcertification:getFaasInfo')
+					.setParameter('faasid', faasid ).singleResult
+	}
+
+	@ProxyMethod
+	public void validateFaas(cert){
+		util.required('TD No.', cert.faasid)
+		def state = faasSvc.getState(cert.faasid)
+
+		if (state == 'CANCELLED')
+			throw new Exception('FAAS has already been cancelled.')
+		if (state != 'CURRENT')
+			throw new Exception('FAAS is not current.')
+	}
+
+
+	@ProxyMethod
+	public void buildFilter(cert) {
+		cert.taxpayerid = cert.taxpayer.objid
+		cert.asoffilter = " and f.state = 'CURRENT' "
+		/*
+		if (cert.asofyear != dtSvc.serverYear){
+			cert.asoffilter = " and f.state in ('CURRENT', 'CANCELLED') "
+			cert.asoffilter += ' and f.year = $P{asofyear} '
+		}
+		*/
+	}
+
+	void validate(cert){
+		validateORInfo(cert)
+		em.validate(SCHEMA_NAME, cert)
+	}
+
+	void validateORInfo(cert){
+		if (! cert.official){
+			if (cert.oramount <= 0.0)
+			throw new Exception('Amount must be greater than zero.')
+
+			def cdate = dtSvc.parseCurrentDate()
+			def ordate = dtSvc.parseDate(cert.ordate, null)
+			if (ordate.year < cdate.year)
+				throw new Exception('O.R. must be issued within this year.')
+			if (dtSvc.parse('yyyy-MM-dd', cert.ordate) > dtSvc.serverDate )
+				throw new Exception('O.R. Date must not be later than current date.')
+		}
+		if (cert.ordate != null) {
+			cert.ordate = dtSvc.parse('yyyy-MM-dd', cert.ordate)
+		}
+	}	
+
+
+	@ProxyMethod
+	public void buildFootNotes( cert ) {
+		if (!cert.items) return;
+		def i = 0
+		cert.footnote = cert.items.findAll{ it.owner.name != cert.taxpayer.name }.groupBy{ it.owner.name}
+		cert.footnote = cert.footnote.collect{ [footnote: ++i, owner:[name: it.key]] }
+		
+		cert.items = cert.items.each(){ o ->
+			cert.footnote.each(){
+				if( o.owner.name == it.owner.name && o.owner.name != cert.taxpayer.name )
+					o.footnote = it.footnote + ''
+			}  
+		}
+		i = 0
+		
+		cert.footnotes = cert.items.findAll{ !it.owner.name.equals(cert.taxpayer.name) }
+		cert.footnotes = cert.footnotes.groupBy{ it.owner.name }.collect{ [footnote: it.key] }
+		cert.footnotes.each(){
+			it.footno = ++i + '';
+		}
+			
+	}
+
+	def htmlMapping = [
+		'&' : '&amp;',
+		'<' : '&lt;',
+		'>' : '&gt;',
+	]
+
+	def htmlSafe(val) {
+		if (!val) return val 
+
+		htmlMapping.each{k, v ->
+			if (val.indexOf(v) < 0) {
+				val = val.replaceAll(k, v)
+			}
+		}
+		return val
+	}
+}

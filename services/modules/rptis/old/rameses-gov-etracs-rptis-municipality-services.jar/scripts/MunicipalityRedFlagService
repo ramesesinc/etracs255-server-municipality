@@ -1,0 +1,41 @@
+import com.rameses.annotations.*;
+import com.rameses.common.*;
+
+class MunicipalityRedFlagService
+{   
+	@Env
+	def env
+
+	@Service('RPTRedFlagService')
+	def redflagSvc 
+
+	@Service('DateService')
+	def dtSvc 
+
+	@Service('RPTNotificationService')
+    def notificationSvc
+
+    @Service('FAASChangeInfoService')
+    def changeinfoSvc
+
+    @Service('NotificationService')
+	def userNotificationService
+
+	@ProxyMethod
+	public resolveRedFlag(redflag, changeinfo){
+		changeinfo.refid = redflag.refid
+		redflag.remarks = changeinfo.reason
+		changeinfoSvc.updateInfo(changeinfo)
+		redflag.putAll(redflagSvc.resolveRedFlag(redflag))
+		userNotificationService.removeMessage([objid:redflag.refid])
+		return redflag 
+	}
+
+	@ProxyMethod
+	public def resendToProvince( redflag ) {
+		redflag = redflagSvc.open(redflag)
+		def changeinfo = changeinfoSvc.openByRedFlag(redflag)
+		notifyFiledBy(redflag)
+		return changeinfo 
+	}
+}

@@ -1,0 +1,87 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+class LandTaxReportBarangayCityShareService{
+    @ActiveDB('landtaxreport_brgycityshare')
+    def em
+
+    @Service('DateService')
+    def dtsvc
+
+    @Service('NumberService')
+    def numSvc 
+
+    @Async
+    @ProxyMethod
+    public def generateReport(params){
+        String idx = (params.month.index+'').padLeft(2, '0')
+        params.fromdate = dtsvc.parse('yyyy-MM-dd', params.year+"-"+idx+"-01");
+        params.todate = dtsvc.getMonthEndDate(dtsvc.parse("yyyy-MM-dd",params.fromdate));
+        params.todate = dtsvc.add(dtsvc.parse("yyyy-MM-dd",params.todate),"1d");
+
+        def period = 'For the Month of ' + dtsvc.format('MMMMM, yyyy', params.fromdate);
+        params.filter = ' cv.dtposted >= $P{fromdate} AND cv.dtposted < $P{todate} '
+        if (params.postingtype && params.postingtype.code == 'byrem'){
+            params.filter = ' rem.dtposted between $P{fromdate} AND $P{todate} '
+        }
+        
+        def collections = em.getCollectionsByBarangay(params)
+        if (!collections) {
+            throw new Exception('Records not found.')
+        }
+
+        def shares = em.getBarangays()
+        shares.each { s ->
+            def col = collections.find{it.brgyindex == s.brgyindex}
+            if (col) {
+                col.brgyshare = numSvc.round(col.basic30 * 0.50)
+                s.putAll(col)
+            }
+        }
+
+        calcBrgyAndCommonShares(shares)
+
+        return [
+            params : [PERIOD : period],  
+            reportdata  : [items: shares]
+        ]
+    }
+
+
+    void calcBrgyAndCommonShares(shares) {
+        def total30 = shares.basic30.sum() 
+        def totalcommonshare = numSvc.round(total30 / 2) 
+        def totalbrgyshare = total30 - totalcommonshare
+        def commonshare = numSvc.round(totalcommonshare / shares.size()) + (-0.01)
+        
+        def actualtotalcommonshare = commonshare * shares.size();
+        def actualtotalbrgyshare = shares.brgyshare.sum()
+
+        def commonsharediff = actualtotalcommonshare - totalcommonshare
+        def brgysharediff = actualtotalbrgyshare - totalbrgyshare
+
+        shares.each {
+            it.commonshare = commonshare
+            if (commonsharediff > 0) {
+                it.commonshare -= 0.01
+                commonsharediff -= 0.01
+            } else if (commonsharediff < 0) {
+                it.commonshare += 0.01
+                commonsharediff += 0.01
+            }
+
+            if (it.brgyshare > 0) {
+                if (brgysharediff > 0) {
+                    it.brgyshare -= 0.01
+                    brgysharediff -= 0.01
+                } else if (brgysharediff < 0) {
+                    it.brgyshare += 0.01
+                    brgysharediff += 0.01
+                }
+            }
+
+        }
+    }
+   
+}

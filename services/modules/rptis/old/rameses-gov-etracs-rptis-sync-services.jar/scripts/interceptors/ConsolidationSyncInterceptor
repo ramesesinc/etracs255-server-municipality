@@ -1,0 +1,56 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+
+/*----------------------------------------------------------------
+* Consolidation Synchronization support shared 
+* between province and municipalities 
+-----------------------------------------------------------------*/
+class ConsolidationSyncInterceptor
+{
+    @Env
+    def env
+
+    @Service('ConsolidationSyncService')
+    def syncSvc 
+
+
+    /*---------------------------------------------------------
+    *
+    * SCHEDULING SUPPORT
+    *
+    ---------------------------------------------------------*/
+    @After(pattern="ConsolidationWorkflowService.signal", eval="#{args[0].state=='forprovsubmission' && args[0].action=='completed'}", index=10000) 
+    public void scheduleSubmitToProvince( evt ) {
+        def consolidation = evt.args[0].data;
+        syncSvc.scheduleSubmitToProvince(consolidation)
+    }
+
+    @After(pattern="ConsolidationWorkflowService.signal", eval="#{args[0].state.matches('approver|provapprover') && args[0].action=='completed'}", index=10000) 
+    public void scheduleConsolidationApproval( evt ) {
+        def consolidation = evt.args[0].data;
+        syncSvc.scheduleConsolidationApproval(consolidation)
+    }
+
+    /*---------------------------------------------------------
+    *
+    * SEND/RECEIVE HANDLERS
+    *
+    ---------------------------------------------------------*/
+    @After(pattern="RPTMainSyncService.asyncSend", eval="#{result.reftype == 'consolidation' && result.action.matches('CONSOLIDATION-.*')}") 
+    public void sendData( evt ) {
+        def syncdata = evt.result 
+        syncSvc.send(syncdata)
+    }   
+
+    @After(pattern="RPTMainSyncService.receive", eval="#{args[0].reftype == 'consolidation' && args[0].action.matches('CONSOLIDATION-.*')}") 
+    public void receiveData(evt){
+        def syncdata = evt.args[0]
+        syncSvc.receive(syncdata)
+        evt.result.status = 'OK'
+    }
+
+
+}
+

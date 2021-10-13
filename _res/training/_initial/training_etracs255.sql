@@ -15,6 +15,10 @@
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
+CREATE DATABASE /*!32312 IF NOT EXISTS*/ `training_etracs255` /*!40100 DEFAULT CHARACTER SET utf8 */;
+
+USE `training_etracs255`;
+
 --
 -- Table structure for table `account`
 --

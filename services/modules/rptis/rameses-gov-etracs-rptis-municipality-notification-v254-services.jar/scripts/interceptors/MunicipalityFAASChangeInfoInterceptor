@@ -1,0 +1,44 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+
+class MunicipalityFAASChangeInfoInterceptor
+{
+	@Env
+	def env
+
+    @Service('RPTNotificationService')
+    def svc 
+
+    @Service('EntityService')
+    def entitySvc 
+
+    @Service('FAASSupportService')
+    def supportSvc 
+
+
+	@After(pattern="FAASChangeInfoService.updateInfo", eval="#{result.isremote==null}") 
+	public void submitToProvince( evt ) {
+		def changeinfo = evt.result
+        changeinfo.isremote = true
+        if (changeinfo.action == 'change_owner_info')
+            changeinfo.taxpayer = entitySvc.open(changeinfo.newinfo.taxpayer)
+        else if (changeinfo.action == 'add_faas_requirement_document')
+            changeinfo.image = supportSvc.getImageByIds(changeinfo.imageids)
+
+        def asyncreq    = svc.createAsyncRequest('FAASChangeInfoService', 'updateInfo', changeinfo, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.filetype    = 'faas-changeinfo'
+        msg.messagetype = 'faas-changeinfo'
+        msg.message     = 'Post change FAAS information.'
+        svc.sendAsyncMessage(msg)
+        println 'Submit municipality change FAAS information to Province....'
+	}
+
+    @After(pattern="MunicipalityRedFlagService.resendToProvince") 
+    public void resendToProvince( evt ) {
+        println 'Resending Change Info to province...'
+        submitToProvince(evt)
+    }
+
+}
+

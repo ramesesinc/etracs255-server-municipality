@@ -1,0 +1,107 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import java.util.concurrent.*;
+
+class MunicipalityBatchGRSupportService
+{
+	@Env
+	def env
+
+    @Service('RPTNotificationService')
+    def svc 
+	
+	@Service('BatchGRSupportService')
+	def supportSvc
+
+
+    @ProxyMethod
+    public void submitToProvince( batchgr ) {
+        def queue = new LinkedBlockingQueue();
+        batchgr.putAll(supportSvc.buildData(batchgr))
+        sendRevisedFaases(batchgr)
+        queue.poll(1, TimeUnit.SECONDS)
+        sendBatchGr(batchgr)
+        queue.poll(1, TimeUnit.SECONDS)
+        sendExaminations(batchgr)
+        sendRequirements(batchgr)
+    }
+
+    void sendBatchGr(batchgr){
+        def asyncreq    = svc.createAsyncRequest('ProvinceBatchGRRemoteService', 'postForApproval', batchgr, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.txnid       = batchgr.objid
+        msg.txnno       = batchgr.txnno 
+        msg.groupid     = 'assign-receiver'
+        msg.filetype    = 'batchgr'
+        msg.message     = 'Batch GR No. ' + batchgr.txnno + ' (assign-receiver)'
+        msg.messagetype = 'batchgr-forprovapproval'
+        svc.sendAsyncMessage(msg)
+        println 'Sending batch gr ' + batchgr.txnno + ' to province.'
+    }
+
+    void sendExaminations(batchgr){
+        def data = supportSvc.buildExaminations(batchgr)
+        def asyncreq    = svc.createAsyncRequest('ProvinceBatchGRRemoteService', 'postExaminations', data, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.txnid       = batchgr.objid
+        msg.txnno       = batchgr.txnno 
+        msg.groupid     = null 
+        msg.filetype    = null 
+        msg.message     = 'Examinations for Batch GR No. ' + batchgr.txnno 
+        msg.messagetype = 'batchgr-examinations'
+        svc.sendAsyncMessage(msg)
+        println 'Sending batch gr ' + batchgr.txnno + ' examinations to province.'
+    }
+
+    void sendRequirements(batchgr){
+        def requirements = supportSvc.getRequirements(batchgr)
+        requirements.each{
+            def data = supportSvc.buildRequirement(it)
+            def asyncreq    = svc.createAsyncRequest('ProvinceBatchGRRemoteService', 'postRequirement', data, svc.buildEnvMap(env))
+            def msg         = svc.createAsyncMessage(asyncreq[0])
+            msg.txnid       = batchgr.objid
+            msg.txnno       = batchgr.txnno 
+            msg.groupid     = null 
+            msg.filetype    = null 
+            msg.message     = 'Requirement for Batch GR No. ' + batchgr.txnno 
+            msg.messagetype = 'batchgr-requirement'
+            svc.sendAsyncMessage(msg)
+        }
+        println 'Sending batch gr ' + batchgr.txnno + ' requirements to province.'
+    }
+
+    void sendRevisedFaases(batchgr){
+        batchgr.items.each{
+            sendFaas(batchgr, it)
+        }
+        println 'Sending batchgr ' + batchgr.txnno + ' faases'
+    }
+
+    void sendFaas(batchgr, item){
+        def data = supportSvc.buildFaasData(item)
+        def asyncreq    = svc.createAsyncRequest('ProvinceBatchGRRemoteService', 'postFaasData', data, svc.buildEnvMap(env))
+        def msg         = svc.createAsyncMessage(asyncreq[0])
+        msg.txnid       = batchgr.objid
+        msg.txnno       = batchgr.txnno 
+        msg.groupid     = null 
+        msg.filetype    = null 
+        msg.message     = 'New FAAS ' + data.tdno + ' for Batch GR No. ' + batchgr.txnno 
+        msg.messagetype = 'batchgr-faas'
+        svc.sendAsyncMessage(msg)
+    }
+
+
+    @ProxyMethod 	
+	public void resubmitToProvince( batchgr ) {
+        batchgr._resubmitted = true 
+        submitToProvince(batchgr)
+        println 'Resubmit batch gr to province....'
+	}
+
+    @ProxyMethod
+    public void resubmitRequirements( batchgr ){
+        sendRequirements(batchgr)
+    }
+
+}
+

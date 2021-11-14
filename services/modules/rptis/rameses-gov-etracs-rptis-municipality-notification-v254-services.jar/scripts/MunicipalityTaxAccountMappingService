@@ -1,0 +1,61 @@
+import com.rameses.annotations.*;
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+class MunicipalityTaxAccountMappingService
+{
+	@ActiveDB('municipality_taxacct_mapping')
+	def em
+
+	@ProxyMethod
+	public def getMappings(  ) {
+		def unmappedLgus = em.getUnmappedMunicipalities()
+		def mappings = em.getMappings()
+		unmappedLgus.each{
+			it.basicprioracct = [:]
+			it.basicpriorintacct = [:]
+			it.basicprevacct = [:]
+			it.basicprevintacct = [:]
+			it.basiccurracct = [:]
+			it.basiccurrintacct = [:]
+			it.basicadvacct = [:]
+			it.basicidlecurracct = [:]
+			it.basicidlecurrintacct = [:]
+			it.basicidleprevacct = [:]
+			it.basicidleprevintacct = [:]
+			it.basicidleadvacct = [:]
+
+			it.sefprioracct = [:]
+			it.sefpriorintacct = [:]
+			it.sefprevacct = [:]
+			it.sefprevintacct = [:]
+			it.sefcurracct = [:]
+			it.sefcurrintacct = [:]
+			it.sefadvacct = [:]
+			saveMapping(it)
+		}
+		if (unmappedLgus)
+			mappings.addAll( unmappedLgus )
+		mappings.sort{a,b -> a.indexno <=> b.indexno }
+		return mappings 
+	}
+
+	@ProxyMethod
+	public def saveMapping( mapping ) {
+		em.save(mapping)	
+		return mapping 
+	}
+
+	@ProxyMethod 
+	public def buildAccounts( params ) {
+		def stats = em.findMunicipalStats(); 
+		if ( stats?.totalcount > 0 ) { 
+			em.buildItemAccounts(); 
+			em.removeAccountMappings(); 
+			em.buildAccountMappings(); 
+			return getMappings(); 
+		} 
+
+		throw new Exception( 'No available municipal(s)' ); 
+	}	
+}

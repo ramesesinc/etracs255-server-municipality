@@ -12,6 +12,9 @@ class OnlineLandTaxBillingService
     @Service('RPTLedgerPostPaymentService')
     def postPaymentSvc
 
+    @Service('RPTReceiptShareService')
+    def shareSvc;
+
     def BARCODE_PREFIX = '56001:'
 
 	@ProxyMethod
@@ -21,11 +24,12 @@ class OnlineLandTaxBillingService
         eor.ledgers = [bill.rptledger]
         eor.rptledger = bill.rptledger 
         return [
+            sharing: true, 
             ledgers: [bill.rptledger],
             rptledger: bill.rptledger,
             amount: eor.amount,
-            items: bill.rptledger.billitems,
-        ]
+            items: bill.rptledger.billitems 
+        ];
 	}
 
 	@ProxyMethod
@@ -42,6 +46,12 @@ class OnlineLandTaxBillingService
 	public def getEmailAttachments( eor ) {
         return []
     }
+
+
+    @ProxyMethod
+    public def generateShares( param ) { 
+        return shareSvc.generateShares( param ); 
+    } 
 
 
     def generateBill(params){

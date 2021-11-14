@@ -182,7 +182,7 @@ class CashbookLiquidationReportService {
 		if ( value instanceof java.sql.Date ) return value; 
 
 		if ( value instanceof java.util.Date ) {
-			return java.sql.Date( value.time ); 
+			return new java.sql.Date( value.time ); 
 		}
 
 		try {

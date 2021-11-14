@@ -86,7 +86,7 @@ class RPTLedgerPostPaymentService
 		em_rptledger_item.where('parentid = :refid and amtpaid >= amount', ledgerpmt).delete()
 	}
 
-void postShares(ledgerpmt, ledger){
+	void postShares(ledgerpmt, ledger){
 		ledger.shares.each{
 			it.parentid = ledgerpmt.objid 
 			it.item = it.payableitem

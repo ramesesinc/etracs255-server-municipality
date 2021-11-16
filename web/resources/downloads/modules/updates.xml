@@ -32,7 +32,7 @@ socketio.host=${app_server_ip}:7080
 
   <import file="queue/updates.pxml"/> 
 
-  <import file="rptis/old/updates.pxml"/> 
+  <import file="rptis/updates.pxml"/> 
 
   <import file="bpls/updates.pxml"/> 
 </modules>

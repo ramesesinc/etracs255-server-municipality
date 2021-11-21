@@ -97,7 +97,13 @@ class RPTMainSyncDataService {
 			list.each {
 				def writer = null;
 				try {
-					def fileName = [it.reftype, it.refno, it.idx.toString().padLeft(5, '0'), it.action, safeFileId(it.refid)].join('-')
+					def fileName = [
+						it.reftype, 
+						it.refno.toString().replaceAll("[^0-9a-zA-Z]", ''), 
+						it.idx.toString().padLeft(5, '0'), 
+						it.action, 
+						safeFileId(it.refid)
+					].join('-')
 					writer = new ObjectWriter(fileName, xconn.conf);
 					writer.write(it);
 					self.asyncSend(it);

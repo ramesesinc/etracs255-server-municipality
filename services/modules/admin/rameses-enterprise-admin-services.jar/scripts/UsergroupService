@@ -35,6 +35,8 @@ class UsergroupService extends ActiveCrudListService {
 		} 
 
 		list.each { 
+			it.security_checks = false; 
+
 			if ( o.root ) it.folder = true;
 			if ( it.filetype == 'usergroup-folder') {
 				it.children = [[filetype:'usergroup']];

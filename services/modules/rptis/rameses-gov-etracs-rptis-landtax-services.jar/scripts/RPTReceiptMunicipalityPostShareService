@@ -58,6 +58,17 @@ class RPTReceiptMunicipalityPostShareService
 		saveShares(ledger)
 	}
 
+	@ProxyMethod
+	public def generateShares( param ) { 
+		def filter = [ receiptid: param.receiptid.toString() ]; 
+		def ledger = em.findPaidLedgerByReceipt( filter ); 
+		if ( !ledger ) ledger = em.findPaidCompromiseByReceipt( filter ); 
+		if ( !ledger ) return [:]; 
+
+		buildShares(filter, ledger); 
+		return ledger; 
+	}
+
 	void buildShares(receipt, ledger) {
 		def mappings = em_mapping.select('org.class,org.objid,parent.objid,item.objid,item.tag').where('1=1').list()
 		ledger.mainshares = []

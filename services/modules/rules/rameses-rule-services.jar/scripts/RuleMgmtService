@@ -428,11 +428,14 @@ class RuleMgmtService extends ActiveCrudListService {
 			}
 
 			def m = [:]; 
-			list.each{ o-> 
-				if ( o.ruletext == null ) { return; } 
-				
-				m.objid = o.objid; 
-				sysruledeployed.find( m ).update([ ruletext: o.ruletext ]);  
+			list.each{ o-> 				
+				if ( o.ruletext ) { 
+					m.objid = o.objid.toString(); 
+					sysruledeployed.find( m ).delete(); 
+
+					m.ruletext = o.ruletext; 
+					sysruledeployed.create( m ); 
+				}
 			} 
 
 			self.reloadAsync( param.ruleset ); 

@@ -170,6 +170,11 @@ class RemittanceService  {
 			//test to be sure. compare records affected with the fromseries and toseries 
 			def interval = (itm.interval == null || itm.interval <= 0) ? 1 : itm.interval; 
 			def checksum = ((itm.qty-1) * interval) + itm.fromseries;
+
+			if ( interval > 1 ) {
+				checksum = (itm.qty * interval) + itm.fromseries - 1;
+			}
+
 			if ( itm.toseries != checksum )
 				throw new Exception("Mismatch qty with series. Please check the ff: " + itm.fromseries + " - " + itm.toseries + ". Please redo remittance" );
 		} 

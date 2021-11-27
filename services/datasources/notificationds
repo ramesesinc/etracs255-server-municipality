@@ -3,3 +3,13 @@ driverClass=com.mysql.jdbc.Driver
 url=jdbc:mysql://${dbserver_host}/${db_notification}
 user=${dbserver_user}
 pwd=${dbserver_pass}
+
+
+
+## LGU specific settings
+##
+dialect=mssql
+driverClass=com.microsoft.sqlserver.jdbc.SQLServerDriver
+url=jdbc:sqlserver://${dbserver_host};DatabaseName=${db_notification}
+user=${dbserver_user}
+pwd=${dbserver_pass}

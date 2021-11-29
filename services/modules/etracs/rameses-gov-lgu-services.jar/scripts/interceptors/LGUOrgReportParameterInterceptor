@@ -2,8 +2,8 @@ import com.rameses.annotations.*;
 import com.rameses.common.*;
 import com.rameses.services.extended.*
 
-public class LGUOrgReportParameterInterceptor
-{
+public class LGUOrgReportParameterInterceptor {
+
 	@Env
 	def env
 
@@ -23,9 +23,30 @@ public class LGUOrgReportParameterInterceptor
 	def brgySvc
 
 	
+	@After(pattern="JasperReportService.getStandardParameter")
+	public void afterGetStandardParameter( evt ) {
+		def org = orgSvc.getRoot(); 
+
+		env.ORGID = org.objid; 
+		env.ORGCLASS = org.orgclass; 
+
+		def orgclass = org.orgclass.toString().toLowerCase(); 
+		if ( orgclass == 'city' ) {
+			addCityInfo( evt ); 
+		}
+		else if ( orgclass == 'municipality' ) {
+			addMunicipalityInfo( evt );
+		}
+		else if ( orgclass == 'province' ) {
+			addProvinceInfo( evt );
+		}
+		else if ( orgclass == 'barangay' ) {
+			addBarangayInfo( evt ); 
+		}
+	}
+
 	@After(pattern="ReportParameterService.getStandardParameter", eval="#{env?.ORGCLASS.toString().toLowerCase() =='city'}")
-	public void addCityInfo(evt) 
-	{
+	public void addCityInfo(evt) {
 		def result = evt.result
 		def lgu = citySvc.getById( env.ORGID )
 		result.LGUNAME  = lgu.name  

@@ -28,6 +28,9 @@ class OnlineBusinessRenewalService {
 	@DataContext('online_business_application') 
 	def online_app; 
 
+	@DataContext('online_business_application_doc') 
+	def em_appdoc; 
+
 	@DataContext('vw_online_business_application') 
 	def vw_online_app; 
 
@@ -36,6 +39,9 @@ class OnlineBusinessRenewalService {
 
 	@DataContext('business_address')
 	def business_address; 
+
+	@DataContext( dynamic=true )
+	def dynaEm; 
 
 	def contact_support_msg = 'Please contact the Business Permit and Licensing Office for assistance.'; 
 
@@ -208,6 +214,7 @@ class OnlineBusinessRenewalService {
 		} 
 
 		res.controlno = KeyGen.generateAlphanumKey( 'B-'+ res.orgcode +'-', 12 );
+
 		return res; 
   	}
 
@@ -391,6 +398,7 @@ class OnlineBusinessRenewalService {
 		app.infos = complexdata?.infos; 
 		app.requirements = complexdata?.requirements; 
 		complexdata.clear(); 
+
 		return app; 
 	}
 
@@ -443,7 +451,42 @@ class OnlineBusinessRenewalService {
 
 		def findby = [ objid: param.remove('objid') ]; 
 		online_app.find( findby ).update([ state: 'OPEN', step: param.step ]); 
-		return param;		
+
+		em_appdoc.find([ parentid: findby.objid ]).delete();
+
+		def app = online_app.find( findby ).select('objid,requirements').first();
+		
+		def em_download = dynaEm.lookup('online_business_application_doc_fordownload'); 
+
+		def rundate = dateSvc.getServerDate(); 
+
+		app.requirements.eachWithIndex{ o, idx-> 
+			def path = (o.attachment?.location ? o.attachment.location : o.attachment?.path);
+			if ( !path ) return; 
+
+			def m = [:]; 
+			m.objid = app.objid +'-'+ idx; 
+			m.parentid = app.objid; 
+			m.doc = [type: o.ref?.reftype, title: o.ref?.title];
+			m.attachment = [ objid: o.objid, path: path ];
+			m.attachment.name = (o.attachment.etag ? o.attachment.etag : o.attachment.name); 
+			m.fs = [ filetype: "", state: 'PENDING' ]; 
+
+			def charIdx = m.attachment.name.toString().lastIndexOf('.'); 
+			if ( charIdx >= 0 ) {
+				m.fs.filetype = m.attachment.name.toString().substring(charIdx + 1).toLowerCase(); 
+			}
+
+			em_appdoc.create( m ); 
+			o.docid = m.objid; 
+
+			m.scheduledate = rundate; 
+			m.filesize = m.bytesprocessed = 0; 
+			em_download.create( m ); 
+		} 
+
+		online_app.find( findby ).update( app ); 
+		return param; 
 	} 
 
 	@ProxyMethod
@@ -452,6 +495,7 @@ class OnlineBusinessRenewalService {
 
 		def findby = [ objid: param.remove('objid') ];
 		online_app.find( findby ).update( param ); 
+
 		return param;
 	} 
 

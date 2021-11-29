@@ -14,9 +14,9 @@ CREATE TABLE `account_incometarget` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 ;
 
-alter table account_incometarget add CONSTRAINT `fk_account_incometarget_itemid` 
-   FOREIGN KEY (`itemid`) REFERENCES `account` (`objid`)
-;
+-- alter table account_incometarget add CONSTRAINT `fk_account_incometarget_itemid` 
+--    FOREIGN KEY (`itemid`) REFERENCES `account` (`objid`)
+-- ;
 
 /*
 CREATE TABLE `business_closure` ( 
@@ -44,53 +44,53 @@ create UNIQUE index `uix_title` on businessrequirementtype (`title`);
 
 create UNIQUE index `uix_name` on businessvariable (`name`);
 
-CREATE TABLE `cashreceipt_group` ( 
-   `objid` varchar(50) NOT NULL, 
-   `txndate` datetime NOT NULL, 
-   `controlid` varchar(50) NOT NULL, 
-   `amount` decimal(16,2) NOT NULL, 
-   `totalcash` decimal(16,2) NOT NULL, 
-   `totalnoncash` decimal(16,2) NOT NULL, 
-   `cashchange` decimal(16,2) NOT NULL,
-   CONSTRAINT `pk_cashreceipt_group` PRIMARY KEY (`objid`),
-   KEY `ix_controlid` (`controlid`),
-   KEY `ix_txndate` (`txndate`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8
-; 
+-- CREATE TABLE `cashreceipt_group` ( 
+--    `objid` varchar(50) NOT NULL, 
+--    `txndate` datetime NOT NULL, 
+--    `controlid` varchar(50) NOT NULL, 
+--    `amount` decimal(16,2) NOT NULL, 
+--    `totalcash` decimal(16,2) NOT NULL, 
+--    `totalnoncash` decimal(16,2) NOT NULL, 
+--    `cashchange` decimal(16,2) NOT NULL,
+--    CONSTRAINT `pk_cashreceipt_group` PRIMARY KEY (`objid`),
+--    KEY `ix_controlid` (`controlid`),
+--    KEY `ix_txndate` (`txndate`)
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+-- ; 
 
 
-CREATE TABLE `cashreceipt_groupitem` ( 
-   `objid` varchar(50) NOT NULL, 
-   `parentid` varchar(50) NOT NULL,
-   CONSTRAINT `pk_cashreceipt_groupitem` PRIMARY KEY (`objid`),
-   KEY `ix_parentid` (`parentid`),
-   CONSTRAINT `fk_cashreceipt_groupitem_objid` FOREIGN KEY (`objid`) REFERENCES `cashreceipt` (`objid`),
-   CONSTRAINT `fk_cashreceipt_groupitem_parentid` FOREIGN KEY (`parentid`) REFERENCES `cashreceipt_group` (`objid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8
-; 
+-- CREATE TABLE `cashreceipt_groupitem` ( 
+--    `objid` varchar(50) NOT NULL, 
+--    `parentid` varchar(50) NOT NULL,
+--    CONSTRAINT `pk_cashreceipt_groupitem` PRIMARY KEY (`objid`),
+--    KEY `ix_parentid` (`parentid`),
+--    CONSTRAINT `fk_cashreceipt_groupitem_objid` FOREIGN KEY (`objid`) REFERENCES `cashreceipt` (`objid`),
+--    CONSTRAINT `fk_cashreceipt_groupitem_parentid` FOREIGN KEY (`parentid`) REFERENCES `cashreceipt_group` (`objid`)
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+-- ; 
 
 
-CREATE TABLE `cashreceipt_plugin` ( 
-   `objid` varchar(50) NOT NULL, 
-   `connection` varchar(150) NOT NULL, 
-   `servicename` varchar(255) NOT NULL,
-   CONSTRAINT `pk_cashreceipt_plugin` PRIMARY KEY (`objid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8
-; 
+-- CREATE TABLE `cashreceipt_plugin` ( 
+--    `objid` varchar(50) NOT NULL, 
+--    `connection` varchar(150) NOT NULL, 
+--    `servicename` varchar(255) NOT NULL,
+--    CONSTRAINT `pk_cashreceipt_plugin` PRIMARY KEY (`objid`)
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+-- ; 
 
 
 -- create unique index uix_receiptid on cashreceipt_void (receiptid); 
 
-alter table collectiontype add info text null 
-; 
+-- alter table collectiontype add info text null 
+-- ; 
 
-CREATE TABLE `entity_mapping` ( 
-   `objid` varchar(50) NOT NULL, 
-   `parent_objid` varchar(50) NOT NULL, 
-   `org_objid` varchar(50) NULL,
-   CONSTRAINT `pk_entity_mapping` PRIMARY KEY (`objid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8
-; 
+-- CREATE TABLE `entity_mapping` ( 
+--    `objid` varchar(50) NOT NULL, 
+--    `parent_objid` varchar(50) NOT NULL, 
+--    `org_objid` varchar(50) NULL,
+--    CONSTRAINT `pk_entity_mapping` PRIMARY KEY (`objid`)
+-- ) ENGINE=InnoDB DEFAULT CHARSET=utf8
+-- ; 
 
 -- create unique index uix_name on lob (name);
 alter table lob add _ukey varchar(50) not null default '';
@@ -133,10 +133,10 @@ CREATE TABLE `paymentorder` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8
 ; 
 
-CREATE UNIQUE INDEX `uix_ruleset_name` ON sys_rule (`ruleset`,`name`);
--- alter table sys_rule add _ukey varchar(50) not null default '';
--- update sys_rule set _ukey=objid where _ukey='';
--- CREATE UNIQUE INDEX `uix_ruleset_name` ON sys_rule (`ruleset`,`name`,`_ukey`);
+-- CREATE UNIQUE INDEX `uix_ruleset_name` ON sys_rule (`ruleset`,`name`);
+alter table sys_rule add _ukey varchar(50) not null default '';
+update sys_rule set _ukey=objid where _ukey='';
+CREATE UNIQUE INDEX `uix_ruleset_name` ON sys_rule (`ruleset`,`name`,`_ukey`);
 
 
 
@@ -1853,9 +1853,9 @@ where aa.objid = bb.objid
 
 -- ## 2020-05-01
 
-INSERT INTO sys_var (name, value, description, datatype, category) 
-VALUES ('liquidation_report_show_accountable_forms', '0', 'Show Accoutable Forms in RCD Liquidation Report ', NULL, 'TC')
-;
+-- INSERT INTO sys_var (name, value, description, datatype, category) 
+-- VALUES ('liquidation_report_show_accountable_forms', '0', 'Show Accoutable Forms in RCD Liquidation Report ', NULL, 'TC')
+-- ;
 
 
 
@@ -1887,24 +1887,24 @@ where aa.objid = bb.cdetailid
 
 -- ## 2020-05-05
 
-alter table creditmemo change payername _payername varchar(255) null
-;
-alter table creditmemo add payer_name varchar(255) null
-;
-update creditmemo set payer_name = _payername where payer_name is null 
-; 
-alter table creditmemo modify payer_name varchar(255) not null
-;
-create index ix_payer_name on creditmemo (payer_name)
-;
+-- alter table creditmemo change payername _payername varchar(255) null
+-- ;
+-- alter table creditmemo add payer_name varchar(255) null
+-- ;
+-- update creditmemo set payer_name = _payername where payer_name is null 
+-- ; 
+-- alter table creditmemo modify payer_name varchar(255) not null
+-- ;
+-- create index ix_payer_name on creditmemo (payer_name)
+-- ;
 
-alter table creditmemo add payer_address_objid varchar(50) null
-;
-create index ix_payer_address_objid on creditmemo (payer_address_objid)
-; 
+-- alter table creditmemo add payer_address_objid varchar(50) null
+-- ;
+-- create index ix_payer_address_objid on creditmemo (payer_address_objid)
+-- ; 
 
-alter table creditmemo change payeraddress _payeraddress varchar(255) null 
-;
+-- alter table creditmemo change payeraddress _payeraddress varchar(255) null 
+-- ;
 alter table creditmemo add payer_address_text varchar(255) null 
 ;
 update creditmemo set payer_address_text = _payeraddress where payer_address_text is null 
@@ -1997,16 +1997,16 @@ from collectionvoucher cv
 
 -- ## 2020-06-06
 
-alter table aftxn add lockid varchar(50) null 
-; 
+-- alter table aftxn add lockid varchar(50) null 
+-- ; 
 
 -- alter table af_control add constraint fk_af_control_afid 
 --    foreign key (afid) references af (objid) 
 -- ; 
 
-alter table af_control add constraint fk_af_control_allocid 
-   foreign key (allocid) references af_allocation (objid) 
-; 
+-- alter table af_control add constraint fk_af_control_allocid 
+--    foreign key (allocid) references af_allocation (objid) 
+-- ; 
 
 drop view if exists vw_af_inventory_summary
 ;
@@ -2025,38 +2025,38 @@ where af.objid = u.itemid
 order by (case when af.formtype='serial' then 0 else 1 end), af.objid 
 ;
 
-alter table af_control add salecost decimal(16,2) not null default '0.0'
-;
+-- alter table af_control add salecost decimal(16,2) not null default '0.0'
+-- ;
 
 
-insert into sys_usergroup (
-   objid, title, domain, role, userclass
-) values (
-   'TREASURY.AFO_ADMIN', 'TREASURY AFO ADMIN', 'TREASURY', 'AFO_ADMIN', 'usergroup' 
-); 
+-- insert into sys_usergroup (
+--    objid, title, domain, role, userclass
+-- ) values (
+--    'TREASURY.AFO_ADMIN', 'TREASURY AFO ADMIN', 'TREASURY', 'AFO_ADMIN', 'usergroup' 
+-- ); 
 
-insert into sys_usergroup_permission (
-   objid, usergroup_objid, object, permission, title 
-) values ( 
-   'TREASURY-AFO-ADMIN-aftxn-changetxntype', 'TREASURY.AFO_ADMIN', 'aftxn', 'changeTxnType', 'Change Txn Type'
-); 
+-- insert into sys_usergroup_permission (
+--    objid, usergroup_objid, object, permission, title 
+-- ) values ( 
+--    'TREASURY-AFO-ADMIN-aftxn-changetxntype', 'TREASURY.AFO_ADMIN', 'aftxn', 'changeTxnType', 'Change Txn Type'
+-- ); 
 
 
 
 -- ## 2020-06-09
 
-insert into sys_usergroup (
-   objid, title, domain, role, userclass
-) values (
-   'TREASURY.COLLECTOR_ADMIN', 'TREASURY COLLECTOR ADMIN', 'TREASURY', 'COLLECTOR_ADMIN', 'usergroup' 
-); 
+-- insert into sys_usergroup (
+--    objid, title, domain, role, userclass
+-- ) values (
+--    'TREASURY.COLLECTOR_ADMIN', 'TREASURY COLLECTOR ADMIN', 'TREASURY', 'COLLECTOR_ADMIN', 'usergroup' 
+-- ); 
 
-insert into sys_usergroup_permission (
-   objid, usergroup_objid, object, permission, title 
-) values ( 
-   'TREASURY-COLLECTOR-ADMIN-aftxn-changetxntype', 'TREASURY.COLLECTOR_ADMIN', 'remittance', 'rebuildFund', 'Rebuild Remittance Fund'
-); 
-
+-- insert into sys_usergroup_permission (
+--    objid, usergroup_objid, object, permission, title 
+-- ) values ( 
+--    'TREASURY-COLLECTOR-ADMIN-aftxn-changetxntype', 'TREASURY.COLLECTOR_ADMIN', 'remittance', 'rebuildFund', 'Rebuild Remittance Fund'
+-- ); 
+-- 
 
 
 -- ## 2020-06-10
@@ -2099,11 +2099,11 @@ where aa.objid = bb.objid
 alter table sys_usergroup_permission modify objid varchar(100) not null 
 ;
 
-insert into sys_usergroup_permission (
-   objid, usergroup_objid, object, permission, title 
-) values ( 
-   'TREASURY-COLLECTOR-ADMIN-remittance-modifyCashBreakdown', 'TREASURY.COLLECTOR_ADMIN', 'remittance', 'modifyCashBreakdown', 'Modify Remittance Cash Breakdown'
-); 
+-- insert into sys_usergroup_permission (
+--    objid, usergroup_objid, object, permission, title 
+-- ) values ( 
+--    'TREASURY-COLLECTOR-ADMIN-remittance-modifyCashBreakdown', 'TREASURY.COLLECTOR_ADMIN', 'remittance', 'modifyCashBreakdown', 'Modify Remittance Cash Breakdown'
+-- ); 
 
 
 
@@ -2156,45 +2156,45 @@ where currentdetailid is not null
 ; 
 
 
-insert into sys_usergroup_permission (
-   objid, usergroup_objid, object, permission, title 
-) values ( 
-   'TREASURY-COLLECTOR-ADMIN-remittance-voidReceipt', 'TREASURY.COLLECTOR_ADMIN', 'remittance', 'voidReceipt', 'Void Receipt'
-); 
+-- insert into sys_usergroup_permission (
+--    objid, usergroup_objid, object, permission, title 
+-- ) values ( 
+--    'TREASURY-COLLECTOR-ADMIN-remittance-voidReceipt', 'TREASURY.COLLECTOR_ADMIN', 'remittance', 'voidReceipt', 'Void Receipt'
+-- ); 
 
 
 
 -- ## 2020-06-12
 
-insert into sys_usergroup (
+insert ignore into sys_usergroup (
    objid, title, domain, role, userclass
 ) values (
    'TREASURY.LIQ_OFFICER_ADMIN', 'TREASURY LIQ. OFFICER ADMIN', 
    'TREASURY', 'LIQ_OFFICER_ADMIN', 'usergroup' 
 ); 
 
-insert into sys_usergroup_permission (
+insert ignore into sys_usergroup_permission (
    objid, usergroup_objid, object, permission, title 
 ) values ( 
    'UGP-d2bb69a6769517e0c8e672fec41f5fd7', 'TREASURY.LIQ_OFFICER_ADMIN', 
    'collectionvoucher', 'changeLiqOfficer', 'Change Liquidating Officer'
 ); 
 
-insert into sys_usergroup_permission (
+insert ignore into sys_usergroup_permission (
    objid, usergroup_objid, object, permission, title 
 ) values ( 
    'UGP-3219ec222220f68d1f69d4d1d76021e0', 'TREASURY.LIQ_OFFICER_ADMIN', 
    'collectionvoucher', 'modifyCashBreakdown', 'Modify Cash Breakdown'
 ); 
 
-insert into sys_usergroup_permission (
+insert ignore into sys_usergroup_permission (
    objid, usergroup_objid, object, permission, title 
 ) values ( 
    'UGP-4e508bdd04888894926f677bbc0be374', 'TREASURY.LIQ_OFFICER_ADMIN', 
    'collectionvoucher', 'rebuildFund', 'Rebuild Fund Summary'
 ); 
 
-insert into sys_usergroup_permission (
+insert ignore into sys_usergroup_permission (
    objid, usergroup_objid, object, permission, title 
 ) values ( 
    'UGP-cf543fabc2aca483c6e5d3d48c39c4cc', 'TREASURY.LIQ_OFFICER_ADMIN', 
@@ -2202,10 +2202,10 @@ insert into sys_usergroup_permission (
 ); 
 
 
-INSERT INTO `sys_usergroup` (`objid`, `title`, `domain`, `userclass`, `orgclass`, `role`) 
+INSERT ignore INTO `sys_usergroup` (`objid`, `title`, `domain`, `userclass`, `orgclass`, `role`) 
 VALUES ('RULEMGMT.DEV', 'RULEMGMT DEV', 'RULEMGMT', NULL, NULL, 'DEV');
 
-INSERT INTO `sys_usergroup` (`objid`, `title`, `domain`, `userclass`, `orgclass`, `role`) 
+INSERT ignore INTO `sys_usergroup` (`objid`, `title`, `domain`, `userclass`, `orgclass`, `role`) 
 VALUES ('WORKFLOW.DEV', 'WORKFLOW DEV', 'WORKFLOW', NULL, NULL, 'DEV');
 
 

@@ -15,6 +15,6 @@
   <module version="2.02" file="shared/rameses-enterprise-financial.jar"  />
   <module version="2.02" file="shared/rameses-client-notification2.jar"  />
   <module version="2.02" file="shared/rameses-email-client.jar"  />
-  <module version="2.02" file="shared/rameses-jasper-client.jar"  />
+  <module version="2.03" file="shared/rameses-jasper-client.jar"  />
 </modules>
 </app>

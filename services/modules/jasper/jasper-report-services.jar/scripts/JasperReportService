@@ -20,6 +20,10 @@ class JasperReportService  {
 	@Service(dynamic=true)
 	def dSvc;
 
+	@Service
+	def self; 
+
+
 	@ProxyMethod
 	public def generateReport( def o ) {
 		def params = o.parameters;				
@@ -105,11 +109,20 @@ class JasperReportService  {
 
 			def url = classLoader.getResource( headerName );
 			if( url ) {
-				def is = url.openStream();
-				props.load( is );
-				is.close();				
+				def inp = null; 
+				try {
+					inp = url.openStream();
+					props.load( inp );
+				} 
+				finally {
+					try { inp.close(); }catch(Throwable t){;} 
+				}
 			}
-			def xparams = props ;
+
+			def xparams = self.getStandardParameter();
+			if ( xparams == null ) xparams = [:]; 
+
+			xparams.putAll( props ); 
 			xparams.REPORT_CLASS_LOADER = classLoader;
 
 			def jasperFile = JasperFillManager.fillReport( jr, xparams, new ReportDataSource( data ) );
@@ -126,6 +139,10 @@ class JasperReportService  {
 		}
 	}
 
+	@ProxyMethod 
+	public def getStandardParameter() {
+		return [:]; 
+	}
 }
 
 public class CustomClassLoader extends URLClassLoader {

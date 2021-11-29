@@ -27,19 +27,31 @@ WHERE ca.collectiontypeid=$P{collectiontypeid}
 ORDER BY r.title 
 
 [findHasCollectionTypeAccount]
-SELECT COUNT(*) AS count FROM  collectiontype_account  
+SELECT COUNT(*) AS count 
+FROM collectiontype_account  
 WHERE collectiontypeid=$P{collectiontypeid}
 
 [findAccount]
-SELECT r.objid, r.code, r.title, r.fund_objid, r.fund_code, r.fund_title 
-FROM itemaccount r WHERE objid=$P{objid}
+SELECT 
+	r.objid, r.code, r.title, 
+	r.fund_objid, r.fund_code, r.fund_title 
+FROM itemaccount r 
+WHERE objid = $P{objid}
+
+[findSubAccount]
+SELECT 
+	r.objid, r.code, r.title, 
+	r.fund_objid, r.fund_code, r.fund_title, 
+	r.org_objid, r.org_name 
+FROM itemaccount r 
+WHERE parentid = $P{parentid}
+	and org_objid = $P{orgid}
 
 [getTags]
 SELECT * FROM itemaccount_tag WHERE acctid=$P{acctid}
 
 [removeTags]
 DELETE FROM itemaccount_tag WHERE acctid=$P{acctid}
-
 
 [getAccountsByTag]
 SELECT a.* FROM itemaccount a

@@ -29,6 +29,8 @@ public class BPAssessmentRuleService  {
 	@Service("NumberService")
 	def numberSvc;
 
+	@DataContext( dynamic=true )
+	def dynaEm;
 	
 	@Env 
 	def env;
@@ -59,9 +61,9 @@ public class BPAssessmentRuleService  {
 		def actions = new RuleAction();
 		actions.addCommand( "ask_business_info", new AskBusinessInfo( infotype:'assessment', BV:bv, request:request ));
 		actions.addCommand( "assert_business_info", new AssertBusinessInfo(request:request, BV:bv,  comparator: comparator));
-		actions.addCommand( "compute_businesstax", new ComputeTaxFee( request:request, BA:ba, NA: numberSvc, type:'TAX') );
-		actions.addCommand( "compute_regfee", new ComputeTaxFee( request:request, BA:ba, NA: numberSvc, type:'REGFEE') );	
-		actions.addCommand( "compute_othercharge", new ComputeTaxFee( request:request, BA:ba, NA: numberSvc, type:'OTHERCHARGE') );
+		actions.addCommand( "compute_businesstax", new ComputeTaxFee( request:request, BA:ba, NA: numberSvc, type:'TAX')); 
+		actions.addCommand( "compute_regfee", new ComputeTaxFee( request:request, BA:ba, NA: numberSvc, type:'REGFEE')); 
+		actions.addCommand( "compute_othercharge", new ComputeTaxFee( request:request, BA:ba, NA: numberSvc, type:'OTHERCHARGE')); 
 
 		actions.addCommand( "assert_taxfee", new AssertTaxFee( request:request, ruleSvc: ruleSvc));
 		actions.addCommand( "update_taxfee", new UpdateTaxFee(request:request));

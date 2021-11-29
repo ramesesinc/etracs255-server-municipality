@@ -2,13 +2,16 @@ package bpls.actions;
 
 import com.rameses.rules.common.*;
 import bpls.facts.*;
-import java.rmi.server.*;
+import java.rmi.server.UID;
 
 public class ComputeTaxFee implements RuleActionHandler {
-	def request;
-	def BA;
+	
+	def BA; 
 	def NA;
+
+	def request;
 	def type;
+
 	public void execute(def params, def drools) {
 		def entity = request.entity;
 		def taxfees = request.taxfees;
@@ -18,8 +21,9 @@ public class ComputeTaxFee implements RuleActionHandler {
 		def amt = params.amount.doubleValue;
 		def tag = params.tag; 
 		def flag = params.flag; 
-		def test = null;
-		
+		def orgid = params.orgid;
+		def test = null;		
+
  		//if( !lob ) {
 		//	test = taxfees.find{it.lob?.objid==null && it.account.objid == acctid};
 		//}
@@ -30,16 +34,27 @@ public class ComputeTaxFee implements RuleActionHandler {
 		test = taxfees.find{ it.lob?.objid==lob?.objid && it.account?.objid == acctid && it.tag == tag } 
 
 		//if account already exists, do not override.
-		if(!test) {
+		if ( !test ) {
 			def info = [ objid:"BPTXFEE"+ new UID(), tag: tag, flag: flag ];
-			info.account = BA.findAccount([ objid: acctid ]);
-			if(lob) {
+
+			if ( orgid ) {
+				info.account = BA.findSubAccount([ parentid: acctid, orgid: orgid ]);
+			} 
+			else {
+				info.account = BA.findAccount([ objid: acctid ]);
+			}
+
+			if ( !info.account ) 
+				throw new Exception("Unable to locate item account '"+ params.account?.title +"'. Please remap this account"); 
+
+			if ( lob ) { 
 				info.lob = [objid:lob.objid, name:lob.name, assessmenttype: lob.assessmenttype];
 			}
+
 			info.taxfeetype = type;
 			info.paymentmode = info.account.paymentmode;
 			info.assessedvalue = NA.round(amt);
-			info.amount = NA.round(amt);
+			info.amount = NA.round( amt );
 			info.rulename = drools.rule.name;
 			taxfees << info;
 			taxfeefacts << info;

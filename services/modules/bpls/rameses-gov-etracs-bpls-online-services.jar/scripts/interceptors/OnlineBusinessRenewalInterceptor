@@ -30,7 +30,7 @@ class OnlineBusinessRenewalInterceptor {
 			throw new Exception('OnlineBusinessRenewalInterceptor requires result.approvedappno'); 
 
 		def appno = result.approvedappno; 
-		def msg = 'The online business renewal application you submitted has been approved. \nYour application number is '+ appno; 
+		def msg = 'The online business renewal application you submitted has been approved. <br/>Your application number is <b>'+ appno +'</b>'; 
 
 		def data = [:]; 
 		data.state = 0;

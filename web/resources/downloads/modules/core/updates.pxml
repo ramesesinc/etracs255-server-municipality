@@ -12,7 +12,7 @@
   <module version="2.01" file="core/rameses-client-ui-bio.jar"  />
   <module version="2.01" file="core/rameses-client-ui-jfx.jar"  />
   <module version="2.01" file="core/rameses-client-notification-socketio.jar"  />
-  <module version="2.01" file="core/rameses-common2.jar"  />
+  <module version="2.02" file="core/rameses-common2.jar"  />
   <module version="2.01" file="core/rameses-custom-impl.jar"  />
   <module version="2.01" file="core/rameses-jdbc16.jar"  />
   <module version="2.02" file="core/rameses-seti.jar"  />

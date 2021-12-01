@@ -1,0 +1,33 @@
+import com.rameses.annotations.*;
+import com.rameses.util.*;
+import com.rameses.services.extended.*;
+import ctc.facts.*;
+import treasury.utils.*;
+
+class CTCBillingInterceptor {
+
+	//update the franchise info if capture or 
+	@After(pattern="FactBuilderService.getFacts",  eval="#{ args[0].rulename == 'ctcbilling' }")
+	public void buildFacts(def evt) {
+		def data = evt.args[0].params;
+		def factBuilder = evt.result;
+
+		if( data.type == "individual") {
+			factBuilder.facts << new IndividualCTC(data);			
+		}
+		else {
+			factBuilder.facts << new CorporateCTC(data);
+		}
+
+		factBuilder.outputHandler = { o, res->
+			if( o instanceof IndividualCTC ) {
+				res.putAll( o.toMap() );
+			}
+			else if( o instanceof CorporateCTC  ) {
+				res.putAll( o.toMap() );
+			}
+		} as RuleOutputHandler;
+	}
+
+
+} 

@@ -1,0 +1,70 @@
+import com.rameses.annotations.*;
+import java.rmi.server.*;
+import com.rameses.rules.common.*;
+import com.rameses.util.*;
+import com.rameses.services.extended.*;
+
+import ctc.facts.*;
+
+public class IndividualCTCService {
+
+	@Service('DateService')
+	def dtSvc
+
+	@Service("BillingRuleService")
+	def basicBillingService;
+
+	@Service("IndividualEntityService")
+	def entitySvc;
+
+	@ProxyMethod
+	public def getCtcRelatedPayerData(entity){
+		def g = [newbusiness:false];
+		if(entity.birthdate) {
+			def a = entitySvc.calculateAge( [birthdate: entity.birthdate] );
+			g.putAll( a );
+		}		
+		return g;
+
+		// info fields required:
+		// newbusiness, businessgross
+		// def business = em.findBusinessInfo(entity)
+		/*
+		def info = [
+			newbusiness 	: (business.apptype == null ? false : business.apptype.equalsIgnoreCase('NEW')),
+			businessgross 	: business.totalgross 
+		]
+		return info 
+		*/
+	}
+
+	@ProxyMethod
+	public def getSeniorCitizenStatus(entity){
+		if (entity.birthdate){
+			def birthyear = dtSvc.getYear( entity.birthdate )
+			def age = dtSvc.serverYear - birthyear
+			return (age >= 60)
+		}
+		return null
+	}
+
+	@ProxyMethod
+	public def calculateTax( ctc ) { 
+		ctc.type = "individual";
+		if ( ctc.newbusiness == null ) ctc.newbusiness = false; 
+
+		def req = [:];
+		req.rulename = "ctcbilling"; 
+		req.params = ctc;
+		req.include_items = true;
+		req.include_billitems = false;
+
+		return basicBillingService.execute( req );
+	}
+
+
+
+
+}
+	
+

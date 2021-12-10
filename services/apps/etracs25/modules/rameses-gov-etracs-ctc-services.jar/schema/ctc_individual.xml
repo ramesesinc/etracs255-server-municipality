@@ -1,0 +1,30 @@
+<schema>
+	<element name="ctc_individual" tablename="cashreceipt_ctc_individual">
+		<field name="objid" primary="true" />
+		<field name="payer_profession" />
+		<field name="payer_citizenship" />
+		<field name="payer_civilstatus" />
+		<field name="payer_height" />
+		<field name="payer_weight" />
+		<field name="additional_remarks" />
+		<field name="businessgross" type="decimal" required="true" />
+		<field name="annualsalary" type="decimal" required="true" />
+		<field name="propertyincome" type="decimal" required="true" />
+		<field name="basictax" type="decimal" required="true" />
+		<field name="salarytax" type="decimal" required="true" />
+		<field name="businessgrosstax" type="decimal" required="true" />
+		<field name="propertyincometax" type="decimal" required="true" />
+		<field name="additionaltax" type="decimal" required="true" />
+		<field name="totaltax" type="decimal" required="true" />
+		<field name="interest" type="decimal" required="true" />
+		<field name="amountdue" type="decimal" required="true" />
+		<field name="interestdue" type="decimal" required="true" />
+		<field name="barangay_objid" />
+		<field name="barangay_name" />
+		<field name="brgytaxshare" />
+		<field name="brgyinterestshare" />
+	</element>
+</schema>
+
+
+

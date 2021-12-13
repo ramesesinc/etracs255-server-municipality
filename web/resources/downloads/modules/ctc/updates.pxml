@@ -3,6 +3,6 @@
 
 </env>
 <modules>
-  <module version="2.01" file="ctc/rameses-queueing.jar"  />
+  <module version="2.01" file="ctc/rameses-gov-etracs-ctc.jar"  />
 </modules>
 </app>

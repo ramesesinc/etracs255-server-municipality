@@ -1,0 +1,16 @@
+import com.rameses.annotations.*; 
+
+class CTCReportTaxRollService {
+	
+	@ActiveDB('ctcreport') 
+	def em; 
+
+	@ProxyMethod 
+	public def getReport( params ) {
+		if ( !params.startdate ) throw new Exception('startdate parameter is required'); 
+		if ( !params.enddate ) throw new Exception('enddate parameter is required'); 
+
+		return em.getTaxRoll( params );  
+	}
+
+}

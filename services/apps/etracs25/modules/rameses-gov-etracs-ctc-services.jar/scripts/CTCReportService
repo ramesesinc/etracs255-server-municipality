@@ -1,0 +1,21 @@
+import com.rameses.annotations.*;
+import com.rameses.util.*;
+import java.rmi.server.*;
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+class RemittanceReportService  {
+	
+	@ActiveDB('ctcreport')
+	def em;
+
+	@ProxyMethod 
+	def generateAbstractCTCIndividual(def params) {
+		def list = em.getAbstractCTCIndividual(params);
+		if( ! list ) throw new Exception('No record(s) found.          ')
+		
+		return list;
+	}
+
+
+}

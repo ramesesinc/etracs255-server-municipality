@@ -59,8 +59,8 @@ public class RPTLedgerItemFact
         this.basicav = item.basicav
         this.sefav = item.sefav
         this.txntype = item.txntype
-        this.classification = item.classification
-        this.actualuse = item.actualuse
+        this.classification = item.classification instanceof Map ? item.classification.objid : item.classification
+        this.actualuse = item.actualuse instanceof Map ? item.actualuse.objid : item.actualuse 
         this.revtype = item.revtype
         this.monthsfromqtr = item.monthsfromqtr
         this.monthsfromjan = item.monthsfromjan

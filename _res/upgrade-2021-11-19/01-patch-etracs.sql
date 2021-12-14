@@ -3066,6 +3066,16 @@ alter table sys_fileitem
 ;
 
 
+alter table online_business_application_doc add `fs_state` varchar(20) NOT NULL
+;
+
+INSERT INTO sys_fileloc (objid, url, rootdir, defaultloc, loctype, user_name, user_pwd, info) 
+VALUES ('bpls-fileserver', '127.0.0.1', NULL, '0', 'ftp', 'ftpuser', 'P@ssw0rd#', NULL);
+
+INSERT INTO sys_fileloc (objid, url, rootdir, defaultloc, loctype, user_name, user_pwd, info) 
+VALUES ('bpls-fileserver-pub', '127.0.0.1', NULL, '0', 'ftp', 'ftpuser', 'P@ssw0rd#', NULL);
+
+
 
 -- ## 2021-11-26
 

@@ -59,8 +59,8 @@ public class RPTLedgerItemFact
         this.basicav = item.basicav
         this.sefav = item.sefav
         this.txntype = item.txntype
-        this.classification = item.classification
-        this.actualuse = item.actualuse
+        this.classification = item.rptledgerfaas?.classification?.objid
+        this.actualuse = item.rptledgerfaas?.actualuse?.objid
         this.revtype = item.revtype
         this.monthsfromqtr = item.monthsfromqtr
         this.monthsfromjan = item.monthsfromjan

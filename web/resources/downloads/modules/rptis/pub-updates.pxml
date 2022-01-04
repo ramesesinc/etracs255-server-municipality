@@ -4,7 +4,7 @@ rpt.app.host=${pub_app_server_ip}:8070
 rpt.app.context=etracs25
 </env>
 <modules>
-    <module version="2.05" file="rptis/rameses-gov-etracs-rptis-landtax.jar" />
+    <module version="2.06" file="rptis/rameses-gov-etracs-rptis-landtax.jar" />
     <module version="2.04" file="rptis/rameses-gov-etracs-rptis-landtax-report.jar" />
     <module version="2.04" file="rptis/rameses-gov-etracs-rptis.jar" />
     <module version="2.03" file="rptis/rameses-gov-etracs-rptis-report.jar" />

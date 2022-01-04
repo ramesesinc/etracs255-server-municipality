@@ -1,0 +1,29 @@
+package ctcindividual;
+
+declare IndividualCTC
+    profession :  String    
+    citizenship: String    
+    gender:   String    
+    civilstatus: String    
+    seniorcitizen:  Boolean    
+    newbusiness: Boolean    
+    annualsalary: Double    
+    businessgross: Double    
+    propertyincome: Double   
+    
+    barangayid: String    
+    additional: Boolean    
+    basictax:   Double    
+    salarytax:  Double    
+    businessgrosstax:  Double    
+    propertyincometax: Double    
+    additionaltax:     Double    
+    totaltax:  Double   
+    interest: Double    
+    amountdue: Double    
+end
+
+declare Barangay
+    objid : String
+end
+

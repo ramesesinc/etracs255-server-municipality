@@ -81,6 +81,7 @@ class OnlineBusinessApplicationDocService {
 
 		def findby = [ objid: param.objid ]; 
 		def doc = em_appdoc.find( findby ).first(); 
+
 		if ( !doc ) { 
 			em_download.find( findby ).delete(); 
 			return; 
@@ -147,6 +148,7 @@ class OnlineBusinessApplicationDocService {
 		if ( doc.bytesprocessed ) mm.bytesprocessed = doc.bytesprocessed; 
 
 		em_download.find([ objid: doc.objid ]).update( mm ); 
+
 		doc.remove('bytesprocessed'); 
 	}
 
@@ -155,6 +157,7 @@ class OnlineBusinessApplicationDocService {
 	public void updateDocStatus( param ) { 
 		if ( param.state ) { 
 			def fsparam = [ fs: [ state: param.state ]]; 
+
 			em_appdoc.find([ objid: param.objid ]).update( fsparam ); 
 		}
 	}
@@ -260,8 +263,9 @@ class OnlineBusinessApplicationDocService {
 			dynaEm.lookup('sys_fileitem').find( findby ).update( stat ); 
 
 			findby.objid = doc_objid; 
-			em_appdoc.find( findby ).update([ fs: stat ]); 
+
 			em_download.find( findby ).delete();
+			em_appdoc.find( findby ).update([ fs: stat ]); 
         } 
 	}
 

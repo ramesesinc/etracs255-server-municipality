@@ -3,7 +3,7 @@ import com.rameses.util.*;
 import java.rmi.server.*;
 import com.rameses.services.extended.*;
 
-public class RetireLobApplicationInterceptor {
+public class BusinessApplicationRetireLOBInterceptor {
 
 	@Env
 	def env;

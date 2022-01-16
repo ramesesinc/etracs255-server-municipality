@@ -86,7 +86,7 @@ public class BusinessAssessmentService  {
 		if ( r.taxfees ) { 
 			r.totals = [tax:0, regfee:0, othercharge:0, total:0]; 
 			def rt = r.taxfees; 
-			def taxfees = rt.findAll{ it.lob?.objid!=null }.sort{ it.lob } + rt.findAll{it.lob?.objid==null};
+			def taxfees = rt.findAll{ it.lob?.objid!=null }.sort{ it.lob?.name.toString() } + rt.findAll{it.lob?.objid==null};
 			taxfees.eachWithIndex {oo,idx-> 
 				oo.year = o.appyear;
 				if( oo.lob?.assessmenttype!=null ) {

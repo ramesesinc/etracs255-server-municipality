@@ -6,7 +6,7 @@ select * from business where objid=$P{objid}
 
 [findLastApp]
 select 
-	a.objid, a.appno, a.appyear, a.txndate, a.apptype, a.state 
+	a.objid, a.appno, a.appyear, a.txndate, a.apptype, a.state, b.nextrenewaldate  
 from business b 
 	inner join business_application a on a.business_objid = b.objid 
 where b.bin = $P{bin} 

@@ -44,6 +44,12 @@ class OnlineBusinessApplicationService {
 		if ( !bus.state.toString().matches('ACTIVE')) 
 			throw new Exception('Business record must be in ACTIVE status'); 
 
+		// check for any existing renewal application 
+		// that may violate the created online application
+		def test = app_builder.findExistingRenewalApp([ businessid: app.business.objid, appyear: app.appyear ]); 
+		if ( test ) 
+			throw new Exception('There is already an existing renewal application created. Please verify.'); 
+
 		def rundate = dateSvc.getServerDate(); 
 
 		def appcount = bus.appcount + 1; 
@@ -96,11 +102,11 @@ class OnlineBusinessApplicationService {
 	    	if ( !ai ) return; 
 
 	    	if ( o.datatype == 'integer' ) { 
-	    		ai.intvalue = o.value.toString().toInteger(); 
+	    		ai.intvalue = (o.value.toString() == "null" ? 0 : o.value.toString().toInteger()); 
 	    		ai.decimalvalue = ai.boolvalue = ai.stringvalue = null; 
 	    	}
 	    	else if ( o.datatype == 'decimal' ) {
-	    		ai.decimalvalue = new BigDecimal( o.value.toString()); 
+	    		ai.decimalvalue = (o.value.toString() == "null" ? 0 : new BigDecimal( o.value.toString())); 
 	    		ai.intvalue = ai.boolvalue = ai.stringvalue = null; 
 	    	}
 	    	else if ( o.datatype == 'boolean' ) {

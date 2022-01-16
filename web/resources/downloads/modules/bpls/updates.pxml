@@ -7,7 +7,7 @@ bpls.app.context=etracs25
     <module version="2.04" file="bpls/rameses-gov-etracs-bpls.jar"  />
     <module version="2.03" file="bpls/rameses-gov-etracs-bpls-reports.jar"  />
     <module version="2.02" file="bpls/rameses-gov-etracs-bpls-ceo.jar"  />
-    <module version="2.03" file="bpls/rameses-gov-etracs-bpls-online.jar"  />
+    <module version="2.05" file="bpls/rameses-gov-etracs-bpls-online.jar"  />
     <module version="2.02" file="bpls/rameses-gov-etracs-bpls-fire.jar"  />
 </modules>
 </app>

@@ -1,7 +1,7 @@
 import com.rameses.annotations.*;
 import com.rameses.util.*;
 
-public class RenewBusinessApplicationInterceptor {
+public class BusinessApplicationRenewInterceptor {
 
 	@Env
 	def env;
@@ -210,9 +210,15 @@ public class RenewBusinessApplicationInterceptor {
 		def currentYear = dateSvc.getYear( currentDate ); 		
 		def currentQtr = dateSvc.getQtr( currentDate ); 
 		def billing = cashReceiptSvc.getBillingForPayment([ applicationid: o.objid, _silent:true, _with_taxfees:false, _with_items:false ]);  
+
 		if ( billing?.errcode=='NO_UNPAID') {
 			canRelease = true; 
-		} else {
+		} 
+		else if ( o.appyear > currentYear ) {
+			// this will only occur during early renewal period
+			canRelease = true; 
+		}
+		else {
 			def balance = 0.0; 
 			for (int i=1; i<=currentQtr; i++) {
 				def amt = billing?.totals?.get('q'+i); 
@@ -221,38 +227,7 @@ public class RenewBusinessApplicationInterceptor {
 			canRelease = (balance > 0.0 ? false : true);  
 		} 
 
-		/*def lastpaidinfo = paySvc.findLastQtrPaid([ applicationid: o.objid ]); 
-		if (lastpaidinfo) { 
-			if (o.appyear-1 == currentYear) currentQtr = 1;
-
-			canRelease = ( lastpaidinfo.qtr==0 || lastpaidinfo.qtr >= currentQtr ); 
-		}*/
-
 		result.canRelease = canRelease; 
-
-		//rerun the bill and check date must be less than each qtr date deadline
-		/*
-		def rec = receivableSvc.getReceivables([applicationid: o.objid]);
-		
-		boolean canRelease = true;
-		try {
-			def billing = billSvc.generateBilling( [taxfees: rec, app: o] );
-			def today = dateSvc.getServerDate();
-			for(d in billing?.taxfees*.details.flatten()) {
-				if( d.duedate < o.receiptdate ) {
-					canRelease = false;
-					break;
-				}		
-			}
-		}
-		catch(e) {;}
-		
-		result.canRelease = canRelease;
-
-		//select there must be no pending receivables of this
-		if(!rec) {
-			result.state = 'COMPLETED';
-		}*/
 	}
 
 	@Before(pattern="BusinessApplicationService.release", eval="#{args[0].apptype=='RENEW' && args[0].state=='RELEASE' && args[0].txnmode == 'ONLINE' }")

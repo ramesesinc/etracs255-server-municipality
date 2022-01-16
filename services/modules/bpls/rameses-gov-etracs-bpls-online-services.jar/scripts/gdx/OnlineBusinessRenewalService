@@ -83,7 +83,7 @@ class OnlineBusinessRenewalService {
 		return business; 
 	} 
 
-	def appValidator = { business, currentyear-> 
+	def appValidator = { business, currentyear, currentdate-> 
 		def app = online_bpls_renewal.findLastApp([ bin: business.bin, currentyear: currentyear ]); 
 		if ( !app ) {
 			def msg = new StringBuilder(); 
@@ -91,12 +91,28 @@ class OnlineBusinessRenewalService {
 			msg.append('\n').append( contact_support_msg ); 
 			throw new Exception( msg.toString()); 
 		} 
+		
 		if ( app.appyear == currentyear ) {
-			def msg = new StringBuilder(); 
-			msg.append('An application already created for the current year. ');
-			msg.append('\n').append( contact_support_msg ); 
-			throw new Exception( msg.toString()); 
+			boolean pass = false;
+
+			def nextrenewaldate = app.nextrenewaldate; 
+			if ( nextrenewaldate ) {
+				def rundate = new com.rameses.util.DateBean( currentdate ).date; 
+				rundate = new java.sql.Date( rundate.time ); 
+				pass = ( nextrenewaldate <= rundate ); 
+				if ( pass ) { 
+					app.renewalyear = currentyear + 1;
+				}
+			}
+			
+			if ( !pass ) {
+				def msg = new StringBuilder(); 
+				msg.append('An application already created for the current year. ');
+				msg.append('\n').append( contact_support_msg ); 
+				throw new Exception( msg.toString()); 
+			}
 		} 
+
 		if ( !app.state.toString().equalsIgnoreCase('COMPLETED')) {
 			def msg = new StringBuilder(); 
 			msg.append('There is a pending application for this business account. ');
@@ -112,11 +128,12 @@ class OnlineBusinessRenewalService {
 	public def validateBin( param ) {
 		if ( !param.bin ) throw new Exception('bin parameter is required'); 
 
+		def currentdate = dateSvc.getServerDate(); 
 		def currentyear = dateSvc.getServerYear(); 
 		def business = binValidator( param.bin, currentyear ); 
 		
 		stateValidator( business ); 
-		appValidator( business, currentyear ); 
+		appValidator( business, currentyear, currentdate ); 
 
 		def arrs = KeyGen.generateIntKey(null, 8).split('-'); 
 		def str = (arrs.length > 1 ? arrs[1] : arrs[0]); 
@@ -147,22 +164,23 @@ class OnlineBusinessRenewalService {
 
 		stateValidator( business ); 
 		
-		def app = appValidator( business, currentyear ); 
+		def app = appValidator( business, currentyear, currentdate ); 
 		def redflags = online_bpls_renewal.getRedFlags([ businessid: business.objid, currentdate: currentdate ]);  
 		redflags.each { 
 			it.issue = it.remove('message'); 
 		} 
 
-		if ( app.appyear != (currentyear-1)) { 
+		def renewalyear = ( app.renewalyear ? app.renewalyear : currentyear ); 
+		if ( app.appyear != (renewalyear-1)) { 
 			redflags << [
 				office : 'BPLO', caseno: null, 
-				issue  : ('No available application for the year ' + (currentyear-1)) 
+				issue  : ('No available application for the year ' + (renewalyear-1)) 
 			]; 
 		} 
 
 		def balance = 0.0; 
 		def billdate = dateSvc.getBasicServerDate(); 
-		def apps = online_bpls_renewal.getDelinquentApps([ bin: business.bin, currentyear: currentyear ]); 
+		def apps = online_bpls_renewal.getDelinquentApps([ bin: business.bin, currentyear: renewalyear ]); 
 		apps.each{ o-> 
 			def billamt = computeBill( o, billdate ).amount; 
 			balance += billamt; 
@@ -464,18 +482,34 @@ class OnlineBusinessRenewalService {
 			def path = (o.attachment?.location ? o.attachment.location : o.attachment?.path);
 			if ( !path ) return; 
 
+			if ( path.indexOf("://") > 0 ) {
+				def sb = new StringBuilder(); 
+				sb.append("/s3/"); 
+
+				def ii = path.indexOf("://"); 
+				sb.append( path.substring( ii+3 ));
+
+				path = sb.toString();  
+			}
+
+			if ( !o.attachment.filename ) {
+				o.attachment.filename = path.substring( path.lastIndexOf('/')+ 1 ); 
+			}
+			if ( !o.attachment.filetype ) {
+				def filename = o.attachment.filename; 
+				o.attachment.filetype = filename.substring( filename.lastIndexOf('.')+ 1 ); 
+			}
+			if ( !o.attachment.name ) {
+				o.attachment.name = o.attachment.filename; 
+			}
+
 			def m = [:]; 
 			m.objid = app.objid +'-'+ idx; 
 			m.parentid = app.objid; 
 			m.doc = [type: o.ref?.reftype, title: o.ref?.title];
 			m.attachment = [ objid: o.objid, path: path ];
-			m.attachment.name = (o.attachment.etag ? o.attachment.etag : o.attachment.name); 
-			m.fs = [ filetype: "", state: 'PENDING' ]; 
-
-			def charIdx = m.attachment.name.toString().lastIndexOf('.'); 
-			if ( charIdx >= 0 ) {
-				m.fs.filetype = m.attachment.name.toString().substring(charIdx + 1).toLowerCase(); 
-			}
+			m.attachment.name = (o.attachment.name ? o.attachment.name : o.attachment.filename); 
+			m.fs = [ filetype: o.attachment.filetype, state: 'PENDING' ]; 
 
 			em_appdoc.create( m ); 
 			o.docid = m.objid; 

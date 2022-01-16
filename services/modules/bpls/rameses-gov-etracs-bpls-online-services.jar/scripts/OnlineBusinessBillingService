@@ -3,6 +3,9 @@ import com.rameses.util.*;
 
 class OnlineBusinessBillingService {
 
+	@Service( dynamic=true )
+	def dynaSvc; 
+
 	@Service("BusinessCashReceiptService")
 	def svc;
 
@@ -20,6 +23,9 @@ class OnlineBusinessBillingService {
 
 	@Service("NumberService")
 	def numSvc;
+
+	@Service('')
+	def sharingSvc; 
 
 	@ActiveDB('online_bpls') 
 	def online_bpls;
@@ -114,8 +120,9 @@ class OnlineBusinessBillingService {
 		o.appyear = z.app.appyear; 
 		o.taxfees = z.taxfees;
 		o.expirydate = z.expirydate; 
-		o.items = z.items;
-		return o;
+		o.items = z.items; 
+		o.sharing = true; 
+		return o; 
 	}
 
 	@ProxyMethod
@@ -128,8 +135,12 @@ class OnlineBusinessBillingService {
 
     @ProxyMethod
 	public def getEmailAttachments( eor ) {
-        return []
+        return [];
     }
 
-
+    @ProxyMethod
+    public def generateShares( param ) { 
+    	def shareSvc = dynaSvc.lookup('RevenueSharingService', 'treasury'); 
+        return shareSvc.execute( param ); 
+    } 
 }

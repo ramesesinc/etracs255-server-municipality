@@ -61,16 +61,19 @@ public class BusinessBillingService  {
 				def lobInfo = lobEm.find( [objid: lob.objid ]).first();
 				if(!lobInfo)
 					throw new Exception("lob not found for "+lob.objid);
-				def LOB = new LOB();
-				LOB.objid = lobInfo.objid;
-				LOB.lobid = lobInfo.objid;
-				LOB.assessmenttype = tf.assessmenttype;
-				LOB.name = lobInfo.name;
-				LOB.classification = lobInfo.classification?.objid;
+
+				def oLOB = new LOB();
+				oLOB.objid = lobInfo.objid;
+				oLOB.lobid = lobInfo.objid;
+				oLOB.assessmenttype = tf.assessmenttype;
+				oLOB.name = lobInfo.name;
+				oLOB.classification = lobInfo.classification?.objid;
+
 				def attrs = lobAttr.find([lobid: lobInfo.objid] ).list();
-				LOB.attributes = "-" + attrs*.lobattributeid.join("-") + "-";
-				lobMap.put( lob.objid, LOB );
-				facts << LOB;
+				oLOB.attributes = "-" + attrs*.lobattributeid.join("-") + "-";
+
+				lobMap.put( lob.objid, oLOB );
+				facts << oLOB;
 			}
 			return lobMap[lob.objid];
 		}

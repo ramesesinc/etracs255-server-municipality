@@ -124,6 +124,7 @@ public class BusinessApplicationRetireInterceptor {
 
 		app.appno = b.bin +  "-" + b.appcount + "R"; 
 		app.business.apptype = b.apptype; 
+		app.yearstarted = b.yearstarted; 		
 	}
 
 	@After(pattern="BusinessApplicationService.create", eval="#{args[0].apptype=='RETIRE' && args[0].txnmode == 'ONLINE' }")

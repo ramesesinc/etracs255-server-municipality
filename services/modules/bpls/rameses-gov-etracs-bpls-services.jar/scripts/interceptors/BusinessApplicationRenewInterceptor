@@ -164,7 +164,8 @@ public class BusinessApplicationRenewInterceptor {
 		b.permittype = (b.permittype ? b.permittype : 'BUSINESS'); 
 
 		app.appno = b.bin +  "-" + b.appcount + "R"; 
-
+		app.yearstarted = b.yearstarted; 
+		
 		bizSvc.updateOnApply( b ); 
 	}
 

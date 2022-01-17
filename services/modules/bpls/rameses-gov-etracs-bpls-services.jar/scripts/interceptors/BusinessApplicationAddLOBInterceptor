@@ -101,6 +101,7 @@ public class BusinessApplicationAddLOBInterceptor {
 		b.appcount += 1;
 		app.appno = b.bin +  "-" + b.appcount + "A";
 		app.business.appcount = b.appcount; 
+		app.yearstarted = b.yearstarted;
 	}
 
 	@After(pattern="BusinessApplicationService.create", eval="#{args[0].apptype=='ADDITIONAL' && args[0].txnmode == 'ONLINE' }")

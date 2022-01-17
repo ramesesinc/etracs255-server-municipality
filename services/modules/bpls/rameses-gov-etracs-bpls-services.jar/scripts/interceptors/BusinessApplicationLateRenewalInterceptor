@@ -66,6 +66,7 @@ public class LastRenewalBusinessApplicationInterceptor {
 		bizSvc.updateOnApply( b );
 		app.state = 'COMPLETED';
 		app.objid = "BALTR"+ new UID(); 
+		app.yearstarted = b.yearstarted;
 	}
 
 	@After(pattern="BusinessApplicationService.create", eval="#{args[0].apptype=='LATERENEWAL'  }")

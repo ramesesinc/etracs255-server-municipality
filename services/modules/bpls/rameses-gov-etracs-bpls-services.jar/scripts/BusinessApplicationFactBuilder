@@ -24,16 +24,17 @@ public class BusinessApplicationFactBuilder {
 			app.lobs?.each {
 				//we need to retrieve lob to be absolutely sure.
 				def lobInfo = lobEm.find( [objid: it.lobid ]).first();
-				def LOB = new LOB();
-				LOB.objid = it.lobid;
-        		LOB.lobid = it.lobid;
-        		LOB.assessmenttype = it.assessmenttype;  				
-				LOB.name = lobInfo.name;
-				LOB.classification = lobInfo.classification?.objid;
+				def oLOB = new LOB();
+				oLOB.objid = it.lobid;
+        		oLOB.lobid = it.lobid;
+        		oLOB.assessmenttype = it.assessmenttype;  				
+				oLOB.name = lobInfo.name;
+				oLOB.classification = lobInfo.classification?.objid;
+
 				def attrs = lobAttr.find([lobid: it.lobid]).list();
-				LOB.attributes = "-" + attrs*.lobattributeid.join("-") + "-";
-				facts << LOB;
-				lobMap.put( it.lobid, LOB );
+				oLOB.attributes = "-" + attrs*.lobattributeid.join("-") + "-";
+				facts << oLOB;
+				lobMap.put( it.lobid, oLOB );
 			}
 		}
 		if(app.infos!=null ) {

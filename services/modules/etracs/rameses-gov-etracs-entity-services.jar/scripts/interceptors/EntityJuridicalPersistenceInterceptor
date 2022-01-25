@@ -24,13 +24,15 @@ class EntityJuridicalPersistenceInterceptor  {
 	def entityEm;
 
 	@Before(pattern="PersistenceService.(create|update)", eval="#{args[0]._schemaname == 'entityjuridical'}", index=100)
-	public void beforeSave(def evt ) {
+	public void beforeSave( evt ) {
 		def o = evt.args[0];
-		o.entityname = o.name;
+		if ( o.name ) { 
+			o.entityname = o.name; 
+		}
 	}
 
 	@Before(pattern="PersistenceService.create", eval="#{args[0]._schemaname == 'entityjuridical'}", index=101)
-	public void beforeSaveCreate(def evt ) {
+	public void beforeSaveCreate( evt ) {
 		def o = evt.args[0];
 
 		//check if there are name matches
@@ -43,7 +45,7 @@ class EntityJuridicalPersistenceInterceptor  {
 	}
 
 	@Before(pattern="PersistenceService.create", eval="#{args[0]._schemaname == 'entityjuridical'}", index=101)
-	public void beforeCreate(def evt ) {
+	public void beforeCreate( evt ) {
 		def o = evt.args[0];
 		if ( !o.address?.text ) throw new Exception("Address is required");
 		if ( o.orgtype=='SING' ) throw new Exception("Please select another org type"); 
@@ -67,13 +69,13 @@ class EntityJuridicalPersistenceInterceptor  {
 	}
 
 	@After(pattern="PersistenceService.create", eval="#{args[0]._schemaname == 'entityjuridical'}")
-	public void afterCreate(def evt ) {
+	public void afterCreate( evt ) {
 		def o = evt.args[0];
 		addressEm.find([objid: o.address.objid]).update([parentid: o.objid]);
 	}
 
 	@After( pattern="ListService.getList", eval="#{args[0].name == 'entitytype'}", index=10 )
-	public void getEntityTypeList(def evt) {
+	public void getEntityTypeList( evt) {
 		def list = evt.result;
 		list << 'JURIDICAL'
 	}

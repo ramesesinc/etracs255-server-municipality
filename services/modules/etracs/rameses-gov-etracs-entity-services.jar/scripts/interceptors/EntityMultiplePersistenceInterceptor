@@ -27,8 +27,10 @@ class EntityMultiplePersistenceInterceptor  {
 	@Before(pattern="PersistenceService.(create|update)", eval="#{args[0]._schemaname == 'entitymultiple'}", index=100)
 	public void beforeSave(def evt ) {
 		def o = evt.args[0];
-		o.entityname = (o.name.length() > INDEX_CHAR_COUNT ? o.name.substring(0, INDEX_CHAR_COUNT) : o.name ); 
-		o.fullname = o.name;
+		if ( o.name ) {
+			o.entityname = (o.name.length() > INDEX_CHAR_COUNT ? o.name.substring(0, INDEX_CHAR_COUNT) : o.name ); 	
+			o.fullname = o.name;
+		}
 	}
 
 	@Before(pattern="PersistenceService.create", eval="#{args[0]._schemaname == 'entitymultiple'}", index=101)

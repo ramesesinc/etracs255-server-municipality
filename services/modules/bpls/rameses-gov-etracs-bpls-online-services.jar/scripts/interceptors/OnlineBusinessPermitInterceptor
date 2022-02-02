@@ -12,8 +12,15 @@ class OnlineBusinessPermitInterceptor {
 		if ( !res?.applicationid ) return; 
 
 		def em = dynaEm.lookup('online_business_application');
-		def oapp = em.find([ objid: res.applicationid ]).select('objid,dtcreated,controlno,contact.*').first(); 
-		res.onlineapplication = oapp; 
+
+		if ( res.parentapplicationid ) {
+			def oapp = em.find([ objid: res.parentapplicationid ]).select('objid,dtcreated,controlno,contact.*').first(); 
+			res.onlineapplication = oapp; 
+		}
+		else if ( res.applicationid ) {
+			def oapp = em.find([ objid: res.applicationid ]).select('objid,dtcreated,controlno,contact.*').first(); 
+			res.onlineapplication = oapp; 	
+		} 		
 	} 
 
     @Before(pattern="JasperEmailQueueService.send", eval="#{args[0].reportid == 'business_permit'}", index=100)

@@ -83,7 +83,7 @@ class CashReceiptVoidService  {
 				pmtChkEm.find([objid: it.refid]).update( [amtused:'{amtused - :amt}'], [amt: it.amount] );
 				def chkp = pmtChkEm.find([objid: it.refid]).first();
 				//if amt used is already 0, place the check in the deadchecks and delete from the check payment 
-				if(chkp.amtused==0) {
+				if ( chkp && chkp.amtused == 0 ) {
 					deadChksEm.create( chkp );
 					pmtChkEm.find( [objid: it.refid ] ).delete();
 				}

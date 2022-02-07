@@ -48,11 +48,13 @@ class EntityJuridicalListInterceptor  {
 			whereMap.orgtype = orgtype; 
 		}
 
-		def str = filterList.join(' AND '); 
-		if ( whereList ) {
-			whereList.add(0, str); 
-		} else {
-			whereList << str; 
+		if ( filterList ) {
+			def str = filterList.join(' AND '); 
+			if ( whereList ) {
+				whereList.add(0, str); 
+			} else {
+				whereList << str; 
+			}	
 		}
 
 		if ( whereList ) { 

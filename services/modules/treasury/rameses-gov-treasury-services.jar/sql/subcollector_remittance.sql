@@ -16,16 +16,17 @@ AND cr.subcollector_objid=$P{subcollectorid}
 
 [getUremittedCollectionSummary]
 SELECT 
-   cr.stub,   
+   cr.controlid, cr.formno, cr.stub, 
    MIN(cr.receiptno) AS startno,
    MAX(cr.receiptno) AS endno,
    SUM( CASE WHEN cv.objid IS NULL THEN cr.amount ELSE 0 END ) AS amount
 FROM cashreceipt cr
-LEFT JOIN cashreceipt_void cv ON cr.objid=cv.receiptid
+  LEFT JOIN cashreceipt_void cv ON cr.objid=cv.receiptid
 WHERE cr.state = 'DELEGATED'
-AND cr.collector_objid = $P{collectorid}
-AND cr.subcollector_objid=$P{subcollectorid}
-GROUP BY cr.stub
+  AND cr.collector_objid = $P{collectorid}
+  AND cr.subcollector_objid = $P{subcollectorid}
+GROUP BY cr.controlid, cr.formno, cr.stub 
+ORDER BY cr.formno, cr.stub, cr.controlid 
 
 [getItemsRemittance]
 select 

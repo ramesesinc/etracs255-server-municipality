@@ -1,0 +1,9 @@
+import com.rameses.annotations.*;
+
+class PaymentOrderListInterceptor { 
+
+	@Before(pattern="QueryService.getList", eval="#{args[0]._schemaname == 'paymentorder'}") 
+	public void beforeGetList( evt ) { 
+
+	}
+}

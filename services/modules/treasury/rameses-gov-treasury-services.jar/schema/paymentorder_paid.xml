@@ -22,8 +22,8 @@
 
 		<complex name="info" serializer="default" required="true"/>
 
-		<complex name="paymentordertype" ref="paymentorder_type" jointype="many-to-one" required="true">
-			<key field="paymentordertype_objid" target="objid"/>
+		<complex name="collectiontype" ref="collectiontype" jointype="many-to-one" required="true">
+			<key field="collectiontype_objid" target="objid" />
 		</complex>
 
 		<field name="receiptid" required="true"/>

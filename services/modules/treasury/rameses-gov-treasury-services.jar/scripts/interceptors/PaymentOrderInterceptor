@@ -2,7 +2,7 @@ import com.rameses.annotations.*;
 import com.rameses.util.*;
 import java.rmi.server.*;
 
-class PaymentOrderCashReceiptInterceptor {
+class PaymentOrderInterceptor {
 
 	@DataContext("paymentorder")
 	def svc;
@@ -36,6 +36,4 @@ class PaymentOrderCashReceiptInterceptor {
 		r.expirydate = new java.sql.Timestamp( cal.getTimeInMillis() );
 		r.issuedby = [objid:env.USERID, name:env.FULLNAME];
 	} 
-
-
 }

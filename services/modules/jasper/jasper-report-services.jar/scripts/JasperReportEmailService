@@ -6,13 +6,18 @@ import java.util.zip.*;
 
 class JasperReportEmailService  {
 	
-	@Service("JasperReportService")
-	def jasperSvc;
+	final String DEFAULT_EMAIL_CONNECTION = "primary-email-server";
+
+	final String outputReportPath = "/apps/server/output/";
 
 	@XConnection(dynamic=true)
 	def connDb;
 
-	String outputReportPath = "/apps/server/output/";
+	@Service("JasperReportService")
+	def jasperSvc;
+
+	@DataContext( dynamic=true )
+	def dynaEm;
 
 	@ProxyMethod
 	@Async
@@ -24,7 +29,6 @@ class JasperReportEmailService  {
 	public def send( def o ) {
 		if(!o.to) throw new Exception("to is required in JasperReportEmailService.send");
 		if(!o.connection) throw new Exception("email connection is required in JasperReportEmailService.send");
-
 
 		def attachments = o.attachments;
 		if( attachments ) {
@@ -59,5 +63,48 @@ class JasperReportEmailService  {
 				}		
 			}
 		}
+	}
+
+	@ProxyMethod
+	public def submit( o ) {
+		if ( !o.connection ) {
+			o.connection = DEFAULT_EMAIL_CONNECTION; 
+		}
+
+		if ( !o.subject || !o.message  ) {
+			if ( !o.info ) throw new Exception("info is required. info must be a map");
+
+			def em = dynaEm.lookup('sys_email_template'); 
+			def tmp = em.find([ objid: o.reportid.toString() ]).first(); 
+			if ( !tmp ) throw new Exception( o.reportid +" email template not found");
+			if ( !tmp.subject ) throw new Exception("please indicate subject in " + o.reportid +" email template");
+			if ( !tmp.message ) throw new Exception("please indicate message in " + o.reportid +" email template");
+
+			def templateEngine = new groovy.text.SimpleTemplateEngine(); 
+			if ( !o.subject ) o.subject = templateEngine.createTemplate( tmp.subject ).make( o.info )?.toString(); 
+			if ( !o.message ) o.message = templateEngine.createTemplate( tmp.message ).make( o.info )?.toString(); 				
+		} 
+
+		def static_attachments = o.attachments.findAll{( it.bytes )} 
+		if ( static_attachments ) {
+			static_attachments.each { p->
+				p.filename = outputReportPath + com.rameses.util.Encoder.MD5.encode( new java.rmi.server.UID().toString()) +'.pdf'; 
+				if ( !p.title ) p.title = p.filename; 
+
+				def inp = null; 
+				def out = null; 
+				try {
+					inp = new java.io.ByteArrayInputStream( p.bytes ); 
+					out = new java.io.FileOutputStream( new java.io.File( p.filename )); 
+					com.rameses.io.IOStream.write(inp, out, 1024*100); 
+				} 
+				finally {
+					try { out.close(); }catch(Throwable t) {;}
+					try { inp.close(); }catch(Throwable t) {;}
+				}				
+			}
+		}
+
+		return send( o ); 
 	}
 }

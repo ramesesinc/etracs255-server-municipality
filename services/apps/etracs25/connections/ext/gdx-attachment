@@ -1,0 +1,5 @@
+## 
+## GDX Attachment Config
+## 
+provider=conf
+host=${gdx_server_ip}:8500

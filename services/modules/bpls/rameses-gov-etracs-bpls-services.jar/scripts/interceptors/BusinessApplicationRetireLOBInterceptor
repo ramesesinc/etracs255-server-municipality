@@ -3,7 +3,7 @@ import com.rameses.util.*;
 import java.rmi.server.*;
 import com.rameses.services.extended.*;
 
-public class RetireLobApplicationInterceptor {
+public class BusinessApplicationRetireLOBInterceptor {
 
 	@Env
 	def env;
@@ -108,6 +108,7 @@ public class RetireLobApplicationInterceptor {
 		b.appcount += 1;
 		app.appno = b.bin +  "-" + b.appcount + "RL";
 		app.business.appcount = b.appcount; 
+		app.yearstarted = b.yearstarted;
 	}
 
 	@After(pattern="BusinessApplicationService.create", eval="#{args[0].apptype=='RETIRELOB' && args[0].txnmode == 'ONLINE' }")

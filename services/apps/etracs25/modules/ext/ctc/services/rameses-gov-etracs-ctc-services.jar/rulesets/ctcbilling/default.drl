@@ -1,0 +1,9 @@
+package ctc;
+
+import java.util.*;
+import treasury.facts.*;
+import ctc.facts.*;
+import com.rameses.rules.common.*;
+import java.math.*;
+
+global RuleAction action;

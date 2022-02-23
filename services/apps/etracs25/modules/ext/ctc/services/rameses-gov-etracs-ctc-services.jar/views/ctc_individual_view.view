@@ -1,0 +1,15 @@
+DROP VIEW IF EXISTS ctc_individual_view;
+CREATE VIEW ctc_individual_view AS
+SELECT 
+    ctc.*,
+    cr.payer_objid,
+    cr.payer_name,
+    ei.lastname AS payer_lastname,
+    ei.firstname AS payer_firstname,
+    ei.middlename AS payer_middlename,
+    cr.receiptno,
+    cr.receiptdate,
+    YEAR(cr.receiptdate) AS receiptyear
+FROM cashreceipt_ctc_individual ctc
+INNER JOIN cashreceipt cr ON ctc.objid=cr.objid
+INNER JOIN entityindividual ei ON ei.objid=cr.payer_objid;

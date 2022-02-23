@@ -123,11 +123,6 @@ class BusinessPermitInterceptor {
 		data.connection = "bpls";
 		data.reftype = "business_permit";
 		data.refid = result.objid;
-		
-		// begin: for testing only 
-		data.host = "http://192.168.0.20:90"; 
-		// end:   for testing only 
-
 		result.qrcode = "qrcode:" + qrCodeSvc.getData( data ); 
 	}	
 }

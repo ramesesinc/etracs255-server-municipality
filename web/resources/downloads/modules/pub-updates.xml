@@ -35,5 +35,7 @@ socketio.host=${pub_app_server_ip}:7080
   <import file="rptis/pub-updates.pxml"/> 
 
   <import file="bpls/pub-updates.pxml"/>   
+
+  <import file="ctc/updates.pxml"/> 
 </modules>
 </app>

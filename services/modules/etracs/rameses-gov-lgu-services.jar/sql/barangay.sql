@@ -6,7 +6,7 @@ SELECT
 	CASE WHEN p.objid IS NOT NULL THEN p.indexno ELSE c.indexno END AS provcity_indexno,
 	CASE WHEN p.objid IS NOT NULL THEN p.name ELSE c.name END AS provcity_name,
 	CASE WHEN m.objid IS NOT NULL THEN m.objid ELSE d.objid END AS munidistrict_objid,
-	CASE WHEN m.objid IS NOT NULL THEN m.indexno ELSE d.indexno END AS munidistrict_indexno,
+	CASE WHEN m.objid IS NOT NULL THEN m.code ELSE d.indexno END AS munidistrict_indexno,
 	CASE WHEN m.objid IS NOT NULL THEN m.name ELSE d.name END AS munidistrict_name,
 	CASE WHEN c.objid IS NOT NULL THEN c.name ELSE null END AS city,
 	CASE WHEN p.objid IS NOT NULL THEN p.name ELSE null END AS province,
@@ -16,7 +16,7 @@ INNER JOIN sys_org sb ON b.objid = sb.objid
 LEFT JOIN sys_org sp ON sb.parent_objid = sp.objid 
 LEFT JOIN district d ON sp.objid = d.objid 
 LEFT JOIN city c ON sp.parent_objid= c.objid 
-LEFT JOIN municipality m ON sp.objid = m.objid 
+LEFT JOIN sys_org m ON sp.objid = m.objid 
 LEFT JOIN province p ON sp.parent_objid = p.objid 
 WHERE (b.name LIKE $P{searchtext} OR b.pin LIKE $P{searchtext})
 ORDER BY b.name 
@@ -28,7 +28,7 @@ SELECT
 	CASE WHEN p.objid IS NOT NULL THEN p.indexno ELSE c.indexno END AS provcity_indexno,
 	CASE WHEN p.objid IS NOT NULL THEN p.name ELSE c.name END AS provcity_name,
 	CASE WHEN m.objid IS NOT NULL THEN m.objid ELSE d.objid END AS munidistrict_objid,
-	CASE WHEN m.objid IS NOT NULL THEN m.indexno ELSE d.indexno END AS munidistrict_indexno,
+	CASE WHEN m.objid IS NOT NULL THEN m.code ELSE d.indexno END AS munidistrict_indexno,
 	CASE WHEN m.objid IS NOT NULL THEN m.name ELSE d.name END AS munidistrict_name,
 	CASE WHEN c.objid IS NOT NULL THEN c.name ELSE null END AS city,
 	CASE WHEN p.objid IS NOT NULL THEN p.name ELSE null END AS province,
@@ -38,7 +38,7 @@ FROM barangay b
 	LEFT JOIN sys_org sp ON sb.parent_objid = sp.objid 
 	LEFT JOIN district d ON sp.objid = d.objid 
 	LEFT JOIN city c ON sp.parent_objid= c.objid 
-	LEFT JOIN municipality m ON sp.objid = m.objid 
+	LEFT JOIN sys_org m ON sp.objid = m.objid 
 	LEFT JOIN province p ON sp.parent_objid = p.objid 
 WHERE (b.name LIKE $P{searchtext} OR b.pin LIKE $P{searchtext})
 ORDER BY b.name 

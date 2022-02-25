@@ -19,7 +19,7 @@ from cashreceipt c
 where c.collector_objid = $P{collectorid} 
 	and c.remittanceid is null 
 	and c.receiptdate < $P{txndate}  
-	and c.state in ('POSTED','DELEGATED') 
+	and c.state in ('POSTED','DELEGATED','CANCELLED') 
 
 [getAFSummary]
 select * 

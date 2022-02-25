@@ -3,7 +3,7 @@ import com.rameses.util.KeyGen;
 
 class OnlineBusinessRenewalInterceptor {
 	
-	final String DFEAULT_MAIL_CONNECTION = "primary-email-server"; 
+	final String DFEAULT_MAIL_CONNECTION = "bpls-email-server"; 
 
 
 	@DataContext('sys_email_queue')

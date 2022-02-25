@@ -2,7 +2,7 @@ import com.rameses.annotations.*;
 
 class BusinessApplicationWorkflowInterceptor {
 
-	final String DFEAULT_MAIL_CONNECTION = "primary-email-server"; 
+	final String DFEAULT_MAIL_CONNECTION = "bpls-email-server"; 
 
 	@DataContext( dynamic=true )
 	def dynaEm;

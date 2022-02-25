@@ -435,6 +435,7 @@ class RuleMgmtService extends ActiveCrudListService {
 
 					m.ruletext = o.ruletext; 
 					sysruledeployed.create( m ); 
+					m.remove('ruletext'); 
 				}
 			} 
 

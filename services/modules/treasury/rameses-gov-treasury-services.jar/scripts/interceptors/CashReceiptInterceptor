@@ -8,6 +8,15 @@ class CashReceiptInterceptor {
 	@DataContext('checkpayment')
 	def check_db;
 
+	@DataContext('af_control')
+	def afc_db;
+
+	@DataContext('cashreceipt_void')
+	def void_db;
+
+	@DataContext('cashreceipt_cancelseries')
+	def cancel_db;
+
 	@Service("NumberService")
 	def numSvc;
 
@@ -29,6 +38,24 @@ class CashReceiptInterceptor {
 			def cta = colltype_db.find([ objid: data.collectiontype.objid ]).select('name,title,handler,formno').first(); 
 			if ( cta ) data.collectiontype = cta; 
 		} 
+
+		if ( data.controlid ) {
+			def afc = afc_db.find([ objid: data.controlid ]).select('afunit.*').first(); 
+			data.afunit = afc?.afunit; 
+		}
+
+		if ( data.afunit == null ) data.afunit = [:]; 
+		
+		data.afunit.hasprintout = (data.afunit.cashreceiptprintout ? true : false);
+		data.afunit.hasprintoutdetail = (data.afunit.cashreceiptdetailprintout ? true : false);
+
+		data.remitted = ((data.remittanceid && data.remittance?.objid) ? 1 :  0); 
+
+		def voidrec = void_db.find([ receiptid: data.objid ]).select('objid,txndate,reason,postedby.*').first(); 
+		if ( voidrec ) data.void = voidrec; 
+
+		def cancelrec = cancel_db.find([ receiptid: data.objid ]).select('objid,txndate,reason,postedby.*').first(); 
+		if ( cancelrec ) data.cancel = cancelrec; 
 
 		data.paymentitems.each{ 
 			def fldnames = 'objid,refno,refdate,bank.*';

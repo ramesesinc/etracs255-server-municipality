@@ -69,7 +69,7 @@ class RemittanceService  {
 		} 
 
 		boolean split_txn = (var.remittance_split_transaction.toString().matches('false|0') ? false : true); 
-		
+
 		def remo = [ state: 'OPEN', dtfiled: rundate, remittancedate: param.remittancedate ];
 		remo.collector = [ objid: param.collectorid, name: env.FULLNAME, title: env.JOBTITLE ]; 
 		remo.amount = remo.totalcash = remo.totalnoncash = 0.0; 
@@ -91,8 +91,11 @@ class RemittanceService  {
 				o.message = "End of the month remittance only. Please remit again for the remaining collection."; 
 				o._txndate = info.txndate.toString(); 
 
-				remo.remittancedate = dateSvc.add( info.txndate, '-1d'); 				
+				remo.remittancedate = dateSvc.add( info.txndate, '-1d'); 
+				remo.remittancedate = new java.sql.Date( remo.remittancedate.time ); 
 				draftRem_db.find([ objid: remo.objid ]).update([ remittancedate: remo.remittancedate ]); 
+
+				o._txndate = remo.remittancedate.toString();
 			} 
 		} 
 
@@ -114,7 +117,8 @@ class RemittanceService  {
 			}
 		}
 
-		o.voiditems = draftRem_db.getVoidReceipts( info );  
+		o.voiditems = draftRem_db.getVoidReceipts( info ); 
+		o.noncashpayments = draftRem_db.getNoncashPayments( info ); 
 		return o; 
 	}
 

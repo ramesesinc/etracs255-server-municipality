@@ -97,3 +97,29 @@ update c set
 from cashreceipt c, draftremittanceitem remi 
 where remi.remittanceid = $P{remittanceid} 
 	and c.objid = remi.objid  
+
+
+[getNoncashPayments]
+select * 
+from ( 
+	select distinct 
+		nc.refid, nc.reftype, ch.refno, ch.refdate, nc.particulars, ch.amount 
+	from draftremittance rem 
+		inner join draftremittanceitem remi on remi.remittanceid = rem.objid 
+		inner join cashreceipt c on c.objid = remi.objid 
+		inner join cashreceiptpayment_noncash nc on nc.receiptid = c.objid 
+		inner join checkpayment ch on ch.objid = nc.refid 
+	where rem.objid = $P{remittanceid} 
+		and nc.reftype = 'CHECK' 
+	union all 
+	select distinct 
+		nc.refid, nc.reftype, eft.refno, eft.refdate, nc.particulars, eft.amount 
+	from draftremittance rem 
+		inner join draftremittanceitem remi on remi.remittanceid = rem.objid 
+		inner join cashreceipt c on c.objid = remi.objid 
+		inner join cashreceiptpayment_noncash nc on nc.receiptid = c.objid 
+		inner join eftpayment eft on eft.objid = nc.refid 
+	where rem.objid = $P{remittanceid} 
+		and nc.reftype = 'EFT' 
+)t0 
+order by refdate, refno 

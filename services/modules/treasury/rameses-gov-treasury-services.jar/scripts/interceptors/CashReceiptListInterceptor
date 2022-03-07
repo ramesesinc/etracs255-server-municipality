@@ -13,12 +13,20 @@ class CashReceiptListInterceptor {
 			result << [ id:'unremitted', title: 'Unremitted'];	
 			result << [ id:'delegated', title: 'Delegated'];
 			result << [ id:'remitted', title: 'Remitted'];	
-			result << [ id:'voided', title: 'Voided'];	
+
+			if ( !x._formtype.toString().equalsIgnoreCase('cashticket')) {
+				result << [ id:'voided', title: 'Voided'];	
+				result << [ id:'cancelled', title: 'Cancelled'];
+			}
 		} 
 		else if ( x._tag == 'subcollector' ) {
 			result << [ id:'unremitted', title: 'Unremitted'];	
 			result << [ id:'remitted', title: 'Remitted']; 
-			result << [ id:'voided', title: 'Voided'];	
+
+			if ( !x._formtype.toString().equalsIgnoreCase('cashticket')) {
+				result << [ id:'voided', title: 'Voided'];	
+				result << [ id:'cancelled', title: 'Cancelled'];
+			} 
 		} 
 		else if( x._tag == 'unremitted' ) {
 			result << [ id:'unremitted', title: 'Unremitted'];	
@@ -45,13 +53,15 @@ class CashReceiptListInterceptor {
 			qarr << " collector.objid = :userid ";
 
 			if ( o.node.id == 'unremitted' ) { 
-				qarr << " remittanceid is null AND state = 'POSTED' ";
+				qarr << " remittanceid is null AND state IN ('POSTED','CANCELLED') ";
 			} else if ( o.node.id == 'delegated' ) { 
 				qarr << " remittanceid is null and subcollector.objid is not null "; 
 			} else if ( o.node.id == 'remitted' ) { 
 				qarr << " remittanceid is not null "; 
 			} else if ( o.node.id == 'voided' ) { 
 				qarr << " void.objid is not null "; 
+			} else if ( o.node.id == 'cancelled' ) { 
+				qarr << " state = 'CANCELLED' "; 
 			}
 		} 
 		else if ( o._tag == 'subcollector' ) {
@@ -64,6 +74,8 @@ class CashReceiptListInterceptor {
 				qarr << " subcollector.remittanceid is not null AND state = 'POSTED' "; 
 			} else if ( o.node.id == 'voided' ) { 
 				qarr << " void.objid is not null "; 
+			} else if ( o.node.id == 'cancelled' ) { 
+				qarr << " state = 'CANCELLED' "; 
 			} 
 		} 
 		else if ( o.node.id == 'unremitted' ) { 

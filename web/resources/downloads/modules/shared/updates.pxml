@@ -4,7 +4,7 @@
 </env>
 <modules>
   <module version="2.02" file="shared/client-system.jar"  />
-  <module version="2.02" file="shared/client-ui-extended.jar"  />
+  <module version="2.03" file="shared/client-ui-extended.jar"  />
   <module version="2.02" file="shared/rameses-client-menu.jar"  />
   <module version="2.02" file="shared/rameses-client-report.jar"  />
   <module version="2.03" file="shared/rameses-rules-mgmt.jar"  />

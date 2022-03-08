@@ -41,7 +41,7 @@ class CollectionVoucherService  {
 		wheres << "objid IN ('"+ pp.ids.join("','") +"')"; 
 		wheres << "state = 'POSTED' AND collectionvoucherid IS NULL"; 
 
-		//search if there is at least one for posting
+		// search if there is at least one for posting
 		def cnt = remEm.where( wheres.join(' AND ')).select("x:{COUNT(*)}").val();
 		if ( cnt == 0 ) throw new Exception("There are no remittances found that are POSTED within this date"); 
 
@@ -60,12 +60,14 @@ class CollectionVoucherService  {
 
 
 		def z = [ collectionvoucherid: m.objid ]; 
-		//update the collection voucher id for each remittance
+
+		// update the collection voucher id for each remittance
 		remEm.where( wheres.join(' AND ')).update( z );
-		//build voucher funds
+
+		// build voucher funds
 		cvEm.insertCollectionVoucherFund( z );
 
-		//update cash breakdown totals in each collection fund
+		// update cash breakdown totals in each collection fund
 		def lfList = cvFundEm.find( [ parentid: m.objid ] ).list();
 		lfList.each {
 			def cc = [cvid: it.parentid, fundid: it.fund.objid]; 
@@ -75,7 +77,7 @@ class CollectionVoucherService  {
 		} 
 
 
-		//totals in collection
+		// totals in collection
 		def u = [cashbreakdown: [], totalcash:0, totalcheck:0, totalcr: 0, amount:0 ];
 		def remList = remEm.find( z ).list().each { 
 			def bd = cashBreakdownSvc.summarize([ it.cashbreakdown ]); 
@@ -87,10 +89,26 @@ class CollectionVoucherService  {
 			u.cashbreakdown << bd; 
 		} 
 
-		// there must be a cash,check or credit amount, if result is zero then this is not valid 
-		if ((u.totalcash + u.totalcheck + u.totalcr) == 0) throw new Exception("Total Cash must not be zero"); 
+		// there must be a cash, check or credit amount, if result is zero then this is not valid 
+		if ((u.totalcash + u.totalcheck + u.totalcr) == 0) {
+			// check if all receipts are voided 
+			// 
+			boolean pass = false;
+			def mm = cvEm.findReceiptSummary( z ); 
+			if ( mm ) {
+				def c_amount  = (mm.amount ? mm.amount : 0.0); 
+				def c_voidamt = (mm.voidamount ? mm.voidamount : 0.0); 
+				if ( c_amount > 0 && (c_amount - c_voidamt) == 0 ) {
+					// this transaction is valid since all receipts are voided 
+					// 
+					pass = true; 
+				}
+			}
 
-		//validate totalcashbreakdown = totalcash 
+			if ( !pass ) throw new Exception("Total Cash must not be zero"); 
+		}
+
+		// validate totalcashbreakdown = totalcash 
 		def bd = cashBreakdownSvc.summarize( u.cashbreakdown ); 
 		bd.sort{ -((Number) it.denomination).intValue() } 
 

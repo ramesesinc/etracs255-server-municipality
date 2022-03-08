@@ -109,3 +109,15 @@ WHERE cv.objid = $P{collectionvoucherid}
   AND crv.objid IS NULL 
 GROUP BY 
   ra.fund_objid, ra.objid, ia.objid, ia.code, ia.title  
+
+
+[findReceiptSummary]
+select 
+  sum(c.amount) as amount, 
+  sum(c.voidamount) as voidamount, 
+  sum(c.totalnoncash) as totalnoncash, 
+  sum(c.amount)-sum(c.totalnoncash) as totalcash,
+  sum(c.amount)-sum(c.voidamount) as total 
+from collectionvoucher cv 
+  inner join vw_remittance_cashreceipt c on c.collectionvoucherid = cv.objid 
+where cv.objid = $P{collectionvoucherid} 

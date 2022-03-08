@@ -135,3 +135,14 @@ where r.collector_objid = t1.collector_objid
 	and r.dtposted < t1.dtposted 
 	and r.state in ('OPEN','POSTED') 
 order by r.dtposted desc, r.controldate desc, r.controlno desc 
+
+
+[findReceiptSummary]
+select 
+	sum(amount) as amount, 
+	sum(voidamount) as voidamount, 
+	sum(totalnoncash) as totalnoncash, 
+	sum(amount)-sum(totalnoncash) as totalcash,
+	sum(amount)-sum(voidamount) as total 
+from vw_remittance_cashreceipt 
+where remittanceid = $P{remittanceid} 

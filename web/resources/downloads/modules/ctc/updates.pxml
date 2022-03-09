@@ -1,8 +1,0 @@
-<app>
-<env>
-
-</env>
-<modules>
-  <module version="2.02" file="ctc/rameses-gov-etracs-ctc.jar"  />
-</modules>
-</app>

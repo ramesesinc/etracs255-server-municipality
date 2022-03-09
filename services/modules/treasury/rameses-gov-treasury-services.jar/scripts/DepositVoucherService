@@ -154,11 +154,12 @@ class DepositVoucherService  {
 		//check all deposit voucher deposited and transferred must balance.
 		def dvfList = dvfEm.find([parentid : o.objid ]).list();
 		if( dvfList.find{ (it.amount - it.totaldr) != (it.amountdeposited - it.totalcr) } ) {
-			throw new Exception("All deposit amount deposited and transferred are not balanced");
+			throw new Exception("Amount deposited and transferred are not balanced");
 		}
 		//retrieve the depost voucher
-		def m = [ state: 'POSTED' ];
-		dvEm.find([ objid: o.objid ]).update( m );
+		def m = [ state: 'POSTED' ]; 
+		dvEm.find([ objid: o.objid ]).update( m ); 
+		dvfEm.find([ parentid: o.objid ]).update( m ); 
 		return m;
 	}
 

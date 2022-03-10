@@ -7,7 +7,7 @@
   <module version="2.02" file="core/osiris2-client-ui.jar"  />
   <module version="2.01" file="core/osiris2-draw.jar"  />
   <module version="2.01" file="core/osiris2-framework.jar"  />
-  <module version="2.03" file="core/osiris2-report.jar"  />
+  <module version="2.04" file="core/osiris2-report.jar"  />
   <module version="2.05" file="core/rameses-client-ui.jar"  />
   <module version="2.01" file="core/rameses-client-ui-bio.jar"  />
   <module version="2.01" file="core/rameses-client-ui-jfx.jar"  />

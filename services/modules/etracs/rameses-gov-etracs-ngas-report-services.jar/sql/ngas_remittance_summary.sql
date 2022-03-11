@@ -19,7 +19,6 @@ from (
 )t1, fund 
 where fund.objid = t1.fundid 
 group by fund.objid, fund.code, fund.title 
-having sum(t1.amount) > 0 
 order by fund.code, fund.title 
 
 
@@ -35,20 +34,17 @@ from (
 		select ci.receiptid, ci.fundid, ci.acctid, sum(ci.amount) as amount 
 		from vw_remittance_cashreceiptitem ci  
 		where ci.remittanceid = $P{remittanceid} 
-			and ci.voided = 0 
 		group by ci.receiptid, ci.fundid, ci.acctid 
 		union all 
 		select ci.receiptid, ia.fund_objid as fundid, ia.objid as acctid, -sum(ci.amount) as amount 
 		from vw_remittance_cashreceiptshare ci 
 			inner join itemaccount ia on ia.objid = ci.refacctid 
 		where ci.remittanceid = $P{remittanceid} 
-			and ci.voided = 0 
 		group by ci.receiptid, ia.fund_objid, ia.objid
 		union all 
 		select ci.receiptid, ci.fundid, ci.acctid, sum(ci.amount) as amount 
 		from vw_remittance_cashreceiptshare ci 
 		where ci.remittanceid = $P{remittanceid} 
-			and ci.voided = 0 
 		group by ci.receiptid, ci.fundid, ci.acctid 
 	)t1 
 	group by t1.receiptid, t1.fundid, t1.acctid 

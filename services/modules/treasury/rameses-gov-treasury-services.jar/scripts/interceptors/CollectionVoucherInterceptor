@@ -28,9 +28,11 @@ class CollectionVoucherInterceptor {
 		def o = evt.args[0];
 
 		if( !o.node?.state ) return;
-		//o.debug = true;
+		
+		o.debug = true;
+		
 		def str = "state = :state";
-		def m = [state: o.node.state ]; 
+		def m = [state: o.node.state]; 
 
 		if( o.where ) {
 			o.where[0] = str + " AND " + o.where[0];	
@@ -39,7 +41,15 @@ class CollectionVoucherInterceptor {
 		else {
 			o.where = [str, m];
 		} 
-	}	
+
+		if ( !o.orderBy ) {
+			if ( o.node.state == 'POSTED' ) {
+				o.orderBy = 'controldate DESC, dtposted DESC'; 
+			} else {
+				o.orderBy = 'controldate, dtposted'; 
+			}
+		}
+	} 
 
 	@Before(pattern="PersistenceService.removeEntity", eval="#{ args[0]._schemaname == 'collectionvoucher' }" )
 	public void beforeRemove( evt ) { 

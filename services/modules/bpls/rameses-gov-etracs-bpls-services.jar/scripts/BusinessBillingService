@@ -311,6 +311,7 @@ public class BusinessBillingService  {
         };
         e.barcode = "51005:"+ e.appno;
         e.expirydate = result.expirydate;
+        e.qtrdates = result.qtrdates; 
         e.totals = result.totals;
         e.billdate = p.billdate;
         return e;
@@ -326,17 +327,60 @@ public class BusinessBillingService  {
 			[ qtr: 3, amount: data.totals.q3], 
 			[ qtr: 4, amount: data.totals.q4]  
 		]; 
+		qtrdues.each{
+			it.amount = (it.amount ? it.amount : 0.0); 
+			it.amount = Math.max( it.amount, 0.0 ); 
+		}
 
-		def qtrdates = [
-			[ qtr: 1, date:'01/20/'+ datemap.year ],
-			[ qtr: 2, date:'04/20/'+ datemap.year ],
-			[ qtr: 3, date:'07/20/'+ datemap.year ],
-			[ qtr: 4, date:'10/20/'+ datemap.year ] 
-		]
-		
-		def billqtr = datemap.qtr; 		
-		def totaldue = qtrdues.findAll{( it.qtr <= billqtr )}.sum{( it.amount? it.amount: 0.0 )} 
-		if ( !totaldue ) throw new Exception("There are no unpaid balances for this application");
+		def default_qtr_dates = [ 
+			[ qtr: 1, duedate: datemap.year +'-01-20' ], 
+			[ qtr: 2, duedate: datemap.year +'-04-20' ], 
+			[ qtr: 3, duedate: datemap.year +'-07-20' ], 
+			[ qtr: 4, duedate: datemap.year +'-10-20' ] 
+		]; 
+
+		def date_format  = new java.text.SimpleDateFormat("yyyy-MM-dd"); 
+		default_qtr_dates.each{
+			it.duedate = date_format.parse( it.duedate ); 
+		}
+
+		def qtrdates = data.qtrdates; 
+		if ( qtrdates ) { 
+			qtrdates.each{ q-> 
+				if ( !q.duedate ) {
+					q.duedate = default_qtr_dates.find{( it.qtr == q.qtr )}?.duedate; 
+				}
+				if ( q.duedate instanceof String ) { 
+					q.duedate = date_format.parse( q.duedate ); 
+				}
+			}
+		} 
+		else {
+			qtrdates = default_qtr_dates; 
+		}
+		qtrdues.each{ q->  
+			q.duedate = qtrdates.find{( it.qtr == q.qtr )}?.duedate; 
+		} 
+
+		def qtrdue = null; 
+		def billqtr = datemap.qtr; 
+		def dues = qtrdues.findAll{( it.qtr <= billqtr && it.amount > 0.0 )} 
+		if ( dues ) {
+			qtrdue = [:]; 
+			qtrdue.duedate = dues.max{ it.qtr }.duedate; 
+			qtrdue.amount  = dues.sum{ it.amount }
+		}
+		else {
+			qtrdue = qtrdues.find{( it.qtr > billqtr && it.amount > 0.0 )} 
+		}
+
+		def totaldue = qtrdue?.amount; 
+		if ( !totaldue ) {
+			throw new Exception("There are no unpaid balances for this application");
+		}
+		if ( !qtrdue.duedate ) { 
+			throw new Exception("Qtr due date must be specified");
+		} 
 
 		def bdata = businessMasterSvc.open( data.business ); 
 		if ( !bdata ) throw new Exception('Unable to load business master information');
@@ -346,7 +390,7 @@ public class BusinessBillingService  {
 		if ( !phoneno ) throw new Exception('No available mobile number set on this application. Please check.');  
 
 		def bin = bdata.bin; 
-		def duedate = qtrdates.find{ it.qtr==billqtr }.date;  
+		def duedate = new java.text.SimpleDateFormat('MM/dd/yyyy').format( qtrdue.duedate );
 		def msg = "ADVISORY: Your amount due for your business with ref# ${bin} is ${totaldue}. Due date is on ${duedate}. To avoid penalty please pay on time."; 
 		smsSvc.send([ phoneno: phoneno, message: msg.toString() ]);
 	}

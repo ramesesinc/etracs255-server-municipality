@@ -2,7 +2,7 @@
 --
 -- Host: localhost    Database: training_notification
 -- ------------------------------------------------------
--- Server version	5.5.59
+-- Server version 5.5.59
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;

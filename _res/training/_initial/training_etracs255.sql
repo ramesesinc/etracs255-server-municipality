@@ -15276,3 +15276,7 @@ VALUES ('000', 'DRAFT', '000', '000', 'PROVINCE', 'GOVERNOR', 'OFFICE OF THE GOV
 
 INSERT INTO `municipality` (`objid`, `state`, `indexno`, `pin`, `name`, `mayor_title`, `mayor_office`, `assessor_title`, `assessor_office`, `treasurer_title`, `treasurer_office`, `address`, `fullname`) 
 VALUES ('00000', 'DRAFT', '00', '000-00', 'TRAINING', 'MUNICIPAL MAYOR', 'OFFICE OF THE MUNICIPAL MAYOR', 'MUNICIPAL ASSESSOR', 'OFFICE OF THE MUNICIPAL ASSESSOR', 'ACTING MUNICIPAL TREASURER', 'OFFICE OF THE MUNICIPAL TREASURER', 'TRAINING', 'MUNICIPALITY OF TRAINING');
+
+
+alter table eftpayment drop foreign key fk_eftpayment_fundid;
+alter table eftpayment drop column fundid ;

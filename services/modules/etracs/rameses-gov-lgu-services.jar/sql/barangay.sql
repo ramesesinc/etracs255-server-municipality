@@ -18,7 +18,7 @@ LEFT JOIN district d ON sp.objid = d.objid
 LEFT JOIN city c ON sp.parent_objid= c.objid 
 LEFT JOIN municipality m ON sp.objid = m.objid 
 LEFT JOIN province p ON sp.parent_objid = p.objid 
-WHERE (b.name LIKE $P{searchtext} OR b.pin LIKE $P{searchtext})
+WHERE (b.name LIKE $P{searchtext} OR b.pin LIKE $P{searchtext}) ${filters} 
 ORDER BY b.name 
 
 [lookup]

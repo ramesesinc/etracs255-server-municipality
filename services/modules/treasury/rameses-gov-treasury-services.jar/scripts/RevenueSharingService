@@ -14,23 +14,42 @@ import enterprise.facts.Org;
 
 class RevenueSharingService {
 	
+	@Service
+	def self; 
+
 	@Service("RuleExecutorService")
 	def ruleSvc;
 
 	@DataContext('sys_org') 
 	def sys_org;
 
+
+	@ProxyMethod
+	public def getFacts( def receipt ) { 
+		// to be intercepted by other services 
+		return []; 
+	} 
+
 	@ProxyMethod
 	public def execute( def rct ) {
 		if(!rct.receiptdate ) throw new Exception("RevenueSharingService.getSharing error. receiptdate is required in parameters");
 		if(!rct.items ) throw new Exception("RevenueSharingService.getSharing error. items is required in parameters");
 
-		def facts = [];
+		def facts = self.getFacts( rct ); 
+		if ( facts == null ) facts = []; 
 
 		if ( rct.receiptdate instanceof String ) {
 			rct.receiptdate = java.sql.Date.valueOf( rct.receiptdate );  
 		} 
 		facts << new CashReceipt( receiptdate: rct.receiptdate );
+
+		if ( rct.collectiontype?.objid ) { 
+			facts << new CollectionType( 
+				objid: rct.collectiontype.objid, 
+				name: rct.collectiontype.name, 
+				handler: rct.collectiontype.handler 
+			); 
+		}
 
 		if( rct.org?.objid ) {
 			def org = sys_org.find([ objid: rct.org.objid ]).first(); 

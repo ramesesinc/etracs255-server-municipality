@@ -17,72 +17,107 @@ class CashReceiptPluginInterceptor {
 	@DataContext("cashreceipt_plugin")
 	def pluginEm;
 
-	@After(pattern="CashReceiptService.post", eval="#{args[0]?.collectiontype?.handler != null}", index=10000 )
-	public void onPostPayment(def evt) {
-		def a = evt.args[0];
-		def handler = a.collectiontype.handler;
-		def p = pluginEm.find([ objid: handler ]).first();
-		if ( p ) {
-			def conn = p.connection;
-			def serviceName = p.servicename;
-			if ( !conn ) { 
-				conn = p.objid; 
-			}
-			if ( !serviceName ) {
-				serviceName = "PaymentService";
+
+	Throwable getRuntimeCause( RuntimeException re ) {
+
+		def cause = re.getCause(); 
+		if ( cause instanceof RuntimeException && cause.getClass().getName() == 'java.lang.RuntimeException' ) {
+			return getRuntimeCause( cause ); 
+		}
+		return (cause ? cause : re);
+	}
+
+	def getPlugin( handler ) {
+		def plugin = pluginEm.find([ objid: handler.toString() ]).first();
+		if ( plugin ) {
+			def connName = plugin.connection;
+			def serviceName = plugin.servicename;
+			if ( !connName ) { 
+				connName = plugin.objid; 
 			} 
+			if ( !serviceName ) { 
+				serviceName = "PaymentService"; 
+			} 
+
+			def pluginSvc = svc.lookup( serviceName, connName );
+			if ( pluginSvc ) {
+				return [connection: connName, servicename: serviceName, service: pluginSvc]; 
+			}
 			
-			def t = svc.lookup(serviceName, conn );
-			if ( !t ) throw new Exception(serviceName +" not found for "+ handler +" @connection "+ conn);
+			throw new Exception( serviceName +" not found for "+ handler +" @connection "+ connName );
+		} 
+
+		return null; 
+	}
+
+	// this should be the very first to execute
+	// 
+	@Before(pattern="CashReceiptService.post", eval="#{args[0]?.collectiontype?.handler != null}", index=-10000 )
+	public void onPrePayment( evt ) {
+		def param = evt.args[0];
+		def handler = param.collectiontype.handler; 
+		def plugin = getPlugin( handler );  
+		if ( plugin ) {
 			
-			a.reftype = "cashreceipt";
-			def rr = t.postPayment( a ); 
-			if ( rr ) a.putAll( rr ); 
+			param.reftype = "cashreceipt";
+
+			def result = null; 
+			try {
+				result = plugin.service.prePayment( param );
+			}
+			catch(RuntimeException re) { 
+				def cause = getRuntimeCause( re ); 
+				if ( cause instanceof NoSuchMethodException || cause instanceof groovy.lang.MissingMethodException ) { 
+					println '[Warn] '+ plugin.connection +'/'+ plugin.servicename +' ==> '+ cause.getMessage(); 
+				} 
+				else { 
+					throw re; 
+				}
+			} 
+			catch(Exception e) { 
+				throw e; 
+			} 
+
+			if ( result ) { 
+				param.putAll( result ); 
+			} 
 		} 
 	}
 
+	@After(pattern="CashReceiptService.post", eval="#{args[0]?.collectiontype?.handler != null}", index=10000 )
+	public void onPostPayment( evt ) {
+		def param = evt.args[0];
+		def handler = param.collectiontype.handler;
+		def plugin = getPlugin( handler );  
+		if ( plugin ) {
+			
+			param.reftype = "cashreceipt";
+
+			def result = plugin.service.postPayment( param ); 
+			if ( result ) { 
+				param.putAll( result ); 
+			} 
+		} 
+	} 
+
 	@After(pattern="CashReceiptVoidService.post", eval="#{result?.receipt?.collectiontype?.handler != null}", index=10000 )
-	public void onVoidPayment(def evt) {
-		def a = evt.result;
-		def handler = a.receipt.collectiontype.handler;
-		def p = pluginEm.find( [objid: handler] ).first();
-		if ( p ) {
-			def conn = p.connection;
-			def serviceName = p.servicename;
-			if ( !conn ) {
-				conn = p.objid;
-			}
-			if ( !serviceName ) {
-				serviceName = "PaymentService";
-			}
-
-			def t = svc.lookup(serviceName, conn );
-			if ( !t ) throw new Exception(serviceName +" not found for "+ handler +" @connection "+ conn);
-
-			t.voidPayment( a );
-		}
+	public void onVoidPayment( evt ) {
+		def param = evt.result;
+		def handler = param.receipt.collectiontype.handler;
+		def plugin = getPlugin( handler );  
+		if ( plugin ) { 
+			plugin.service.voidPayment( param );
+		} 
 	}
 
 
 	@After(pattern="CashReceiptVoidService.revert", index=10000 )
 	public void afterRevert( evt ) {
-		def a = evt.args[0]; 
-		def handler = a.receipt.collectiontype.handler; 
-		def p = pluginEm.find([ objid: handler ]).first(); 
- 		if ( p ) {
-			def conn = p.connection;
-			def serviceName = p.servicename;
-			if ( !conn ) {
-				conn = p.objid;
-			}
-			if ( !serviceName ) {
-				serviceName = "PaymentService";
-			}
-
-			def t = svc.lookup(serviceName, conn );
-			if ( !t ) throw new Exception(serviceName +" not found for "+ handler +" @connection "+ conn);
-
-			t.revertVoidPayment( a );
+		def param = evt.args[0]; 
+		def handler = param.receipt.collectiontype.handler; 
+		def plugin = getPlugin( handler );  
+ 		if ( plugin ) { 
+			plugin.service.revertVoidPayment( param ); 
 		}
 	}
 }

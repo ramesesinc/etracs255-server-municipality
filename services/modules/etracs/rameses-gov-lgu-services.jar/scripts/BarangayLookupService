@@ -23,7 +23,13 @@ class BarangayLookupService{
 	public def getList( params ) {
 		params._pagingKeys = 'b.objid'
 		params.searchtext = (params.searchtext ? params.searchtext : '') + '%'
-		return em.getList(params)
+
+		params.filters = "";
+		if ( params.filter ) {
+			params.filters = ' AND '+ params.filter; 
+		}
+
+		return em.getList(params); 
 	}
 
 

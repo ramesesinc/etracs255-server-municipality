@@ -2,6 +2,7 @@ import com.rameses.annotations.*;
 import java.io.File;
 import com.rameses.fileupload.*;
 import org.apache.commons.lang.exception.ExceptionUtils;
+import java.util.concurrent.*;
 
 class DownloadTask {
     @XConnection('fileupload')
@@ -16,8 +17,14 @@ class DownloadTask {
     @DataContext('rpt_syncdata_completed')
     def em_sync_completed
 
+    @DataContext('rpt_syncdata_item_completed')
+    def em_sync_item_completed
+
     @DataContext('rpt_syncdata_error')
     def em_sync_error
+
+    @DataContext('rpt_syncdata_fordownload')
+    def em_sync_fordownload
 
     @Service('Var')
     def var;
@@ -25,51 +32,111 @@ class DownloadTask {
     @Service('DateService')
     def dtSvc;
 
+    @DataContext('sys_org')
+    def sys_org
+
     def DOWNLOAD_FLAG = "fileserver_download_task_active"
 
-    @Schedule(interval=300)
-    public void doDownload( evt ) {
+    @Schedule(interval=20)
+    public void fetchFilesForDownloadFromAws( evt ) {
         if (!downloaderActive()) return
 
+        println 'DownloadTask [INFO] Fetching files for download'
         try {
-            fu.getList().each{
-                download(it);
+            fu.getList().each {
+                try {
+                    def fordownload = [:];
+                    fordownload.objid = it.Key;
+                    fordownload.etag = it.ETag;
+                    fordownload.error = false;
+                    fordownload.state = 'FORDOWNLOAD';
+                    em_sync_fordownload.save(fordownload);
+                } catch(err) {
+                    err.printStackTrace();
+                    //ignore possible duplicate error
+                }
             }
         } catch ( e ) {
             println "DownlaodTask [ERROR] " + e.message;
         }
     }
 
-    @Schedule(interval=900)
-    public void rescheduleErrors( evt ) {
-        mgmtSvc.rescheduleErrors();
+    @Schedule(interval=1)
+    public void downloadFiles( evt ) {
+        if (!downloaderActive()) {
+            waitTimeout(10);
+            return
+        }
+
+        def fordownloadfiles = em_sync_fordownload.where("state = 'FORDOWNLOAD' AND error = 0 ").orderBy('objid').list(0, 10)
+        if (!fordownloadfiles) {
+            waitTimeout(10);
+            return;
+        }
+
+        fordownloadfiles.each {
+            try {
+                fu.download(it.objid);
+                fu.delete(it.objid);
+                em_sync_fordownload.find([objid: it.objid]).update([state: 'DOWNLOADED']);
+            } catch(err) {
+                if (err.message.startsWith("ERROR 500")) {
+                    em_sync_fordownload.find([objid: it.objid]).update([error: 1]);
+                } else {
+                    try {
+                        def reader = fu.readObject(it.objid);
+                        em_sync_fordownload.find([objid: it.objid]).update([state: 'DOWNLOADED']);
+                    } catch(retryerror) {
+                        retryerror.printStackTrace();
+                        em_sync_fordownload.find([objid: it.objid]).update([error: 1]);
+                    }
+                }
+            } 
+        }
     }
 
-    void download(downloadinfo) {
+    @Schedule(interval=1)
+    public void syncDownloadedFile( evt ) {
+        def downloadfile = em_sync_fordownload.where("state = 'DOWNLOADED' and error = 0").orderBy('objid').first()
+        if (!downloadfile) {
+            waitTimeout(10);
+            return;
+        }
+
         def reader = null;
         def syncdata = null;
         try {
-            syncdata = em_sync_error.find([filekey: downloadinfo.Key]).first();
-            if (syncdata) {
-                println 'DownloadTask [HOLD] Key ' + downloadinfo.Key
-                return;
-            }
-            reader = fu.getObject(downloadinfo.Key);
+            reader = fu.readObject(downloadfile.objid);
             syncdata = reader.read();
             syncdata.data = reader.read(); 
+            def orgid = syncdata.parent.remote.orgid;
+            syncdata.parent.remote = getRemoteOrg(syncdata);
+            syncdata.parent.orgid = orgid;
+            syncdata.parent.parent = syncdata.parent.remote
+            syncdata.remote = syncdata.parent.remote;
+
             svc.receive(syncdata);
+
+            //save syncdata and item
             syncdata.dtcreated = dtSvc.serverDate;
-            em_sync_completed.save(syncdata);
-            reader.close();
-            fu.delete(downloadinfo.Key);
+            syncdata.parent.state = syncdata.state;
+            em_sync_completed.save(syncdata.parent);
+            em_sync_item_completed.save(syncdata);
+            em_sync_fordownload.find([objid: downloadfile.objid]).delete();
+            em_sync_error.find([objid: syncdata.objid]).delete();
+            reader.deleteFile();
+        } catch(java.io.FileNotFoundException iox) {
+            log('ERROR', 'Downloaded file not exists: ' + downloadfile.objid);
+            em_sync_fordownload.find([objid: downloadfile.objid]).delete();
         } catch (e) {
-            println 'DownloadTask [ERROR] ' + e.message
+            log('INFO', e.message)
+            e.printStackTrace();
             if (syncdata) {
-                syncdata.filekey = downloadinfo.Key;
+                syncdata.filekey = downloadfile.objid;
                 syncdata.error = ExceptionUtils.getStackTrace(e);
                 syncdata.info = syncdata.info ? syncdata.info : [:]
-                syncdata.remote = syncdata.parent.remote
-                em_sync_error.create(syncdata);
+                em_sync_error.save(syncdata);
+                em_sync_fordownload.find([objid: downloadfile.objid]).update([error: 1]);
             }
             if (reader) reader.close();
         }
@@ -83,5 +150,35 @@ class DownloadTask {
         println 'DownloadTask [INFO] inactive' ;
         return false;
     }
+
+    def hasFileForDownload() {
+        def downloadfile = em_sync_fordownload.where('error = 0').first()
+        return downloadfile != null
+    }
+
+    void waitTimeout(secs) {
+        def queue = new LinkedBlockingQueue();
+        queue.poll(secs, TimeUnit.SECONDS);
+    }
+
+    void log(type, msg) {
+        println 'DownloadTask [' + type + '] ' + msg;
+    }
+
+    def getRemoteOrg(syncdata) {
+        def remoteorg = [
+            orgid: '-',
+            orgcode: '-',
+            orgclass: '-',
+        ]
+        
+        def org = sys_org.find([objid: syncdata.parent.orgid]).first();
+        if (!org) return remoteorg;
+
+        remoteorg.orgid = org.objid;
+        remoteorg.orgcode = org.code.replaceAll('-', '');
+        remoteorg.orgclass = org.orgclass;
+        return remoteorg;
+    }    
 
 }

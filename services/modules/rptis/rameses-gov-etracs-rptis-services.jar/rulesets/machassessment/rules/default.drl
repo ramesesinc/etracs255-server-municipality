@@ -41,8 +41,8 @@ rule "calc-machine-av"
 	salience 500000
 	no-loop
 	when
-		MU   : MachineActualUse()
-		MACH : MachineDetail(machuse == MU, taxable==true, MV:marketvalue, AL:assesslevel)
+		MU   : MachineActualUse(MUTAXABLE: taxable)
+		MACH : MachineDetail(machuse == MU, taxable==MUTAXABLE, MV:marketvalue, AL:assesslevel)
 	then	
 		Map bindings = new HashMap();
 		bindings.put("MV", MV);
@@ -59,13 +59,11 @@ rule "summarize-machine-info"
 	salience 500000
 	no-loop
 	when
-		MU   : MachineActualUse()
-		MACH : MachineDetail(machuse == MU)
+		MU   : MachineActualUse(MUTAXABLE: taxable)
+		MACH : MachineDetail(machuse == MU, taxable == MUTAXABLE)
 	then	
 		MU.setBasemarketvalue( MU.getBasemarketvalue() + MACH.getBasemarketvalue());
-		if (MACH.getTaxable() == true){
-			MU.setMarketvalue( MU.getMarketvalue() + MACH.getMarketvalue());
-		};
+		MU.setMarketvalue( MU.getMarketvalue() + MACH.getMarketvalue());
 		MU.setAssesslevel( MACH.getAssesslevel());
 		MU.setAssessedvalue( MU.getAssessedvalue() + MACH.getAssessedvalue());
 end

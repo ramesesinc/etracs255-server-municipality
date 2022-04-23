@@ -100,6 +100,7 @@
 		<field name="amount" required="true" type="decimal" />
 		<field name="expr" required="true" />
 		<field name="depreciate" required="true" type="boolean" />
+		<field name="issystem" required="true" type="boolean" />
 	</element>
 
 	<element name="param" tablename="bldgflooradditionalparam">

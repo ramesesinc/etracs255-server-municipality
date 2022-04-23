@@ -24,7 +24,8 @@ class RPTCertificationLatestService
 
 		if (!cert.faasid)
 			em.insertLastAndExistingItems(cert)
-		return openCertification(cert.objid)
+
+		return cert;
 	}
 
 	@ProxyMethod
@@ -42,7 +43,9 @@ class RPTCertificationLatestService
 			certSvc.buildFootNotes(cert)
 		}
 		else{
+			def certid = cert.objid
 			cert.putAll(certSvc.getFaasInfo(cert.faasid))
+			cert.objid = certid
 		}
 		return cert 
 	}

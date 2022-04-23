@@ -138,9 +138,9 @@ class LandTaxReportService
 			period = (periodcode == 'asofmon' ? 'JANUARY - ' : 'FOR THE MONTH OF ') + util.getMonthName( params.month.index ) + ', ' + params.year  
 		} 
 
-		params.filter = ' cv.controldate >= $P{fromdate} AND cv.controldate < $P{todate} '
+		params.filter = ' liquidationdate >= $P{fromdate} AND liquidationdate < $P{todate} '
 		if (params.postingtype && params.postingtype.code == 'byrem'){
-			params.filter = ' rem.controldate >= $P{fromdate} AND rem.controldate < $P{todate} '
+			params.filter = ' remittancedate >= $P{fromdate} AND remittancedate < $P{todate} '
 		}
 
 		def data = [:]

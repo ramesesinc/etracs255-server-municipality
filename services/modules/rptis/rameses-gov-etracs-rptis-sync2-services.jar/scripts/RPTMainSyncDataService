@@ -99,7 +99,7 @@ class RPTMainSyncDataService {
 				try {
 					def fileName = [
 						it.reftype, 
-						it.refno.toString().replaceAll("[^0-9a-zA-Z]", ''), 
+						it.refno.replaceAll("[^0-9a-zA-Z]", ''), 
 						it.idx.toString().padLeft(5, '0'), 
 						it.action, 
 						safeFileId(it.refid)

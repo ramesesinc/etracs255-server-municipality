@@ -40,10 +40,6 @@ class RPTSyncDataService
     @DataContext('dbimage_chunk')
     def em_image_chunk
 
-    @DataContext('rpt_syncdata_forsync')
-    def em_forsync
-
-
 
 
 	@ProxyMethod

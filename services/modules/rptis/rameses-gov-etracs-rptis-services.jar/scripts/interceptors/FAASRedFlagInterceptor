@@ -7,6 +7,20 @@ class FAASRedFlagInterceptor
 	@Service('FAASService')
 	def svc 
 
+	@DataContext('faas_task')
+	def em_task
+
+	@DataContext('rpt_redflag')
+	def em_redflag
+
+	@After(pattern="QueryService.getList", eval="#{args[0]._schemaname == 'rpt_redflag'}")
+	public void afterGetList(evt){
+		def redflags = evt.result;
+		redflags.each{
+			it.info = em_redflag.serializer.read(it.info);
+		}
+	}
+
 	@After(pattern="RPTRedFlagService.getEntity", index=1)
 	public void afterGetEntity(evt){
 		def redflag = evt.args[0]
@@ -31,10 +45,15 @@ class FAASRedFlagInterceptor
 		def task = evt.result 
 		if (!task.objid){
 			try {
-				def t = svc.findOpenTask([objid:redflag.refid])
-				if (t){
-					t.filetype = 'faas'
-					task.putAll(t)
+				def opentask = svc.findOpenTask([objid:redflag.refid])
+				if (!opentask) {
+					opentask = em_task.find([refid: redflag.refid, state: 'forprovsubmission'])
+					           .orderBy('startdate desc')
+										 .first();
+				}
+				if (opentask){
+					opentask.filetype = 'faas'
+					task.putAll(opentask)
 				}
 			}
 			catch(Exception e) {
@@ -42,7 +61,7 @@ class FAASRedFlagInterceptor
 			}
 			
 		}
-
 	}
+
 }
 

@@ -17,6 +17,9 @@ class FaasMachReportInterceptor
 	@Service('FAASReportService')
 	def faasReportSvc 
 
+	@Service('Var')
+	def var;
+
 	def MACH_DETAIL_ROWS = 12
 
 
@@ -40,9 +43,11 @@ class FaasMachReportInterceptor
 		def appraisals = em.getAppraisals(faas.rpu)
 		buildAppraisals(appraisals)
 
-		if (appraisals.size() <= MACH_DETAIL_ROWS) {
+		def maxrowcount = util.toInteger2(var.machinery_faas_report_row_count, MACH_DETAIL_ROWS)
+
+		if (appraisals.size() <= maxrowcount) {
 			faas.propertyappraisals = appraisals
-			util.buildEmptyRows( faas.propertyappraisals, MACH_DETAIL_ROWS)
+			util.buildEmptyRows( faas.propertyappraisals, maxrowcount)
 			faas.propertyappraisals.each{
 				it.useswornamount = util.toBoolean(it.useswornamount, false)
 			}
@@ -50,7 +55,7 @@ class FaasMachReportInterceptor
 			faas.propertyappraisals = []
 			faas.propertyappraisals2 = []
 			for (int i = 0; i < appraisals.size(); i++) {
-				if (i < MACH_DETAIL_ROWS) {
+				if (i < maxrowcount) {
 					faas.propertyappraisals << appraisals[i]
 				} else {
 					faas.propertyappraisals2 << appraisals[i]

@@ -18,6 +18,9 @@ public class RPTBillingRuleService
 	@Resource('RuleService')
 	def ruleSvc
 
+	@Service('Var')
+	def var
+
 	@Service('DateService')
 	def dtSvc
 
@@ -41,6 +44,9 @@ public class RPTBillingRuleService
 
 	@DataContext('org')
 	def em_org 
+
+	@DataContext('rptledger_faas')
+	def em_ledger_faas
 
 	@DataContext('rpttaxincentive_item')
 	def em_incentive_item 
@@ -111,7 +117,7 @@ public class RPTBillingRuleService
 	}
 
 	void executeShareRules(request){
-		def grps = ['SUMMARY', 'AFTER_SUMMARY', 'BRGY_SHARE','LGU_SHARE','PROV_SHARE']
+		def grps = ['SUMMARY', 'AFTER_SUMMARY']
 		grps.each{g ->
 			ruleSvc.execute( RULESET, request.facts, request.actions, g);
 		}
@@ -127,8 +133,22 @@ public class RPTBillingRuleService
 		facts << createLedgerFact(bill)
 		facts += createLedgerItemFacts(bill)
 		facts += createIncentiveFacts(bill)
+		facts += createLedgerFaasFacts(bill)
 		facts += createTagFacts(bill)
 		return facts 
+	}
+
+	def createLedgerFaasFacts(bill) {
+		def facts = [];
+		if (util.isTrue(var.rptledger_rule_include_ledger_faases)) {
+			def faases = em_ledger_faas.select('faasid,tdno,fromyear,fromqtr,toyear,toqtr,idleland,txntype.objid,assessedvalue,classification.objid,actualuse.objid,faas.totalmv')
+							.find([rptledgerid: bill.rptledger.objid, state:'APPROVED'])
+							.list()
+			faases.each {
+				facts << new RPTLedgerFaasFact(it)
+			}
+		}
+		return facts;
 	}
 
 	def createTagFacts(bill) {
@@ -196,7 +216,7 @@ public class RPTBillingRuleService
 
 
 	boolean checkFirstQtrPaidOntime(rptledger, bill){
-		if (rptledger.lastyearpaid == bill.cy - 1 && rptledger.lastqtrpaid == 4 )
+		if (rptledger.lastyearpaid == bill.cy - 1 && rptledger.lastqtrpaid == 4 && bill._pdate.qtr == 1 )
 			return true;
 
 		def curryearpmt = em.findLatestPayment([objid:rptledger.objid, cy:bill.cy])
@@ -214,7 +234,7 @@ public class RPTBillingRuleService
 			return false 
 		}
 
-		if (rptledger.lastyearpaid == bill.cy && rptledger.lastqtrpaid + 1 == bill.cqtr){
+		if (rptledger.lastyearpaid == bill.cy && rptledger.lastqtrpaid + 1 < bill.cqtr){
 			return false
 		}
 
@@ -312,20 +332,23 @@ public class RPTBillingRuleService
 
 	boolean checkBacktax(bill, item ) {
 		int currYear = bill._pdate.year
-		if (item.year > currYear) {
-			return false 
-		}
 
 		if (util.isTrue(item.rptledgerfaas.backtax)) {
 			return true
 		}
 
+
 		if (item.effectivityyear == null) {
 			item.effectivityyear = item.rptledgerfaas.fromyear 
 		}
 
+		
 		def txntype_objid = item.rptledgerfaas.txntype?.objid; 
-		return ( 'ND'.equalsIgnoreCase(txntype_objid) && item.year == item.effectivityyear ); 
+		if ( 'ND'.equalsIgnoreCase(txntype_objid) && item.year == item.effectivityyear ) {
+			return true
+		} 
+
+		return false;
 	}
 
 

@@ -136,7 +136,7 @@ class LandTaxReportDelinquencyService
 			if ( !list ) throw new Exception('No records found. Try rebuilding the delinquency for this barangay.')
 
 			list.each{
-				if (it.classcode.matches('A|AGR')) { 
+				if (it.classcode?.matches('A|AGR')) { 
 					it.area = numSvc.format('#,##0.0000', it.totalareaha) + ' ha.' 
 				} else {  
 					it.area = numSvc.format('#,##0.00', it.totalareasqm) + ' sqm' 
@@ -180,6 +180,9 @@ class LandTaxReportDelinquencyService
 				throw new Exception('Realty tax delinquency build has not completed.\nOpen the realty tax delinquency build facility and complete the process.')
 			}
 		}
+
+		if (params.period.code == 'YEAR_RANGE' && params.fromyear > params.toyear)
+		throw new Exception("From Year must be less than or equal to To Year")
 	}
 }
 

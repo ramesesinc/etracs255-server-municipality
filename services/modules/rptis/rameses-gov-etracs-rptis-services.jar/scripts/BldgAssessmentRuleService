@@ -145,6 +145,7 @@ public class BldgAssessmentRuleService
 		actions.addCommand( "summarize-adjustment-for-depreciation", new SummarizeAdjustmentForDepreciation( request:request));
 		actions.addCommand( "calc-depreciation-sked", new CalcDepreciationFromSked( request:request, bldgSettingSvc:bldgSettingSvc));
 		actions.addCommand( "calc-depreciation-range", new CalcDepreciationByRange( request:request, bldgSettingSvc:bldgSettingSvc));
+		actions.addCommand( "calc-depreciation-diminishing", new CalcDepreciationDiminishing( request:request, bldgSettingSvc:bldgSettingSvc, NS:numSvc));
 		actions.addCommand( "calc-bldguse-depreciation", new CalcBldgUseDepreciation( request:request, NS:numSvc ));
 		actions.addCommand( "summarize-depreciation", new SummarizeDepreciation( request:request));
 		actions.addCommand( "calc-floor-mv", new CalcFloorMV( request:request));

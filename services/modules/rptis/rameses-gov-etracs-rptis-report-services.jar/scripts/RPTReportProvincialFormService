@@ -51,7 +51,6 @@ class RPTReportProvincialFormService
             data.add(entity);
         }
         createGrandTotal(data);
-        println 'Total: '+getGrandTotal();
         return data;
     }
 

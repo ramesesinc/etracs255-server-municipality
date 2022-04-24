@@ -7,7 +7,7 @@ rpt.app.context=etracs25
     <module version="2.05" file="rptis/rameses-gov-etracs-rptis-landtax.jar" />
     <module version="2.05" file="rptis/rameses-gov-etracs-rptis-landtax-municipality.jar" />
     <module version="2.04" file="rptis/rameses-gov-etracs-rptis-landtax-report.jar" />
-    <module version="2.04" file="rptis/rameses-gov-etracs-rptis.jar" />
+    <module version="2.05" file="rptis/rameses-gov-etracs-rptis.jar" />
     <module version="2.03" file="rptis/rameses-gov-etracs-rptis-report.jar" />
 
     <module version="2.03" file="rptis/rameses-gov-etracs-rptis-transmittal.jar" />

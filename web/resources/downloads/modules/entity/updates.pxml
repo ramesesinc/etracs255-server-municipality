@@ -6,6 +6,6 @@ entity.app.context=etracs25
 <modules>
   <module version="2.02" file="entity/rameses-enterprise-entity.jar"  />
   <module version="2.02" file="entity/rameses-enterprise-entity-tool.jar"  />
-  <module version="2.04" file="entity/rameses-gov-etracs-entity.jar"  />
+  <module version="2.05" file="entity/rameses-gov-etracs-entity.jar"  />
 </modules>
 </app>

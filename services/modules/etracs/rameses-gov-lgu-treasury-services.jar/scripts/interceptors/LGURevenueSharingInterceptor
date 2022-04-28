@@ -11,17 +11,17 @@ class LGURevenueSharingInterceptor {
 		def result = evt.result; 
 		
 		def prov = rct.province; 
-		if ( prov?.objid ) {
+		if ( prov instanceof Map && prov.objid != null ) {
 			loadOrg( prov, result ); 
 		}
 
 		def muni = rct.municipality; 
-		if ( muni?.objid ) {
+		if ( muni instanceof Map && muni.objid != null ) {
 			loadOrg( muni, result ); 
 		}
 
 		def brgy = rct.barangay; 
-		if ( brgy?.objid ) {
+		if ( brgy instanceof Map && brgy.objid != null ) {
 			loadOrg( brgy, result ); 
 		}
 	}

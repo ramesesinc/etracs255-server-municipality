@@ -71,6 +71,7 @@ public class RPTBillingRuleService
 
 		bill.shares = [] 
 		bill.billitems = []
+		bill._pdate = dtSvc.parseDate(bill.billdate, null)
 		def request = [:]
 		request.shares = bill.shares 
 		request.billitems = bill.billitems 

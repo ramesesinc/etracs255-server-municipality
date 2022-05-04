@@ -9,6 +9,6 @@
   <module version="2.02" file="etracs/rameses-gov-etracs-tools.jar"  />
   <module version="2.02" file="etracs/rameses-gov-etracs-signatory-template.jar"  />
   <module version="2.04" file="etracs/rameses-gov-lgu.jar"  />
-  <module version="2.04" file="etracs/rameses-gov-lgu-treasury.jar"  />
+  <module version="2.05" file="etracs/rameses-gov-lgu-treasury.jar"  />
 </modules>
 </app>

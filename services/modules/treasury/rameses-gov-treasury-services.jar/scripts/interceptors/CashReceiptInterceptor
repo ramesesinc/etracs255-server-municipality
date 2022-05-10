@@ -20,6 +20,10 @@ class CashReceiptInterceptor {
 	@Service("NumberService")
 	def numSvc;
 
+	@Service( dynamic=true )
+	def dynaSvc;
+
+
 	@After(pattern="PersistenceService.create", eval="#{ args[0]._schemaname == 'cashreceipt' }", index=-10000)
 	public void afterCreate( evt ) { 
 		adjustReceipt( evt.result ); 
@@ -74,6 +78,13 @@ class CashReceiptInterceptor {
 		} 
 
 		// data compliant to previous versions
-		if( data.totalnoncash == null ) data.totalnoncash = data.totalcheck; 
+		if ( data.totalnoncash == null ) data.totalnoncash = data.totalcheck; 
+
+		if ( data.collector?.objid ) {
+			def adminSvc = dynaSvc.lookup('PersistenceService', 'admin'); 
+			def sysuser = adminSvc.read([_schemaname: 'sys_user', objid: data.collector.objid ]); 
+			def fullname = [sysuser?.firstname, sysuser?.middlename, sysuser?.lastname].findAll{( it )}.join(' '); 
+			data.collector.fullname = fullname.trim(); 
+		}
 	}
 }

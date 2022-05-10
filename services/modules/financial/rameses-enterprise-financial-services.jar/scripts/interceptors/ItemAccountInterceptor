@@ -31,6 +31,14 @@ class ItemAccountInterceptor {
 				param._changeState_findBy = [ objid: param.objid ]; 
 			}
 		}
+		else if ( param._action == 'changeType' ) {
+			if ( param.findBy ) {
+				param._changeType_findBy = param.findBy; 
+			} 
+			else if ( param.objid ) { 
+				param._changeType_findBy = [ objid: param.objid ]; 
+			}
+		}
 	}
 
 	@After(pattern="PersistenceService.update", eval="#{ args[0]._schemaname == 'itemaccount' }")
@@ -43,6 +51,15 @@ class ItemAccountInterceptor {
 			def acct = em_itemaccount.find( findby ).select('objid,state').first(); 
 			if ( acct ) {
 				em_itemaccount.find([ parentid: acct.objid ]).update([ state: acct.state ]); 
+			}
+		}
+		else if ( param._action == 'changeType' && param._changeType_findBy ) {
+			def findby = param.remove('_changeType_findBy');
+			if ( !findby ) return; 
+
+			def acct = em_itemaccount.find( findby ).select('objid,type').first(); 
+			if ( acct ) {
+				em_itemaccount.find([ parentid: acct.objid ]).update([ type: acct.type ]); 
 			}
 		}
 	}

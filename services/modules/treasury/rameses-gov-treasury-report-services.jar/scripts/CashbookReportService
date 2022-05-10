@@ -98,56 +98,84 @@ class CashbookReportService {
 		}
 
 
-
 		def data = [:];
+		data.begbal = 0.0; 
+		
 		def balinfo = null; 
 		def revfund = null;
 		boolean is_summary = ( params.template?.code == 'summary' ); 
-
+		boolean allow_begbal = false; 
+		
 		if ( is_summary ) {
 			data.items = report_db.getSummaries( params ); 
+			balinfo = report_db.findBeginBalance( params ); 
+			revfund = report_db.findRevolvingFund( params ); 
+			
+			def bal_dr = (balinfo.dr ? balinfo.dr : 0.0); 
+			def bal_cr = (balinfo.cr ? balinfo.cr : 0.0);
+			balinfo.balance = bal_dr - bal_cr; 
 
-			def m = [:];
-			m.putAll( params );  
-			m.fromdate = new java.text.SimpleDateFormat('yyyy-01-01').format( params.fromdate );
-			m.todate = params.fromdate; 
-			balinfo = report_db.findBeginBalance2( m ); 
+			if ( balinfo.balance ) { 
+				balinfo.adr = balinfo.balance;
+				balinfo.acr = null; 
+			} 
 
-			m.fromdate = params.fromdate;
-			revfund = report_db.findRevolvingFund( m ); 
+			def YMD = new java.text.SimpleDateFormat("yyyy-MM-dd");
+			def arr = YMD.format( params.fromdate ).split('-');
+			boolean is_first_month = (arr[1] == '01'); 
+			if ( is_first_month ) {
+				balinfo.dr = balinfo.adr; 
+				balinfo.cr = balinfo.acr = null; 
+			}
+			else {
+				def mm = [:];
+				mm.putAll( params );
+				mm.fromdate = arr[0] +'-01-01';
+				def begbalinfo = report_db.findBeginBalance( mm );
+				mm.clear(); 
+
+				balinfo.dr = bal_dr - (begbalinfo.dr ? begbalinfo.dr : 0.0);
+				balinfo.cr = bal_cr - (begbalinfo.cr ? begbalinfo.cr : 0.0);
+				balinfo.balance = balinfo.dr - balinfo.cr; 
+			}
+
+			if ( balinfo.balance ) {
+				allow_begbal = true; 
+			}
 		} 
 		else { 
 			data.items = report_db.getDetails( params ); 
+			balinfo = report_db.findBeginBalance( params ); 
 
-			def m = [:];
-			m.putAll( params );  
-			m.fromdate = new java.text.SimpleDateFormat('yyyy-01-01').format( params.fromdate );
-			m.todate = params.fromdate; 			
-			balinfo = report_db.findBeginBalance2( m ); 
+			def bal_dr = (balinfo.dr ? balinfo.dr : 0.0); 
+			def bal_cr = (balinfo.cr ? balinfo.cr : 0.0);
+			balinfo.balance = bal_dr - bal_cr; 
+
+			if ( balinfo.balance ) { 
+				allow_begbal = true; 
+				balinfo.dr = balinfo.adr = balinfo.balance; 
+				balinfo.cr = balinfo.acr = null;
+			}
 		} 
-
-		data.begbaldr = data.begbalcr = 0.0; 
-		if ( balinfo ) {
+		
+		if ( allow_begbal ) { 
 			balinfo.refid = 'begin_balance'; 
 			balinfo.reftype = '** BEGIN BALANCE **'; 
-			balinfo.particulars = balinfo.reftype;
+			balinfo.particulars = balinfo.reftype; 
 
-			boolean allow_begbal = false; 
-			if ( is_summary && (balinfo.dr || balinfo.cr || balinfo.balance)) {
-				allow_begbal = true; 
-			} else if ( balinfo.balance ) {
-				allow_begbal = true; 
-			} 
+			if ( balinfo.dr > 0 && balinfo.balance > 0 && balinfo.cr > 0 ) {
+				balinfo.dr += balinfo.balance; 
+			}
+			if ( balinfo.dr < 0 && balinfo.dr == balinfo.balance ) {
+				balinfo.dr = null;
+				balinfo.adr = 0.0;
+				balinfo.balance = 0.0;
+			}
 
-			if ( allow_begbal ) {
-				if ( data.items ) {
-					data.items.add(0, balinfo); 
-				} else {
-					data.items << balinfo; 
-				}
-
-				data.begbaldr = balinfo.dr;
-				data.begbalcr = balinfo.cr;
+			if ( data.items ) { 
+				data.items.add(0, balinfo); 
+			} else { 
+				data.items << balinfo; 
 			} 
 		}
 
@@ -158,7 +186,7 @@ class CashbookReportService {
 			FUNDNAME 	 : params.fundtitle, 
 			ACCOUNTNAME	 : (params.account ? params.account.name : env.FULLNAME),  
 			ACCOUNTTITLE : (params.account ? params.account.title : env.JOBTITLE), 
-			REV_FUND_AMT : revfund?.amount  
+			REV_FUND_AMT : (revfund?.amount ? revfund.amount : 0.0) 
 		]; 
 		if ( params.fundgroup?.objid ) {
 			data.info.FUNDNAME = params.fundgroup.objid.toString() +' GROUP'; 

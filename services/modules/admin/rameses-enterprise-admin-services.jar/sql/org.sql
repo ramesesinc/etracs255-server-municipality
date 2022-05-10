@@ -1,14 +1,17 @@
 [getList]
 SELECT * FROM sys_org 
-WHERE orgclass=$P{orgclass} ORDER BY name 
+WHERE orgclass=$P{orgclass} 
+ORDER BY name 
 
 [getOrgClasses]
 SELECT * FROM sys_orgclass
 
 [getLookup]
-SELECT o.* FROM sys_org o WHERE o.orgclass=$P{orgclass} ORDER BY o.name 
-
-
+SELECT o.*, p.name as parent_name  
+FROM sys_org o 
+	LEFT JOIN sys_org p on p.objid = o.parent_objid  
+WHERE o.orgclass=$P{orgclass} ${filters} 
+ORDER BY p.name, o.name 
 
 [findRoot]
 SELECT * FROM sys_org WHERE root = 1

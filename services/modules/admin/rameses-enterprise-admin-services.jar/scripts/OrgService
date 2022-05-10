@@ -1,8 +1,4 @@
 import com.rameses.annotations.*
-import com.rameses.common.*
-import java.rmi.server.UID;
-import com.rameses.util.*;
-import com.rameses.io.*;
 import com.rameses.services.extended.*;
 
 class OrgService extends ActiveCrudListService {
@@ -59,5 +55,4 @@ class OrgService extends ActiveCrudListService {
 	public def getOrgsByParent( parent ) {
 		return em.getOrgsByParent(parent)	
 	}
-
 }

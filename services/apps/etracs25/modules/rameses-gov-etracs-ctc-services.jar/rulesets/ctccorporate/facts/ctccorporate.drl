@@ -1,0 +1,16 @@
+package ctccorporate;
+
+declare CorporateCTC 
+    orgtype: String    
+    realpropertyav: Double    
+    businessgross: Double  
+    newbusiness: Boolean  
+    additional: Boolean    
+    basictax:   Double    
+    businessgrosstax:  Double    
+    propertyavtax: Double    
+    additionaltax:     Double    
+    totaltax:  Double         
+    interest: Double    
+    amountdue : Double
+end   

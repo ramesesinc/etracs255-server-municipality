@@ -1,6 +1,6 @@
 <app>
 <env>
-app.title=ETRACS 2.5 build 2.5.04.03.01 (${lgu_name})
+app.title=ETRACS 2.5 build 2.5.04.05.01 (${lgu_name})
 app.host=${app_server_ip}:8070
 app.cluster=osiris3
 app.context=etracs25
@@ -35,5 +35,7 @@ socketio.host=${app_server_ip}:7080
   <import file="rptis/updates.pxml"/> 
 
   <import file="bpls/updates.pxml"/> 
+
+  <import file="ctc/updates.pxml"/> 
 </modules>
 </app>

@@ -1,0 +1,35 @@
+<schema adpater="main">
+	<element tablename="ctc_individual_view">
+		<field name="objid" primary="true"/>
+		<field name="receiptno" caption="Receipt No" indexed="true" searchable="true"/>
+		<field name="receiptdate" caption="Receipt Date"/>
+		<field name="receiptyear" caption="Receipt Year"/>
+		<field name="payer_objid" />
+		<field name="payer_name" />
+		<field name="payer_lastname" caption="Last Name"/>
+		<field name="payer_firstname"  caption="First Name"/>
+		<field name="payer_middlename"  caption="Middle Name"/>
+		<field name="payer_profession" caption="Profession"/>
+		<field name="payer_citizenship" />
+		<field name="payer_civilstatus" />
+		<field name="payer_height" />
+		<field name="payer_weight" />
+		<field name="additional_remarks" />
+		<field name="businessgross" caption="Business Gross" type="decimal"/>
+		<field name="annualsalary" caption="Annual Salary" type="decimal"/>
+		<field name="propertyincome" caption="Property Income" type="decimal"/>
+		<field name="basictax" caption="Basic Tax" type="decimal"/>
+		<field name="salarytax" caption="Salary Tax" type="decimal"/>
+		<field name="businessgrosstax" caption="Business Gross Tax" type="decimal"/>
+		<field name="propertyincometax" caption="Property Income Tax" type="decimal"/>
+		<field name="additionaltax" caption="Additional Tax" type="decimal"/>
+		<field name="totaltax" caption="Total Tax" type="decimal"/>
+		<field name="interest" type="decimal"/>
+		<field name="amountdue" type="decimal"/>
+		<field name="interestdue" type="decimal"/>
+		<field name="barangay_objid" />
+		<field name="barangay_name" caption="Barangay"/>
+		<field name="brgytaxshare" />
+		<field name="brgyinterestshare" />
+	</element>
+</schema>

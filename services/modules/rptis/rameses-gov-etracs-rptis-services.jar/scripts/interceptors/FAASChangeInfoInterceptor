@@ -42,15 +42,14 @@ class FAASChangeInfoInterceptor
 	public void updatePropertyInfo(evt){
 		def changeinfo = evt.result
 		em.updatePropertyInfo(changeinfo.newinfo);
-		em.updateLedgerPropertyInfo(changeinfo.newinfo);
-
-		//update faas_list info 
+		
 		def flinfo = [:]
 		flinfo.objid = changeinfo.faasid
 		flinfo.blockno = changeinfo.newinfo.blockno
 		flinfo.surveyno = changeinfo.newinfo.surveyno
 		flinfo.cadastrallotno = changeinfo.newinfo.cadastrallotno
 		em_faas_list.update(flinfo)
+		em.updateLedgerInfo(changeinfo);
 	}
 	
 	
@@ -64,7 +63,6 @@ class FAASChangeInfoInterceptor
 		changeinfo.newinfo.utdno = changeinfo.newinfo.tdno 
 		changeinfo.newinfo.txntypeid = changeinfo.newinfo.txntype.objid 
 		em.updateFaasInfo(changeinfo.newinfo);
-		em.updateLedgerInfo(changeinfo.newinfo);
 		em.updateLedgerFaasInfo(changeinfo.newinfo);
 
 		if (changeinfo.newinfo.classification){
@@ -75,7 +73,6 @@ class FAASChangeInfoInterceptor
 
 		em.updateLandRpuInfo(changeinfo.newinfo);
 
-		//update faas_list info 
 		def flinfo = [:]
 		flinfo.objid = changeinfo.faasid
 		flinfo.tdno = changeinfo.newinfo.tdno
@@ -90,6 +87,7 @@ class FAASChangeInfoInterceptor
 		em_faas_list.update(flinfo)
 
 		updateCancelledTdNos(changeinfo)
+		em.updateLedgerInfo(changeinfo)
 	}
 
 
@@ -117,15 +115,14 @@ class FAASChangeInfoInterceptor
 			administrator_address : changeinfo.newinfo.administrator.address,
 		]
 		em.updateFaasOwnerInfo(info)
-		em.updateLedgerOwnerInfo(info)
-
-		//update faas_list info 
+		
 		def flinfo = [:]
 		flinfo.objid = changeinfo.faasid
 		flinfo.taxpayer = changeinfo.newinfo.taxpayer
 		flinfo.owner = changeinfo.newinfo.owner
 		flinfo.administrator = changeinfo.newinfo.administrator
 		em_faas_list.update(flinfo)
+		em.updateLedgerInfo(changeinfo);
 	}
 
 	@After(pattern="FAASChangeInfoService.updateInfo", eval="#{result.action=='change_previous_info'}")
@@ -141,6 +138,7 @@ class FAASChangeInfoInterceptor
 		finfo.prevtdno = prevtdno 
 		em_faas.update(finfo)
 		em_faas_list.update(finfo)
+		em.updateLedgerInfo(changeinfo);
 	}	
 
 	@After(pattern="FAASChangeInfoService.updateInfo", eval="#{result.action=='change_faas_appraisal'}")
@@ -150,7 +148,6 @@ class FAASChangeInfoInterceptor
 		rpuSvc.deleteItems(oldrpu)
 		rpuSvc.updateRpu(changeinfo.newinfo)
 
-		//update faas_list info 
 		def flinfo = [:]
 		flinfo.objid = changeinfo.faasid
 		flinfo.totalmv = changeinfo.newinfo.totalmv
@@ -161,6 +158,7 @@ class FAASChangeInfoInterceptor
 		flinfo.classification = changeinfo.newinfo.classification
 		flinfo.classcode = changeinfo.newinfo.classification.code
 		em_faas_list.update(flinfo)
+		em.updateLedgerInfo(changeinfo)
 	}	
 
 	@After(pattern="FAASChangeInfoService.updateInfo", eval="#{result.action=='change_faas_sketch'}")

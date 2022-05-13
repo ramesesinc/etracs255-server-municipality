@@ -29,7 +29,7 @@ WHERE rp.ry = $P{ry}
   AND rp.section LIKE $P{section} 
   AND f.state = 'CURRENT'  
   AND r.taxable = 1 
-ORDER BY fullpin   
+ORDER BY rp.pin, r.suffix   
 
 [getAssessmentRollExempt]
 SELECT
@@ -61,7 +61,7 @@ WHERE rp.ry = $P{ry}
   AND rp.section LIKE $P{section} 
   AND f.state = 'CURRENT'  
   AND r.taxable = 0 
-ORDER BY fullpin   
+ORDER BY rp.pin, r.suffix
 
 
 

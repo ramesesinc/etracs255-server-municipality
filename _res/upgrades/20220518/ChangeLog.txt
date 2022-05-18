@@ -1,0 +1,88 @@
+2.5.04.05.02 (ddn cumulative)
+------------------------------------------------
+LANDTAX:
+- Ledger: Support posting of previous payments 
+- Support "prior" revtype share (Prov: 45%, Muni: 45%, brgy: 10%)
+- Report: rptc: additional period support
+- Billing: view ledgers with error 
+- Repost of Shares facility
+- Report: Delinquency Summary: add year range option
+- Report: LandTax: integrate online (eor) collection    
+- Monitoring: Ledgers with cancelled FAAS
+- Report: List of Real Property Payment
+- Report: List of Newly Assessed Properties
+- Ledger: update based on FAAS changeinfo
+- Report: shares: index tables and update statements
+- Collection: repost shares facility
+- Billing: misspayment flag update
+- Repost Share: support eor
+- Ledger: Limit last year paid when fixed
+- RPTLedger: municipality: sync with province (initial)
+- REPORT: RPTC: daily period option
+- REPORT: Delinquency: taxpayer filter support
+- INCENTIVE: support decimal rate 
+
+ASSESSOR
+- Sync: support parallel processing
+- Bldg: update additional/adjustment ui entry 
+- Add batchgr to Reassign Task support
+- QRRPA: add Revision Year option
+- BatchGr: count and filter support
+- Sketch: display tdno and pin
+- Report: Specific class listing: add taxable info
+- CancelledFAAS: add View Faas and display txnno info
+- Modify Signatories: clear required info
+- Report: Field Inspection: fix bldg query
+- Report: Statement of Valuation update
+- Modify Owner: formalize name support
+- Certification: update bir certifications
+- Sync: add fordownload support 
+- FAAS: support "canceltxn" workflow action to forward findings to current faas
+- FAAS: previousfaases: avoid same faasid and prevfaasid 
+- FAAS: sketch: display tdno and pin info 
+- FAAS: assessment: fix classification (ui)
+- BATCHGR: additional support e.g. reassign, submission to prov, resend, etc. 
+- BATCHGR: display as workflow list
+- BATCHGR: revise FAAS from last revision only
+- BATCHGR: items: additional filters
+- CANCELFAAS: display txnno in list
+- CANCELFAAS: access view faas 
+- MODIFY: signatories: optional approval date
+- MODIFY: owner: enable formalize option
+- REDFLAG: display pin info
+- REPORT: QRRPA: add revision year option
+- REPORT: certification: improvement 
+- REPORT: certification: property history 
+- REPORT: certification: property tracer
+- SUBDIVISION: fix improvement pin 
+- Batchgr: items: add sortorder option
+- Certification: workflow issuance support
+- CancelFAAS: access to view FAAS  
+- Report: Land specific classes: add taxpayer filter
+- Report: List of Building
+- Report: List of Machineries
+- FAAS: Support requisition of FAAS series by Province
+- Subdivision: clear txnref when deleting mother land    
+- Report: faas: machinery: display condition when acquired
+- Report: Ownership Record Card
+- Report: TMCR (Modified): dislay "X" for mach column
+- Report: FAAS: display stripping info in appraisal
+- CancelFAAS: assign final sequenceno when approve
+- RPU: machinery: update actual use taxability support
+- RPU: bldg: support gap base value computation
+- SYNC2: download to local support
+- BATCHGR: exclude item (province)
+- REDFLAG: sync update for complex txn
+- REDFLAG: management list
+- Certification: workflow issuance update
+- Building: Multi-storey support
+- Viewer: Support pdf and other file formats (open by default app)
+- Resection: Editable TDNo and various improvements
+- Restriction: Display on FAAS restriction tab
+- REPORT: FAAS MasterList : fix orderby error
+- REPORT: Statement of Valuation: additional filters
+- FAAS: txn: support for Change RPU Type
+- Examination: add transaction/tracking no.
+- Report: Ocular inspection: display any number of images
+- Report: List of Idle Lands
+    

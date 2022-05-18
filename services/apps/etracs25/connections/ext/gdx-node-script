@@ -2,6 +2,6 @@
 # CLOUD GDX
 #----------------------------------------
 provider=node-script
-host=18.214.40.20:3000
+host=${gdxnode_server_ip}:3000
 channel=${channel}
 timeout=60000

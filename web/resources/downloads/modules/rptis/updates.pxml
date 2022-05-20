@@ -13,5 +13,7 @@ rpt.app.context=etracs25
     <module version="2.51" file="rptis/rameses-gov-etracs-rptis-transmittal.jar" />
     <module version="2.51" file="rptis/rameses-gov-etracs-rptis-municipality.jar" />
     <module version="2.51" file="rptis/rameses-gov-etracs-rptis-sync2.jar" />
+
+    <module version="2.57" file="rptis/plugins/rameses-gov-etracs-rptis-landtax-auction.jar" /> 
 </modules>
 </app>

@@ -1,0 +1,29 @@
+<schema>
+    <element tablename="propertyauction_redeem">
+		<field name="objid" primary="true" />
+		<field name="parent_objid" required="true" />
+		<field name="rptledger_objid" required="true" />
+		<field name="redeemedby_objid" required="true" />
+		<field name="dtredeemed" required="true" />
+		<field name="amtdue" required="true" type="decimal" />
+		<field name="interest" required="true" type="decimal" />
+		<field name="redeemamt" required="true" type="decimal" />
+		<field name="receipt_objid" required="true" />
+
+		<complex name="redeemedby" ref="entity" jointype="many-to-one"
+			includefields="entityno,name,address_text">
+			<key field="redeemedby_objid" target="objid" />
+		</complex>
+
+		<complex name="rptledger" ref="rptledger" jointype="many-to-one"
+			includefields="owner_name,tdno,fullpin,cadastrallotno,totalav,totalareaha">
+			<key field="rptledger_objid" target="objid" />
+		</complex>
+
+		<complex name="receipt" ref="cashreceipt" jointype="many-to-one"
+			includefields="receiptno, receiptdate, amount">
+			<key field="receipt_objid" target="objid" />
+		</complex>
+    </element>
+</schema>
+

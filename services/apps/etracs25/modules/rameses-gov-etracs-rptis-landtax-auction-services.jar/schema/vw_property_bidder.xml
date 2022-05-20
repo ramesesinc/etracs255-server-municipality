@@ -1,0 +1,13 @@
+<schema>
+    <element tablename="vw_property_bidder">
+		<field name="objid" primary="true" />
+		<field name="state" required="true" />
+		<field name="parent_objid" required="true" />
+		<field name="entity_objid" required="true" />
+		<field name="bidderno" required="true" />
+		<field name="bondamt" required="true" />
+		<field name="property_objid" required="true" />
+		<field name="bidder_name" required="true"/>
+		<field name="bidder_address" required="true" />
+    </element>
+</schema>

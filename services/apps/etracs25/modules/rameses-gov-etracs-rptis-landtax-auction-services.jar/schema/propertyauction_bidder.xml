@@ -1,0 +1,23 @@
+<schema>
+    <element tablename="propertyauction_bidder">
+        <field name="objid" primary="true" prefix="PAB" />
+        <field name="state" required="true" caption="State" searchable="true" indexed="true" defaultValue="DRAFT" />
+		<field name="parent_objid" required="true" />
+		<field name="entity_objid" required="true" />
+		<field name="bidderno" caption="Bidder No" searchable="true" indexed="true" />
+		<field name="bondamt" required="true" type="decimal" caption="Bond" defaultValue="0"/>
+		
+		<complex name="entity" ref="entity" 
+				jointype="many-to-one" required="false"
+				includefields="name,address.text"
+		>
+			<key field="entity_objid" target="objid" />
+		</complex>
+
+		<complex name="properties" ref="propertyauction_bidder_property" 
+				jointype="one-to-many" required="true">
+			<key field="objid" target="parent_objid" />
+		</complex>
+
+    </element>
+</schema>

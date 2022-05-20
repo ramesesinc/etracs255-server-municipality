@@ -1,0 +1,32 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.util.*
+import com.rameses.services.extended.*
+
+
+class PropertyAuctionReportNSDRPService
+{
+    @Service('DateService')
+    def dtSvc
+    
+    @ActiveDB('propertyauction_report_nsdrp')
+    def em
+
+    @ProxyMethod
+    public def getReport(entity) {
+        def params = [:]
+        if (entity._reporttype == 'FIRST'){
+            params.filter = 'a.published1 = 1'
+        }
+        else {
+            params.filter = 'a.published2 = 1'
+        }
+
+        entity.items = em.getPublication(params)
+        entity.sauctiondate = dtSvc.format('MMMMM dd, yyyy', entity.auctiondate)
+        return entity 
+    }
+
+}
+
+

@@ -1,0 +1,74 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.util.*
+import com.rameses.services.extended.*
+
+
+class PropertyAuctionBidderService
+{
+    @Env
+    def env
+
+    @Service('SequenceService')
+    def seqSvc
+
+    @DataContext('propertyauction')
+    def em_auction
+
+    @DataContext('propertyauction_bidder')
+    def em_bidder 
+
+    def STATE_APPROVED = 'APPROVED'
+
+
+    @ProxyMethod
+    public def getActiveAuction() {
+        def auction = em_auction.find([state: 'AUCTION']).first()
+        if (!auction) throw new Exception('An active Auction does not exist.\nConduct an auction first before registering bidders.')
+        return auction
+    }
+
+    @ProxyMethod
+    public void beforeCreate(entity) {
+        checkDuplicate(entity)
+    }
+
+    @ProxyMethod
+    public def approve(entity) {
+        def old = em_bidder.read(entity)
+        if (old.state == STATE_APPROVED) {
+            throw new Exception('Record has already been approved.')
+        }
+
+        if (!entity.properties) {
+            throw new Exception('Unable to approve bidder.\nAt least one property to bid should be specified.')
+        }
+
+        entity.state = STATE_APPROVED
+        entity.bidderno = getNextBidderNo(entity)
+        em_bidder.find([objid: entity.objid]).update([state: entity.state, bidderno: entity.bidderno])
+        return entity
+    }
+
+    def getNextBidderNo(entity) {
+        def auction = em_auction.find([objid: entity.parent.objid]).first()
+        def key = 'AUCTION-' + auction.txnno 
+        return seqSvc.getNextSeries(key)
+    }
+
+    void checkDuplicate(entity) {
+        def dup = em_bidder.select('objid,state,entity.name,bidderno')
+                           .find([entity_objid: entity.entity.objid, parent_objid: entity.parent.objid])
+                           .first()
+       if (dup) {
+            if (dup.state == 'APPROVED') {
+                throw new Exception(dup.entity.name + ' has already been registered as Bidder No. ' + dup.bidderno + '.')
+            } else {
+                throw new Exception(dup.entity.name + ' is already created and still awaiting for approval.')
+            }
+       }
+    }
+
+}
+
+

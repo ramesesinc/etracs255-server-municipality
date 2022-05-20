@@ -1,0 +1,217 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.util.*
+import com.rameses.services.extended.*
+
+
+class PropertyAuctionBiddingService
+{
+    @Env
+    def env
+
+    @Service('Var')
+    def var
+
+    @Service('NumberService')
+    def numSvc
+
+    @Service('DateService')
+    def dtSvc 
+
+    @DataContext('propertyauction_property')
+    def em_property
+
+    @DataContext('propertyauction_bidding')
+    def em_bidding 
+
+    @DataContext('propertyauction_bidding_call')
+    def em_bidding_call
+
+    @DataContext('vw_property_bidder')
+    def em_bidder 
+
+    def STATE_DRAFT = 'DRAFT'
+    def STATE_ONGOING = 'ONGOING'
+    def STATE_AUCTIONED = 'AUCTIONED'
+    def STATE_CLOSED = 'CLOSED'
+
+
+    @ProxyMethod
+    public def beforeCreate(entity) {
+        entity.bidamt = 0.0
+        entity.dtstarted = dtSvc.serverDate
+        entity.bidders = getBidders(entity)
+        entity.lineno = 0
+        entity.calls = getCalls(entity)
+        return entity 
+    }
+
+    @ProxyMethod
+    public def open(entity) {
+        entity.bidders = getBidders(entity)
+        entity.calls = getCalls(entity)
+        return entity 
+    }
+
+    @ProxyMethod
+    public def startBidding(entity) {
+        def old = em_bidding.find([objid: entity.objid]).first()
+        if (!old) throw new Exception('Record does not exist or has already been deleted.')
+        if (old.state == STATE_ONGOING) throw new Exception('Record is already under bidding.')
+        if (old.state == STATE_CLOSED) throw new Exception('Record has already been closed.')
+        entity.state = STATE_ONGOING
+        em_bidding.update(entity)
+        return entity 
+    }
+
+    @ProxyMethod
+    public def closeBidding(entity) {
+        def old = em_bidding.find([objid: entity.objid]).first()
+        if (!old) throw new Exception('Record does not exist or has already been deleted.')
+        if (old.state != STATE_ONGOING) throw new Exception('Record has already been auctioned or closed.')
+
+        if (entity.bidder && entity.bidder.objid) {
+            entity.state = STATE_AUCTIONED
+        } else {
+            entity.state = STATE_CLOSED
+        }
+        entity.dtclosed = dtSvc.serverDate 
+        em_bidding.update(entity)
+
+        closeAuctionedProperty(entity)
+        return entity 
+    }
+
+    @ProxyMethod
+    public def getCalls(entity) {
+        if (!entity.callformat) {
+            entity.callformat = 'STANDARD'
+        }
+
+        if ('STANDARD'.equalsIgnoreCase(entity.callformat)) {
+            return getStandardCallFormat(entity)
+        }
+        else {
+            return getLineCallFormat(entity)
+        }
+    }
+
+    @ProxyMethod
+    public def postBid(bid) {
+        def bidding = getValidatedBidding(bid)
+        incrementLineNo(bidding)
+        bidding.bidder = bid.bidder 
+        bidding.bidamt = bid.amount 
+        em_bidding.update(bidding)
+
+        bid.callno = getNextCallNo(bid)
+        bid.lineno = bidding.lineno 
+        em_bidding_call.create(bid)
+
+        return bid 
+    }
+
+    void incrementLineNo(bidding) {
+        em_bidding.find([objid: bidding.objid]).update([lineno: '{lineno + 1}'])
+        bidding.putAll(em_bidding.read(bidding))
+    }
+
+    def getBidders(entity) {
+        return em_bidder.find([property_objid: entity.property.objid])
+                        .orderBy('bidderno')
+                        .list();
+    }
+
+    def getLineCallFormat(entity) {
+        def items =  em_bidding_call.find([parent_objid: entity.objid])
+                        .select('lineno,amount,bidder.bidderno,bidder.entity.name')
+                        .orderBy('lineno desc')
+                        .list()
+
+        def size = items.size()
+        items.each {
+            it.rank = size - it.lineno + 1
+        }
+
+        return items                         
+    }
+
+    def getStandardCallFormat(entity) {
+        def items = em_bidding_call.find([parent_objid: entity.objid])
+                        .select('callno,amount,bidder.*')
+                        .orderBy('callno,lineno')
+                        .list()
+
+        def calls = []
+        def groups = items.groupBy{it.callno}
+        groups.each{k, list ->
+            def call = [callno:k]
+            list.each {
+                call[it.bidder.bidderno] = it.amount
+            }
+            calls << call 
+        }
+
+        calls.sort{a,b -> a.callno <=> b.callno}
+
+        return calls 
+    }
+
+    def getNextCallNo(bid) {
+        def call = em_bidding_call.find([parent_objid: bid.parent.objid, bidder_objid: bid.bidder.objid])
+                            .orderBy('callno desc')
+                            .first()
+        if (!call) {
+            call = [:]
+            call.callno = 0
+        }
+
+        call.callno += 1
+
+        return call.callno 
+    }
+
+    def getValidatedBidding(bid) {
+        def bidding = em_bidding.read([objid: bid.parent.objid])
+        
+        if (!bidding) {
+            throw new Exception('Bidding record does not exist or has already been deleted.')
+        }
+
+        def minbid = bidding.property.minbidamt
+        if (bid.amount < minbid) {
+            throw new Exception('Bid Amount should be greater than or equal to minimum amount of ' + numSvc.format('#,##0.00', minbid) + '.')
+        }
+
+        if (bid.amount <= bidding.bidamt) {
+            throw new Exception('Bid Amount should be greater than ' + numSvc.format('#,##0.00', bidding.bidamt) + '.')
+        }
+
+        if (bidding.bidder && !bidding.bidder.objid) {
+            return bidding 
+        }
+
+        if (bid.bidder.objid == bidding.bidder.objid) {
+            def msg = 'Bidder should not be Bidder No. ' + bidding.bidder.bidderno + '.\n'
+            msg += 'Bidder No. ' + bidding.bidder.bidderno + ' was the last bidder to call.'
+            throw new Exception(msg)
+        }
+
+        if (bidding.lineno == null) {
+            bidding.lineno = 0
+        }
+
+        return bidding 
+    }
+
+    void closeAuctionedProperty(entity) {
+        def info = [:]
+        info.state = STATE_AUCTIONED
+        info.bidder = entity.bidder 
+        info.bidder.dtbid = entity.dtclosed 
+        info.bidamt = entity.bidamt 
+        em_property.find([objid: entity.property.objid]).update(info)
+    }
+}
+
+

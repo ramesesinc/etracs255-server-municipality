@@ -1,0 +1,20 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.util.*
+import com.rameses.services.extended.*
+
+
+class PropertyAuctionReportNoticeOfRedemptionReminderService
+{
+    @DataContext('propertyauction_property')
+    def em_auction_property
+    
+
+    @ProxyMethod
+    public def getReport(entity) {
+        def prop = em_auction_property.read(entity)
+        return prop
+    }
+}
+
+

@@ -1,0 +1,260 @@
+import com.rameses.annotations.*
+import com.rameses.common.*;
+import com.rameses.util.*
+import com.rameses.services.extended.*
+
+
+class PropertyAuctionService
+{
+    @Env
+    def env
+
+    @Service('DateService')
+    def dtSvc 
+
+    @Service('NumberService')
+    def numSvc
+
+    @Service('RPTUtil')
+    def util
+
+    @Service('SequenceService')
+    def seqSvc
+
+    @DataContext('propertyauction')
+    def em_propertyauction     
+
+    @DataContext('propertyauction_notice')
+    def em_propertyauction_notice
+
+    @DataContext('propertyauction_publication')
+    def em_propertyauction_publication
+
+    @DataContext('propertyauction_property')
+    def em_propertyauction_property
+
+    def PUBLICATION_LEAD_DAYS = 10;
+
+    /* 
+    * Make sure there is only one active auction record.
+    * Active auction has state other than COMPLETED
+    */
+    @ProxyMethod
+    public void checkOpenAuction(){
+        def auction = em_propertyauction.where('state <> :state', [state:'COMPLETED']).first()
+        if (auction)
+            throw new Exception('Unable to create record.\nThere is still an active public auction.')
+    }
+
+    @ProxyMethod
+    public def beforeCreate(entity) {
+        entity.txndate = dtSvc.serverDate
+        entity.auctiondate = dtSvc.parse('yyyy-MM-dd', entity.auctiondate)
+        if (entity.auctiondate < entity.txndate) {
+            throw new Exception('Auction Date must be later than current date.')
+        }
+
+        entity.state = 'DRAFT'
+        entity.published1 = false
+        entity.published2 = false
+        entity.createdby = [name: env.FULLNAME, title: env.JOBTITLE]
+        entity.finalsaledate = entity.auctiondate + 360 
+        return entity
+    }
+
+    
+    @ProxyMethod
+    public def open(entity) {
+        entity.published1 = util.toBoolean(entity.published1, false)
+        entity.published2 = util.toBoolean(entity.published2, false)
+        entity._published = (entity.published1 && entity.published2)
+
+        if (entity.state == 'APPROVED'){
+            def currdate = dtSvc.serverDate 
+            def refdate = currdate + PUBLICATION_LEAD_DAYS
+            entity._forpublication = (entity.publicationdate1 < refdate)
+        }
+        else if (entity.state == 'PUBLICATION'){
+            def currdate = dtSvc.serverDate 
+            def refdate = currdate + PUBLICATION_LEAD_DAYS
+            entity._publish1 = (entity.publicationdate1 < refdate) && !entity.published1
+            entity._publish2 = (entity.publicationdate2 < refdate) && !entity.published2
+            entity._forauction = (entity.auctiondate < dtSvc.serverDate) && entity._published 
+        }
+    }
+
+    /*
+    * Called by task.
+    * Change state to FORPUBLICATION first publication date is due 
+    * given a lead time in days (default 10 days)
+    */
+    @ProxyMethod
+    public void submitForPublication() {
+        def entity = em_propertyauction.where("state = 'APPROVED'").first() 
+        if (entity && entity.state == 'APPROVED'){
+            def currdate = dtSvc.serverDate 
+            def refdate = currdate + PUBLICATION_LEAD_DAYS
+            if (entity.publicationdate1 < refdate) {
+                em_propertyauction.find([objid: auction.objid]).update([state: 'FORPUBLICATION'])
+            }
+        }
+    }
+
+
+    @ProxyMethod
+    public def publish(entity){
+        validate(entity, 'approved')
+        def forpublicationlist = em_propertyauction_notice
+                                    .where(''' step.objid = 'NOPAS' and state in('FORPUBLICATION') ''')
+                                    .list()
+        forpublicationlist.each{
+            def p = [:]
+            p.parent = entity
+            p.notice = [objid:it.objid]
+            p.rptledger = it.rptledger
+            em_propertyauction_publication.create(p)
+            em_propertyauction_notice.find([objid:it.objid]).update([state:'PUBLISHED'])
+        }
+
+        entity.state = 'PUBLICATION'
+        em_propertyauction.find([objid:entity.objid]).update([state:entity.state])
+        return entity 
+    }
+
+
+    @ProxyMethod
+    public def generateFirstPublication(entity) {
+        entity.published1 = true 
+        em_propertyauction.update(entity)
+        return entity 
+    }
+
+    @ProxyMethod
+    public def generateSecondPublication(entity) {
+        entity.published2 = true 
+        em_propertyauction.update(entity)
+        return entity 
+    }
+
+    @ProxyMethod
+    public def approve( entity ) {
+        validate(entity, 'draft')
+        def approver = [objid:env.USERID, name:env.FULLNAME, title:env.JOBTITLE]
+        entity.txnno = 'A' + seqSvc.getNextFormattedSeries('AUCTION')
+        em_propertyauction.find([objid:entity.objid]).update([state:'APPROVED', approvedby:approver, txnno: entity.txnno])
+
+        updateNopasAuctionReference(entity)
+
+        return entity 
+    }
+
+
+    @ProxyMethod
+    public def conductAuction(entity) {
+        validate(entity, 'publication')
+
+        //build auction property
+        def list = em_propertyauction_notice.select('objid,rptledger_objid,amtdue,costofsale')
+                        .where(''' step_objid = 'NOPAS' and state = 'PUBLISHED' ''')
+                        .list()
+
+        list.each{
+            def p = [:]
+            p.objid = it.objid 
+            p.state = 'FORAUCTION'
+            p.parent = entity
+            p.rptledger = it.rptledger
+            p.bidder = [:]
+            p.amtdue = it.amtdue 
+            p.costofsale = it.costofsale
+            p.amtduepaid = 0.0 
+            p.bidamt = 0.0 
+            p.balance = 0.0 
+            p.notice = it 
+            p.minbidamt = it.amtdue + it.costofsale 
+            p.redemptiondate = entity.finalsaledate
+            em_propertyauction_property.create(p)
+            em_propertyauction_notice.find([objid:it.objid]).update([state:'AUCTION'])
+        }
+
+        em_propertyauction.find([objid:entity.objid]).update([state:'AUCTION'])
+        return entity
+    }
+
+    @ProxyMethod
+    public def closeAuction( entity ) {
+        validate(entity, 'auction')
+
+        def unapprovedsales = em_propertyauction_property
+                                .select('objid')
+                                .where(''' state = 'FORSALE' and soldto.objid IS NOT NULL ''')
+                                .list()
+        if (unapprovedsales)
+            throw new Exception('There are still unapproved sales. Approve or cancel the sales before closing.')
+
+        // set unsold properties to city or provincial treasurer 
+        def unsolvedprops = em_propertyauction_property
+                        .select('objid')
+                        .where(''' state = 'FORSALE' and soldto.objid IS NULL ''')
+                        .list()
+
+        unsolvedprops.each{
+            it.bidamt = it.amtdue 
+            em_propertyauction_property.update(it)
+        }
+
+        entity.state = 'REDEMPTION'
+        entity.closedby = [name:env.FULLNAME, title:env.JOBTITLE]
+        em_propertyauction.update(entity)
+        return entity 
+    }
+    @ProxyMethod
+    public def concludeAuction( entity ) {
+        validate(entity, 'final sale')
+        entity.state = 'CLOSED'
+        entity.closedby = [name:env.FULLNAME, title:env.JOBTITLE]
+        em_propertyauction.update(entity)
+        return entity 
+    }
+
+
+
+    @ProxyMethod
+    public void updateAuctionFinalSale(){
+        def auction = em_propertyauction.select('objid,state')
+                            .where("state = 'REDEMPTION' and finalsaledate < NOW()")
+                            .first() 
+        if (auction) {
+            auction.state = 'FINALSALE'
+            em_propertyauction.update(auction)
+
+            em_propertyauction_property
+                    .where('parent_objid = :objid and state <> :state', [objid: auction.objid, state: 'REDEEMED'])
+                    .update([state: 'FINALSALE'])
+        }
+    }
+
+
+    void validate(entity, state){
+        def currstate = state.replaceAll(' ', '')
+        def old = em_propertyauction.select('state').find([objid:entity.objid]).first()
+        if (!old) throw new Exception('Auction record does not exist or has already been deleted.')
+        if (!currstate.equalsIgnoreCase(old.state)) throw new Exception('Unable to process action.\nOnly ' + state + ' state is allowed.')
+    }
+
+    void validatePublishedItems(entity) {
+        def items = em_propertyauction_publication.select('cnt:{count(*)}').find([parent_objid: entity.objid]).first()
+        if (items.cnt == 0) {
+            throw new Exception('Unable to approve auction.\nAt least one published property should be included.')
+        }
+    }
+
+    void updateNopasAuctionReference(entity) {
+        em_propertyauction_notice.where("step_objid = 'NOPAS' and state not in ('SUPERSEDED', 'CLOSED') ")
+                .update([auction_objid: entity.objid])
+    }
+
+
+}
+
+

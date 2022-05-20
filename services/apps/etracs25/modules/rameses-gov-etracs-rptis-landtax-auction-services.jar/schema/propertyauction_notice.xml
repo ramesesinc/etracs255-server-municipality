@@ -1,0 +1,63 @@
+<schema>
+    <element tablename="propertyauction_notice">
+        <field name="objid" primary="true" prefix="AN"/>
+		<field name="state" required="true" caption="State" width="120"  searchable="true" indexed="true"/>
+		<field name="step_objid" required="true" />
+		<field name="rptledger_objid" required="true" />
+		<field name="txndate" required="true" type="timestamp" caption="Txn Date" width="150" />
+		<field name="txnno" required="true" caption="Txn No."  searchable="true" indexed="true"/>
+		<field name="dtcomputed" required="true" type="date" caption="Date Computed" />
+		<field name="validuntil" required="true" type="date" caption="Validity" />
+		<field name="period" required="true" caption="Period"/>
+		<field name="fromyear" required="true" type="integer" caption="From Year"/>
+		<field name="fromqtr" required="true" type="integer" caption="From Qtr"/>
+		<field name="toyear" required="true" type="integer" caption="To Year"/>
+		<field name="toqtr" required="true" type="integer" caption="To Qtr"/>
+		<field name="basic" required="true" type="decimal" />
+		<field name="basicint" required="true" type="decimal" />
+		<field name="basicdisc" required="true" type="decimal" />
+		<field name="sef" required="true" type="decimal" />
+		<field name="sefint" required="true" type="decimal" />
+		<field name="sefdisc" required="true" type="decimal" />
+		<field name="basicidle" required="true" type="decimal" />
+		<field name="basicidleint" required="true" type="decimal" />
+		<field name="basicidledisc" required="true" type="decimal" />
+		<field name="firecode" required="true" type="decimal" />
+		<field name="amtdue" required="true" type="decimal" caption="Amount Due" />
+		<field name="createdby_name" required="true" />
+		<field name="createdby_title" required="true" />
+		<field name="verifiedby" caption="Verified By" />
+		<field name="deliveredby" caption="Delivered By"/>
+		<field name="receivedby" caption="Date Received" />
+		<field name="dtreceived" caption="Received By"/>
+		<field name="treasurer_name" caption="Treasurer" required="true" />
+		<field name="treasurer_title" caption="Job Title" required="true" />
+		<field name="notedby_name" caption="Noted By"/>
+		<field name="notedby_title" caption="Job Title" />
+		<field name="remarks" />
+		<field name="expirydate" type="date" caption="Expiry Date" />
+		<field name="prevnotice_objid" />
+		<field name="auction_objid" />
+		<field name="receipt_objid" />
+		<field name="receipt_receiptno" />
+		<field name="receipt_receiptdate" />
+		<field name="costofsale" type="decimal"  required="true" />
+		
+		<complex name="step" ref="propertyauction_step" jointype="many-to-one"
+			includefields="code,title,seqno,report,duration">
+			<key field="step_objid" target="objid" />
+		</complex>
+		<complex name="rptledger" ref="rptledger" jointype="many-to-one"
+			includefields="faasid,owner.name,administrator.name,rputype,tdno,fullpin,titleno,cadastrallotno,totalmv,totalav,totalareaha,classcode,taxpayer.name,taxpayer.address.text,barangay.name,classification.name">
+			<key field="rptledger_objid" target="objid" />
+		</complex>
+		<complex name="prevnotice" ref="propertyauction_notice" jointype="many-to-one" required="false"
+			includefields="txnno,txndate,amtdue,dtreceived,receivedby">
+			<key field="prevnotice_objid" target="objid" />
+		</complex>
+		<complex name="auction" ref="propertyauction" jointype="many-to-one" required="false"
+			includefields="publicationdate1,publicationdate2,auctiondate,incidentalrate,minincidental,maxincidental">
+			<key field="auction_objid" target="objid" />
+		</complex>
+    </element>
+</schema>

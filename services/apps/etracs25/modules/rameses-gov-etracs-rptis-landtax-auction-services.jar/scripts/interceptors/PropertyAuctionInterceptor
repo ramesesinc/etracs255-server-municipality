@@ -1,0 +1,25 @@
+import com.rameses.annotations.*
+import com.rameses.eserver.*;
+import com.rameses.common.*;
+import com.rameses.services.extended.*;
+
+
+class PropertyAuctionInterceptor
+{
+	@Service('PropertyAuctionService')
+	def svc 
+
+	@Before(pattern="PersistenceService.create", eval="#{args[0]._schemaname=='propertyauction'}") 
+	public void beforeCreate( evt ) {
+		def entity = evt.args[0]
+		svc.beforeCreate(entity)
+	}
+
+	@After(pattern="PersistenceService.read", eval="#{args[0]._schemaname=='propertyauction'}") 
+	public void afterRead( evt ) {
+		def entity = evt.result
+		svc.open(entity)
+	}
+
+}
+

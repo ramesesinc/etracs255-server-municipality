@@ -1,0 +1,56 @@
+import com.rameses.annotations.*
+import com.rameses.common.*
+import com.rameses.services.extended.*
+
+class PropertyAuctionNoticeTask 
+{
+	@Env
+	def env 
+
+	@Service('OrgService')
+	def orgSvc 
+
+	@Service('DateService')
+	def dtSvc 
+
+	@Service('PropertyAuctionNoticeService')
+	def svc 
+
+	@DataContext('propertyauction_notice')
+	def em_propertyauction_notice
+
+	@DataContext('propertyauction_step')
+	def em_propertyauction_step
+	
+	
+	@Schedule(interval=10)
+	public def generateSupersedingNotice(task) {
+		env.ORGID = orgSvc.getRoot().objid
+		env.ORGCLASS = orgSvc.getRoot().orgclass
+
+		def currdate = dtSvc.serverDate 
+		def steps = em_propertyauction_step.where('applicable=1').orderBy('seqno').list() 
+
+		def notices = em_propertyauction_notice
+							.where('''state in ('DELIVERED', 'FORDELIVERY', 'FORPUBLICATION') and expirydate < :currdate''', [currdate:currdate])
+							.list(0,25)
+
+		notices.each{notice->
+			if ('DELIVERED'.equalsIgnoreCase(notice.state)){
+				def nextstep = steps.find{it.seqno > notice.step.seqno }
+				if (nextstep){
+					svc.supersede(notice, nextstep)
+				}
+				else{
+					em_propertyauction_notice.find([objid:notice.objid]).update([state:'FORPUBLICATION'])		
+				}
+			}
+			else if ('FORDELIVERY'.equalsIgnoreCase(notice.state)){
+				em_propertyauction_notice.find([objid:notice.objid]).update([state:'UNDELIVERED'])
+			}
+		}
+		
+	}	
+
+}
+

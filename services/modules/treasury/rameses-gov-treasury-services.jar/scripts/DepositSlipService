@@ -71,13 +71,13 @@ class DepositSlipService  {
 					def arr = [];
 					def list = v;
 					while(true) {
-					    def p = list[0..(i-1)];
-					    arr << p;
-					    list = list -p;
-					    if(list.size() <= i) {
+					    if(list.size() > 0 && list.size() <= i) {
 					        arr << list;
 					        break;
 					    }
+							def p = list[0..(i-1)];
+					    arr << p;
+					    list = list - p;
 					}
 					arr.each { 
 						createCheckDepositSlip( tmp, it, k );

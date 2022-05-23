@@ -3,5 +3,5 @@ host=${fileserver_ip}
 port=7000
 channel=${fileserver_channel}
 uploadDir=${fileserver_dir}/uploads
-downloadDir=fileserver_dir/downloads
+downloadDir=${fileserver_dir}/downloads
 debug=true

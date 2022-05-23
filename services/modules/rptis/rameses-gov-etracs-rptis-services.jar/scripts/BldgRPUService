@@ -381,7 +381,7 @@ class BldgRPUService
 
 	void saveFloorAdditionals(additionals){
 		additionals.each{
-			if (it.issystem == null) it.issytem = false
+			if (it.issystem == null) it.issystem = false
 			em.save(it, SCHEMA_ADDITIONAL)
 			saveParams(it.params)
 		}

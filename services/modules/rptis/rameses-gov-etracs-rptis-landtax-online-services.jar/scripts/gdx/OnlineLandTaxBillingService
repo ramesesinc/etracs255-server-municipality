@@ -31,8 +31,18 @@ class OnlineLandTaxBillingService
             tdno: rptledger.tdno, 
             fullpin: rptledger.fullpin, 
             rputype: rptledger.rputype, 
+            lguname: rptledger.lguname, 
+            barangay: rptledger.barangay, 
+            titleno: rptledger.titleno, 
+            classification: rptledger.classification, 
+            cadastrallotno: rptledger.cadastrallotno, 
             administrator: rptledger.administrator, 
-            totalareasqm: rptledger.totalareasqm, 
+            owner: rptledger.owner, 
+            taxpayer: rptledger.taxpayer, 
+            totalav: rptledger.totalav, 
+            totalmv: rptledger.totalmv, 
+            totalareaha: rptledger.totalareaha, 
+            totalareasqm: rptledger.totalareaha * 10000, 
             totals: bill.totals,
             items: rptledger.billitems,
             amount: bill.totals.total,
@@ -40,6 +50,7 @@ class OnlineLandTaxBillingService
             fromqtr: rptledger.fromqtr,
             toyear: rptledger.toyear,
             toqtr: rptledger.toqtr,
+            validuntil: bill.validuntil,
         ]
         data.amount = bill.totals.total;
         data.info.txntypename = 'Real Property Tax'; 

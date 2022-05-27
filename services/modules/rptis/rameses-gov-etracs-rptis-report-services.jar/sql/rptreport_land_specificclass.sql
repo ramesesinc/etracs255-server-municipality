@@ -31,6 +31,7 @@ where f.lguid like $P{lguid}
   and rp.barangayid like $P{barangayid}
   and rp.section like $P{section}
   and spc.classification_objid like $P{classificationid}
+	and f.taxpayer_objid like $P{taxpayerid}
 group by 
 	o.name, b.name, 
 	f.tdno, f.fullpin, f.titleno, f.owner_name, f.owner_address, f.administrator_name,

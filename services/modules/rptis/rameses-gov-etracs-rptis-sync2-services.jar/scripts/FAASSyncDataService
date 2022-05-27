@@ -353,10 +353,10 @@ class FAASSyncDataService
 		if (! checkFaasExist(remoteFaas)) {
 			excludeOpenTask(remoteFaas)
 			saveFaas(remoteFaas)
-			startWorkflow(syncdata, remoteFaas)
 		} else {
 			saveFaas(remoteFaas)			
 		}
+		startWorkflow(syncdata, remoteFaas)
 	}
 
 	def getFaas = {syncdata ->
@@ -448,13 +448,14 @@ class FAASSyncDataService
 		return em_faaslist.select('state').find([objid: faas.objid]).first()?.state 
 	}
 
-
 	void startWorkflow(syncdata, faas){
+		def opentask = em_task.find([refid: faas.objid]).where("startdate IS NULL").first();
+		if (opentask) return;
+
 		def tasks = workflowSvc.start([refid:faas.objid, data:faas])
 		if (tasks){
 			faas.taskid = tasks[0].objid
 		}
-
 		notifyGroup(syncdata, faas)
 	}
 

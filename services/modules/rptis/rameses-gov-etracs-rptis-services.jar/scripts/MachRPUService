@@ -38,6 +38,9 @@ class MachRPUService
     @DataContext('rysetting_mach_smv')
     def em_machine_smv
 
+    @DataContext('machrpu')
+    def em_rpu
+
     
     def SCHEMA_MACHUSE      = 'machuse'
     def SCHEMA_MACHDETAIL   = 'machdetail'
@@ -55,6 +58,7 @@ class MachRPUService
 
     @ProxyMethod
     public def createMachRpu( rpu ) {
+        if (rpu.taxable == null) rpu.taxable = true
         em.create(rpu)
         saveMachUses(rpu.machuses)
         return rpu
@@ -63,10 +67,14 @@ class MachRPUService
 
     @ProxyMethod
     public def updateMachRpu(rpu) { 
-        em.updateImmediate(rpu)
-        saveMachUses(rpu.machuses)
-        removeDeletedItems(rpu)
-        return rpu
+        if (em_rpu.find([objid: rpu.objid]).first() == null) {
+            return createMachRpu(rpu);
+        } else {
+            em.updateImmediate(rpu)        
+            saveMachUses(rpu.machuses)
+            removeDeletedItems(rpu)
+            return rpu;
+        }
     }
 
 
@@ -337,6 +345,7 @@ class MachRPUService
     -------------------------------------------------------------------*/
     void saveMachUses(machuses){
         machuses.each{ mu ->
+            if (mu.taxable == null) mu.taxable = true
             em.save(mu, SCHEMA_MACHUSE)
             saveMachines(mu.machines)
         }
@@ -344,7 +353,8 @@ class MachRPUService
 
     void saveMachines(machines){
         machines.each{ m ->
-            if (!m.params) m.params = [:];
+            if (m.taxable == null) m.taxable = true
+            if (!m.params) m.params = [];
             em_machdetail.save(m);
         }
     }
@@ -365,6 +375,7 @@ class MachRPUService
     def getMachUses(rpu){
         rpu.machuses = em.getMachUses([machrpuid:rpu.objid])
         rpu.machuses.each{ mu ->
+            mu.taxable = util.toBoolean(mu.taxable, true)
             mu.machines = em_machdetail.find([machuseid: mu.objid]).list()
         }
          

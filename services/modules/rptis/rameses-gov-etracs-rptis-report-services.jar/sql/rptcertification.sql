@@ -2,7 +2,7 @@
 SELECT * 
 FROM rptcertification
 where 1=1 ${filters}
-ORDER BY txnno DESC
+ORDER BY txndate DESC
 
 
 [getItemsTest]
@@ -104,16 +104,18 @@ SELECT
 	f.administrator_name, f.administrator_address, 
 	pc.code AS classcode, 
 	pc.name AS classname, 
-	r.ry, r.realpropertyid, r.rputype, r.fullpin, r.totalmv, r.totalav,
+	r.realpropertyid, r.rputype, r.fullpin, r.totalmv, r.totalav,
 	r.totalareasqm, r.totalareaha,
-	rp.barangayid, rp.cadastrallotno, rp.blockno, rp.surveyno, rp.street,
-	b.name AS barangay_name, so.name as lgu_name, r.taxable 
+	rp.ry, rp.barangayid, rp.cadastrallotno, rp.blockno, rp.surveyno, rp.street,
+	b.name AS barangay_name, so.name as lgu_name, r.taxable,
+	po.name as parentlgu_name
 FROM faas f
 	INNER JOIN rpu r ON f.rpuid = r.objid 
 	INNER JOIN realproperty rp ON f.realpropertyid = rp.objid 
 	INNER JOIN propertyclassification pc ON r.classification_objid = pc.objid 
 	INNER JOIN barangay b ON rp.barangayid = b.objid 
 	LEFT JOIN sys_org so on f.lguid = so.objid 
+	LEFT JOIN sys_org po on so.parent_objid = po.objid 
 WHERE f.objid = $P{faasid}
 
 
@@ -374,3 +376,15 @@ select mi.name as miscitem_name
 from miscrpuitem mri 
 	inner join miscitem mi on mri.miscitem_objid = mi.objid 
 where mri.miscrpuid = $P{rpuid}
+
+
+[getLandDetails]
+select * from vw_certification_landdetail where faasid = $P{faasid} order by specificclass_name
+
+[getLandImprovements]
+select * from vw_certification_land_improvement where faasid = $P{faasid} order by improvement
+
+
+
+[deleteItems]
+delete from rptcertificationitem where rptcertificationid = $P{objid}

@@ -30,8 +30,6 @@ class RPTReportAbstractTaxCollectionService{
             params.fromdate = params.startdate;
             params.todate = dtsvc.add(dtsvc.parse("yyyy-MM-dd",params.enddate),"1d");
         }
-    	println params.fromdate;
-        println params.todate;
     	def items = em.getAbstractOfRPTCollection(params);
 		def advitems = em.getAbstractOfRPTCollectionAdvance(params);
 

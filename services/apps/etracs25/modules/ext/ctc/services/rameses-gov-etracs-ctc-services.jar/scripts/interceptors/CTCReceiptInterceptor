@@ -1,0 +1,142 @@
+import com.rameses.annotations.*;
+import com.rameses.util.*;
+
+class CTCReceiptInterceptor {
+
+	@ActiveDB('ctc_individual')
+	def ctciEm;
+
+	@DataContext('ctc_individual')
+	def ctci_db;
+
+	@ActiveDB('ctc_corporate')
+	def ctccEm;
+
+	@DataContext('ctc_corporate')
+	def ctcc_db;
+
+	@Service('PersistenceService')
+	def persistenceSvc; 
+
+	@Service('DateService')
+	def dtSvc;
+
+	@Service("OrgService")
+	def orgSvc;
+
+	// ---------------------------------------------
+	//   CTC Individual handlers 
+	// ---------------------------------------------
+	@After(pattern="CashReceiptService.post", eval="#{result.formno=='0016' && result.txnmode != 'CAPTURE'}")
+	public def postIndividualCtcCashReceipt( evt ) { 
+		def ctc = evt.result;	
+		if (ctc.payer.birthdate) { 
+			ctc.payer.birthdate = dtSvc.parse('yyyy-MM-dd', ctc.payer.birthdate)
+		} 
+		ctciEm.create( ctc ); 
+		ctc.payer._schemaname = "entityindividual"; 
+		ctc.payer.findBy = [objid: ctc.payer.objid]; 
+		persistenceSvc.update( ctc.payer ); 
+	}
+
+	@After(pattern="CashReceiptService.open", eval="#{result.formno=='0016' && result.txnmode != 'CAPTURE'}")
+	public def openIndividualCtcReceipt( evt ) { 
+		def ctc = evt.result; 
+		def ctcext = ctciEm.read(ctc); 
+		ctc.payer.putAll( ctcext.payer ); 
+		ctcext.remove('payer'); 
+		ctc.putAll( ctcext ); 
+
+		ctc.payer._schemaname = "entityindividual"; 
+		ctc.payer.findBy = [objid: ctc.payer.objid]; 
+		def o = persistenceSvc.read( ctc.payer ); 
+		if ( o ) { 
+			o.putAll( ctc.payer ); 
+			ctc.payer.putAll( o ); 
+			evt.result.putAll( ctc ); 
+		} 
+	} 
+
+	@After(pattern="PersistenceService.read", eval="#{ args[0]._schemaname == 'cashreceipt' && result.formno == '0016' }")
+	public void loadCtcInfo( evt ) { 
+		def res = evt.result; 
+		if ( !res ) return; 
+
+		def info = ctci_db.find([ objid: res.objid ]).first(); 
+		if ( info ) { 
+			def payer = info.remove('payer'); 
+			if ( res.payer ) res.payer.putAll( payer ); 
+			
+			res.putAll( info ); 
+		} 
+	} 
+
+	@After(pattern="PersistenceService.read", eval="#{ args[0]._schemaname == 'cashreceipt' && result.formno.toString().matches('0017|907')==true }")
+	public void loadCtcInfoCorp( evt ) { 
+		def res = evt.result; 
+		if ( !res ) return; 
+
+		def info = ctcc_db.find([ objid: res.objid ]).first(); 
+		if ( info ) res.putAll( info ); 
+	} 	
+
+	// ---------------------------------------------
+	//   CTC Corporate handlers 
+	// ---------------------------------------------
+	@After(pattern="CashReceiptService.post", eval="#{result.formno.matches('0017|907') && result.txnmode != 'CAPTURE'}")
+	public void postCorporateCtcReceipt( evt ) { 
+		def ctc = evt.result;	
+		if (ctc.payer.dtregistered){
+			ctc.payer.dtregistered = dtSvc.parse('yyyy-MM-dd', ctc.payer.dtregistered)
+		}
+		ctccEm.create( ctc ); 
+		ctc.payer._schemaname = "entityjuridical"; 
+		ctc.payer.findBy = [objid: ctc.payer.objid]; 
+		persistenceSvc.update( ctc.payer ); 
+	}
+
+	@After(pattern="CashReceiptService.open", eval="#{result.formno.matches('0017|907') && result.txnmode != 'CAPTURE'}")
+	public void openCorporateCtcCashReceipt( evt ) { 
+		if ( evt.result.payer == null ) evt.result.payer = [:]; 
+
+		def ctc = ctccEm.read( evt.result ); 
+		if ( ctc.payer == null ) ctc.payer = [:]; 
+
+		if ( ctc.payer?.objid ) {
+			ctc.payer._schemaname = "entityjuridical"; 
+			ctc.payer.findBy = [objid: ctc.payer.objid]; 
+			def o = persistenceSvc.read( ctc.payer ); 
+			if ( o ) { 
+				o.putAll( ctc.payer ); 
+				ctc.payer.putAll( o ); 
+			} else { 
+				ctc.payer.putAll( evt.result.payer ); 
+			} 
+		} else {
+			ctc.payer.putAll( evt.result.payer ); 
+		} 
+		evt.result.putAll( ctc ); 
+	}
+
+	
+
+
+	// ---------------------------------------------
+	//   GLOBAL CTC handler 
+	// ---------------------------------------------	
+	@After(pattern="CashReceiptService.post", eval="#{result.formno.matches('0016|0017|907') && result.txnmode != 'CAPTURE'}")
+	public void afterPostCtcReceipt( evt ) { 
+		def cashreceipt = evt.result;
+		def lgu =  orgSvc.getRoot();
+		def m = [ _schemaname: "entity_ctc" ]; 
+		m.ctcno = cashreceipt.receiptno;
+		m.dtissued = cashreceipt.receiptdate;
+		m.barangay = cashreceipt.payer?.address?.barangay;
+		m.entityid = cashreceipt.payer?.objid;
+		m.nonresident = 0;
+		m.placeissued = lgu.name;
+		m.lgu = lgu;
+		m.system = 1;
+		persistenceSvc.create( m );
+	} 
+} 

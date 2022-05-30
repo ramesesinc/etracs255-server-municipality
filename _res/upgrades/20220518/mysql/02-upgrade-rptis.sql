@@ -7,10 +7,10 @@ alter table rpu add isonline int
 update rpu set isonline = 0 where isonline is null 
 ;
 
-alter table rptledger_item 
-	add fromqtr int,
-	add toqtr int
-;
+-- alter table rptledger_item 
+--    add fromqtr int,
+--  add toqtr int
+-- ;
 
 DROP TABLE if exists `batch_rpttaxcredit_ledger_posted`
 ;
@@ -43,7 +43,7 @@ CREATE TABLE `batch_rpttaxcredit_ledger` (
   `parentid` varchar(50) NOT NULL,
   `state` varchar(25) NOT NULL,
   `error` varchar(255) NULL,
-	barangayid varchar(50) not null, 
+  barangayid varchar(50) not null, 
   PRIMARY KEY (`objid`),
   KEY `ix_parentid` (`parentid`),
   KEY `ix_state` (`state`),
@@ -311,10 +311,10 @@ CREATE TABLE `cashreceipt_rpt_share_forposting_repost` (
 
 
 /*===================================================== 
-	IMPORTANT: BEFORE EXECUTING !!!!
+  IMPORTANT: BEFORE EXECUTING !!!!
 
-	CHANGE "eor" database name to match the LGUs 
-	eor production database name
+  CHANGE "eor" database name to match the LGUs 
+  eor production database name
 
 =======================================================*/
 drop view if exists vw_landtax_eor
@@ -355,76 +355,76 @@ drop view if exists vw_landtax_abstract_of_collection_detail
 create view vw_landtax_abstract_of_collection_detail
 as 
 select
-	liq.objid as liquidationid,
-	liq.controldate as liquidationdate,
-	rem.objid as remittanceid,
-	rem.dtposted as remittancedate,
-	cr.objid as receiptid, 
-	cr.receiptdate as ordate, 
-	cr.receiptno as orno, 
-	cr.collector_objid as collectorid,
-	rl.objid as rptledgerid,
-	rl.fullpin,
-	rl.titleno, 
-	rl.cadastrallotno, 
-	rl.rputype, 
-	rl.totalmv, 
-	b.name as barangay, 
-	rp.fromqtr,
+  liq.objid as liquidationid,
+  liq.controldate as liquidationdate,
+  rem.objid as remittanceid,
+  rem.dtposted as remittancedate,
+  cr.objid as receiptid, 
+  cr.receiptdate as ordate, 
+  cr.receiptno as orno, 
+  cr.collector_objid as collectorid,
+  rl.objid as rptledgerid,
+  rl.fullpin,
+  rl.titleno, 
+  rl.cadastrallotno, 
+  rl.rputype, 
+  rl.totalmv, 
+  b.name as barangay, 
+  rp.fromqtr,
   rp.toqtr,
   rpi.year,
-	rpi.qtr,
-	rpi.revtype,
-	case when cv.objid is null then rl.owner_name else '*** voided ***' end as taxpayername, 
-	case when cv.objid is null then rl.tdno else '' end as tdno, 
-	case when m.name is null then c.name else m.name end as municityname, 
-	case when cv.objid is null  then rl.classcode else '' end as classification, 
-	case when cv.objid is null then rl.totalav else 0.0 end as assessvalue,
-	case when cv.objid is null then rl.totalav else 0.0 end as assessedvalue,
-	case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as basiccurrentyear,
-	case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as basicpreviousyear,
-	case when cv.objid is null  and rpi.revtype = 'basic' then rpi.discount else 0.0 end as basicdiscount,
-	case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as basicpenaltycurrent,
-	case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as basicpenaltyprevious,
+  rpi.qtr,
+  rpi.revtype,
+  case when cv.objid is null then rl.owner_name else '*** voided ***' end as taxpayername, 
+  case when cv.objid is null then rl.tdno else '' end as tdno, 
+  case when m.name is null then c.name else m.name end as municityname, 
+  case when cv.objid is null  then rl.classcode else '' end as classification, 
+  case when cv.objid is null then rl.totalav else 0.0 end as assessvalue,
+  case when cv.objid is null then rl.totalav else 0.0 end as assessedvalue,
+  case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as basiccurrentyear,
+  case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as basicpreviousyear,
+  case when cv.objid is null  and rpi.revtype = 'basic' then rpi.discount else 0.0 end as basicdiscount,
+  case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as basicpenaltycurrent,
+  case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as basicpenaltyprevious,
 
-	case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as sefcurrentyear,
-	case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as sefpreviousyear,
-	case when cv.objid is null  and rpi.revtype = 'sef' then rpi.discount else 0.0 end as sefdiscount,
-	case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as sefpenaltycurrent,
-	case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as sefpenaltyprevious,
+  case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as sefcurrentyear,
+  case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as sefpreviousyear,
+  case when cv.objid is null  and rpi.revtype = 'sef' then rpi.discount else 0.0 end as sefdiscount,
+  case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as sefpenaltycurrent,
+  case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as sefpenaltyprevious,
 
-	case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as basicidlecurrent,
-	case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as basicidleprevious,
-	case when cv.objid is null  and rpi.revtype = 'basicidle' then rpi.amount else 0.0 end as basicidlediscount,
-	case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as basicidlecurrentpenalty,
-	case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as basicidlepreviouspenalty,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as basicidlecurrent,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as basicidleprevious,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' then rpi.amount else 0.0 end as basicidlediscount,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as basicidlecurrentpenalty,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as basicidlepreviouspenalty,
 
-	
-	case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as shcurrent,
-	case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as shprevious,
-	case when cv.objid is null  and rpi.revtype = 'sh' then rpi.discount else 0.0 end as shdiscount,
-	case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as shcurrentpenalty,
-	case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as shpreviouspenalty,
+  
+  case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as shcurrent,
+  case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as shprevious,
+  case when cv.objid is null  and rpi.revtype = 'sh' then rpi.discount else 0.0 end as shdiscount,
+  case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as shcurrentpenalty,
+  case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as shpreviouspenalty,
 
-	case when cv.objid is null and rpi.revtype = 'firecode' then rpi.amount else 0.0 end as firecode,
-	
-	case 
-			when cv.objid is null 
-			then rpi.amount - rpi.discount + rpi.interest 
-			else 0.0 
-	end as total,
-	case when cv.objid is null then rpi.partialled else 0 end as partialled
+  case when cv.objid is null and rpi.revtype = 'firecode' then rpi.amount else 0.0 end as firecode,
+  
+  case 
+      when cv.objid is null 
+      then rpi.amount - rpi.discount + rpi.interest 
+      else 0.0 
+  end as total,
+  case when cv.objid is null then rpi.partialled else 0 end as partialled
 from collectionvoucher liq
-	inner join remittance rem on rem.collectionvoucherid = liq.objid 
-	inner join cashreceipt cr on rem.objid = cr.remittanceid
-	left join cashreceipt_void cv on cr.objid = cv.receiptid 
-	inner join rptpayment rp on rp.receiptid= cr.objid 
-	inner join rptpayment_item rpi on rpi.parentid = rp.objid
-	inner join rptledger rl on rl.objid = rp.refid
-	inner join barangay b on b.objid  = rl.barangayid
-	left join district d on b.parentid = d.objid 
-	left join city c on d.parentid = c.objid 
-	left join municipality m on b.parentid = m.objid 
+  inner join remittance rem on rem.collectionvoucherid = liq.objid 
+  inner join cashreceipt cr on rem.objid = cr.remittanceid
+  left join cashreceipt_void cv on cr.objid = cv.receiptid 
+  inner join rptpayment rp on rp.receiptid= cr.objid 
+  inner join rptpayment_item rpi on rpi.parentid = rp.objid
+  inner join rptledger rl on rl.objid = rp.refid
+  inner join barangay b on b.objid  = rl.barangayid
+  left join district d on b.parentid = d.objid 
+  left join city c on d.parentid = c.objid 
+  left join municipality m on b.parentid = m.objid 
 ;
 
 
@@ -435,75 +435,75 @@ drop view if exists vw_landtax_abstract_of_collection_detail_eor
 create view vw_landtax_abstract_of_collection_detail_eor
 as 
 select
-	rem.objid as liquidationid,
-	rem.controldate as liquidationdate,
-	rem.objid as remittanceid,
-	rem.controldate as remittancedate,
-	eor.objid as receiptid, 
-	eor.receiptdate as ordate, 
-	eor.receiptno as orno, 
-	rem.createdby_objid as collectorid,
-	rl.objid as rptledgerid,
-	rl.fullpin,
-	rl.titleno, 
-	rl.cadastrallotno, 
-	rl.rputype, 
-	rl.totalmv, 
-	b.name as barangay, 
-	rp.fromqtr,
+  rem.objid as liquidationid,
+  rem.controldate as liquidationdate,
+  rem.objid as remittanceid,
+  rem.controldate as remittancedate,
+  eor.objid as receiptid, 
+  eor.receiptdate as ordate, 
+  eor.receiptno as orno, 
+  rem.createdby_objid as collectorid,
+  rl.objid as rptledgerid,
+  rl.fullpin,
+  rl.titleno, 
+  rl.cadastrallotno, 
+  rl.rputype, 
+  rl.totalmv, 
+  b.name as barangay, 
+  rp.fromqtr,
   rp.toqtr,
   rpi.year,
-	rpi.qtr,
-	rpi.revtype,
-	case when cv.objid is null then rl.owner_name else '*** voided ***' end as taxpayername, 
-	case when cv.objid is null then rl.tdno else '' end as tdno, 
-	case when m.name is null then c.name else m.name end as municityname, 
-	case when cv.objid is null  then rl.classcode else '' end as classification, 
-	case when cv.objid is null then rl.totalav else 0.0 end as assessvalue,
-	case when cv.objid is null then rl.totalav else 0.0 end as assessedvalue,
-	case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as basiccurrentyear,
-	case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as basicpreviousyear,
-	case when cv.objid is null  and rpi.revtype = 'basic' then rpi.discount else 0.0 end as basicdiscount,
-	case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as basicpenaltycurrent,
-	case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as basicpenaltyprevious,
+  rpi.qtr,
+  rpi.revtype,
+  case when cv.objid is null then rl.owner_name else '*** voided ***' end as taxpayername, 
+  case when cv.objid is null then rl.tdno else '' end as tdno, 
+  case when m.name is null then c.name else m.name end as municityname, 
+  case when cv.objid is null  then rl.classcode else '' end as classification, 
+  case when cv.objid is null then rl.totalav else 0.0 end as assessvalue,
+  case when cv.objid is null then rl.totalav else 0.0 end as assessedvalue,
+  case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as basiccurrentyear,
+  case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as basicpreviousyear,
+  case when cv.objid is null  and rpi.revtype = 'basic' then rpi.discount else 0.0 end as basicdiscount,
+  case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as basicpenaltycurrent,
+  case when cv.objid is null  and rpi.revtype = 'basic' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as basicpenaltyprevious,
 
-	case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as sefcurrentyear,
-	case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as sefpreviousyear,
-	case when cv.objid is null  and rpi.revtype = 'sef' then rpi.discount else 0.0 end as sefdiscount,
-	case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as sefpenaltycurrent,
-	case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as sefpenaltyprevious,
+  case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as sefcurrentyear,
+  case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as sefpreviousyear,
+  case when cv.objid is null  and rpi.revtype = 'sef' then rpi.discount else 0.0 end as sefdiscount,
+  case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as sefpenaltycurrent,
+  case when cv.objid is null  and rpi.revtype = 'sef' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as sefpenaltyprevious,
 
-	case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as basicidlecurrent,
-	case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as basicidleprevious,
-	case when cv.objid is null  and rpi.revtype = 'basicidle' then rpi.amount else 0.0 end as basicidlediscount,
-	case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as basicidlecurrentpenalty,
-	case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as basicidlepreviouspenalty,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as basicidlecurrent,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as basicidleprevious,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' then rpi.amount else 0.0 end as basicidlediscount,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as basicidlecurrentpenalty,
+  case when cv.objid is null  and rpi.revtype = 'basicidle' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as basicidlepreviouspenalty,
 
-	
-	case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as shcurrent,
-	case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as shprevious,
-	case when cv.objid is null  and rpi.revtype = 'sh' then rpi.discount else 0.0 end as shdiscount,
-	case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as shcurrentpenalty,
-	case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as shpreviouspenalty,
+  
+  case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('current','advance') then rpi.amount else 0.0 end as shcurrent,
+  case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('previous','prior') then rpi.amount else 0.0 end as shprevious,
+  case when cv.objid is null  and rpi.revtype = 'sh' then rpi.discount else 0.0 end as shdiscount,
+  case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('current','advance') then rpi.interest else 0.0 end as shcurrentpenalty,
+  case when cv.objid is null  and rpi.revtype = 'sh' and rpi.revperiod in ('previous','prior') then rpi.interest else 0.0 end as shpreviouspenalty,
 
-	case when cv.objid is null and rpi.revtype = 'firecode' then rpi.amount else 0.0 end as firecode,
-	
-	case 
-			when cv.objid is null 
-			then rpi.amount - rpi.discount + rpi.interest 
-			else 0.0 
-	end as total,
-	case when cv.objid is null then rpi.partialled else 0 end as partialled
+  case when cv.objid is null and rpi.revtype = 'firecode' then rpi.amount else 0.0 end as firecode,
+  
+  case 
+      when cv.objid is null 
+      then rpi.amount - rpi.discount + rpi.interest 
+      else 0.0 
+  end as total,
+  case when cv.objid is null then rpi.partialled else 0 end as partialled
 from vw_landtax_eor_remittance rem
-	inner join vw_landtax_eor eor on rem.objid = eor.remittanceid 
-	left join cashreceipt_void cv on eor.objid = cv.receiptid 
-	inner join rptpayment rp on eor.objid = rp.receiptid 
-	inner join rptpayment_item rpi on rpi.parentid = rp.objid
-	inner join rptledger rl on rl.objid = rp.refid
-	inner join barangay b on b.objid  = rl.barangayid
-	left join district d on b.parentid = d.objid 
-	left join city c on d.parentid = c.objid 
-	left join municipality m on b.parentid = m.objid 
+  inner join vw_landtax_eor eor on rem.objid = eor.remittanceid 
+  left join cashreceipt_void cv on eor.objid = cv.receiptid 
+  inner join rptpayment rp on eor.objid = rp.receiptid 
+  inner join rptpayment_item rpi on rpi.parentid = rp.objid
+  inner join rptledger rl on rl.objid = rp.refid
+  inner join barangay b on b.objid  = rl.barangayid
+  left join district d on b.parentid = d.objid 
+  left join city c on d.parentid = c.objid 
+  left join municipality m on b.parentid = m.objid 
 ;
 
 
@@ -513,26 +513,26 @@ drop view if exists vw_landtax_collection_detail
 create view vw_landtax_collection_detail
 as 
 select 
-	cv.objid as liquidationid,
-	cv.controldate as liquidationdate,
-	rem.objid as remittanceid,
-	rem.controldate as remittancedate,
-	cr.receiptdate,
-	o.objid as lguid,
-	o.name as lgu,
-	b.objid as barangayid,
-	b.indexno as brgyindex,
-	b.name as barangay,
-	ri.revperiod,
-	ri.revtype,
-	ri.year,
-	ri.qtr,
-	ri.amount,
-	ri.interest,
-	ri.discount,
+  cv.objid as liquidationid,
+  cv.controldate as liquidationdate,
+  rem.objid as remittanceid,
+  rem.controldate as remittancedate,
+  cr.receiptdate,
+  o.objid as lguid,
+  o.name as lgu,
+  b.objid as barangayid,
+  b.indexno as brgyindex,
+  b.name as barangay,
+  ri.revperiod,
+  ri.revtype,
+  ri.year,
+  ri.qtr,
+  ri.amount,
+  ri.interest,
+  ri.discount,
   pc.name as classname, 
-	pc.orderno, 
-	pc.special,  
+  pc.orderno, 
+  pc.special,  
   case when ri.revperiod='current' and ri.revtype = 'basic' then ri.amount else 0.0 end  as basiccurrent,
   case when ri.revtype = 'basic' then ri.discount else 0.0 end  as basicdisc,
   case when ri.revperiod in ('previous', 'prior') and ri.revtype = 'basic'  then ri.amount else 0.0 end  as basicprev,
@@ -569,8 +569,8 @@ from remittance rem
   inner join rptpayment rp on cr.objid = rp.receiptid 
   inner join rptpayment_item ri on rp.objid = ri.parentid
   left join rptledger rl ON rp.refid = rl.objid  
-	left join barangay b on rl.barangayid = b.objid 
-	left join sys_org o on rl.lguid = o.objid  
+  left join barangay b on rl.barangayid = b.objid 
+  left join sys_org o on rl.lguid = o.objid  
   left join propertyclassification pc ON rl.classification_objid = pc.objid 
 where crv.objid is null 
 ;
@@ -582,12 +582,12 @@ drop view if exists vw_landtax_collection_disposition_detail
 create view vw_landtax_collection_disposition_detail
 as 
 select   
-	cv.objid as liquidationid,
-	cv.controldate as liquidationdate,
-	rem.objid as remittanceid,
-	rem.controldate as remittancedate,
-	cr.receiptdate,
-	ri.revperiod,
+  cv.objid as liquidationid,
+  cv.controldate as liquidationdate,
+  rem.objid as remittanceid,
+  rem.controldate as remittancedate,
+  cr.receiptdate,
+  ri.revperiod,
     case when ri.revtype in ('basic', 'basicint', 'basicidle', 'basicidleint') and ri.sharetype in ('province', 'city') then ri.amount else 0.0 end as provcitybasicshare,
     case when ri.revtype in ('basic', 'basicint', 'basicidle', 'basicidleint') and ri.sharetype in ('municipality') then ri.amount else 0.0 end as munibasicshare,
     case when ri.revtype in ('basic', 'basicint') and ri.sharetype in ('barangay') then ri.amount else 0.0 end as brgybasicshare,
@@ -597,7 +597,7 @@ select
   from remittance rem 
     inner join collectionvoucher cv on cv.objid = rem.collectionvoucherid 
     inner join cashreceipt cr on cr.remittanceid = rem.objid 
-		left join cashreceipt_void crv on cr.objid = crv.receiptid 
+    left join cashreceipt_void crv on cr.objid = crv.receiptid 
     inner join rptpayment rp on cr.objid = rp.receiptid 
     inner join rptpayment_share ri on rp.objid = ri.parentid
   where crv.objid is null 
@@ -610,26 +610,26 @@ drop view if exists vw_landtax_collection_detail_eor
 create view vw_landtax_collection_detail_eor
 as 
 select 
-	rem.objid as liquidationid,
-	rem.controldate as liquidationdate,
-	rem.objid as remittanceid,
-	rem.controldate as remittancedate,
-	eor.receiptdate,
-	o.objid as lguid,
-	o.name as lgu,
-	b.objid as barangayid,
-	b.indexno as brgyindex,
-	b.name as barangay,
-	ri.revperiod,
-	ri.revtype,
-	ri.year,
-	ri.qtr,
-	ri.amount,
-	ri.interest,
-	ri.discount,
+  rem.objid as liquidationid,
+  rem.controldate as liquidationdate,
+  rem.objid as remittanceid,
+  rem.controldate as remittancedate,
+  eor.receiptdate,
+  o.objid as lguid,
+  o.name as lgu,
+  b.objid as barangayid,
+  b.indexno as brgyindex,
+  b.name as barangay,
+  ri.revperiod,
+  ri.revtype,
+  ri.year,
+  ri.qtr,
+  ri.amount,
+  ri.interest,
+  ri.discount,
   pc.name as classname, 
-	pc.orderno, 
-	pc.special,  
+  pc.orderno, 
+  pc.special,  
   case when ri.revperiod='current' and ri.revtype = 'basic' then ri.amount else 0.0 end  as basiccurrent,
   case when ri.revtype = 'basic' then ri.discount else 0.0 end  as basicdisc,
   case when ri.revperiod in ('previous', 'prior') and ri.revtype = 'basic'  then ri.amount else 0.0 end  as basicprev,
@@ -664,8 +664,8 @@ from vw_landtax_eor_remittance rem
   inner join rptpayment rp on eor.objid = rp.receiptid 
   inner join rptpayment_item ri on rp.objid = ri.parentid
   left join rptledger rl ON rp.refid = rl.objid  
-	left join barangay b on rl.barangayid = b.objid
-	left join sys_org o on rl.lguid = o.objid   
+  left join barangay b on rl.barangayid = b.objid
+  left join sys_org o on rl.lguid = o.objid   
   left join propertyclassification pc ON rl.classification_objid = pc.objid 
 ;
 
@@ -676,12 +676,12 @@ drop view if exists vw_landtax_collection_disposition_detail_eor
 create view vw_landtax_collection_disposition_detail_eor
 as 
 select   
-	rem.objid as liquidationid,
-	rem.controldate as liquidationdate,
-	rem.objid as remittanceid,
-	rem.controldate as remittancedate,
-	eor.receiptdate,
-	ri.revperiod,
+  rem.objid as liquidationid,
+  rem.controldate as liquidationdate,
+  rem.objid as remittanceid,
+  rem.controldate as remittancedate,
+  eor.receiptdate,
+  ri.revperiod,
     case when ri.revtype in ('basic', 'basicint', 'basicidle', 'basicidleint') and ri.sharetype in ('province', 'city') then ri.amount else 0.0 end as provcitybasicshare,
     case when ri.revtype in ('basic', 'basicint', 'basicidle', 'basicidleint') and ri.sharetype in ('municipality') then ri.amount else 0.0 end as munibasicshare,
     case when ri.revtype in ('basic', 'basicint') and ri.sharetype in ('barangay') then ri.amount else 0.0 end as brgybasicshare,
@@ -690,7 +690,7 @@ select
     0.0 as brgysefshare 
   from vw_landtax_eor_remittance rem 
     inner join vw_landtax_eor eor on rem.objid = eor.remittanceid
-		inner join rptpayment rp on eor.objid = rp.receiptid 
+    inner join rptpayment rp on eor.objid = rp.receiptid 
     inner join rptpayment_share ri on rp.objid = ri.parentid
   
 ;
@@ -698,53 +698,53 @@ select
 
 create view vw_newly_assessed_property as 
 select
-	f.objid,
-	f.owner_name,
-	f.tdno,
-	b.name as barangay,
-	case 
-		when f.rputype = 'land' then 'LAND' 
-		when f.rputype = 'bldg' then 'BUILDING' 
-		when f.rputype = 'mach' then 'MACHINERY' 
-		when f.rputype = 'planttree' then 'PLANT/TREE' 
-		else 'MISCELLANEOUS'
-	end as rputype,
-	f.totalav,
-	f.effectivityyear
+  f.objid,
+  f.owner_name,
+  f.tdno,
+  b.name as barangay,
+  case 
+    when f.rputype = 'land' then 'LAND' 
+    when f.rputype = 'bldg' then 'BUILDING' 
+    when f.rputype = 'mach' then 'MACHINERY' 
+    when f.rputype = 'planttree' then 'PLANT/TREE' 
+    else 'MISCELLANEOUS'
+  end as rputype,
+  f.totalav,
+  f.effectivityyear
 from faas_list f 
-	inner join barangay b on f.barangayid = b.objid 
+  inner join barangay b on f.barangayid = b.objid 
 where f.state in ('CURRENT', 'CANCELLED') 
 and f.txntype_objid = 'ND'
 ;
 
 create view vw_real_property_payment as 
 select 
-	cv.controldate as cv_controldate,
-	rem.controldate as rem_controldate,
-	rl.owner_name,
-	rl.tdno,
-	pc.name as classification, 
-	case 
-		when rl.rputype = 'land' then 'LAND' 
-		when rl.rputype = 'bldg' then 'BUILDING' 
-		when rl.rputype = 'mach' then 'MACHINERY' 
-		when rl.rputype = 'planttree' then 'PLANT/TREE' 
-		else 'MISCELLANEOUS'
-	end as rputype,
-	b.name as barangay,
-	rpi.year, 
-	rpi.qtr,
-	rpi.amount + rpi.interest - rpi.discount as amount,
-	case when v.objid is null then 0 else 1 end as voided
+  cv.controldate as cv_controldate,
+  rem.controldate as rem_controldate,
+  rl.owner_name,
+  rl.tdno,
+  pc.name as classification, 
+  case 
+    when rl.rputype = 'land' then 'LAND' 
+    when rl.rputype = 'bldg' then 'BUILDING' 
+    when rl.rputype = 'mach' then 'MACHINERY' 
+    when rl.rputype = 'planttree' then 'PLANT/TREE' 
+    else 'MISCELLANEOUS'
+  end as rputype,
+  b.name as barangay,
+  rpi.year, 
+  rpi.qtr,
+  rpi.amount + rpi.interest - rpi.discount as amount,
+  case when v.objid is null then 0 else 1 end as voided
 from collectionvoucher cv 
-	inner join remittance rem on cv.objid = rem.collectionvoucherid
-	inner join cashreceipt cr on rem.objid = cr.remittanceid
-	inner join rptpayment rp on cr.objid = rp.receiptid 
-	inner join rptpayment_item rpi on rp.objid = rpi.parentid 
-	inner join rptledger rl on rp.refid = rl.objid 
-	inner join barangay b on rl.barangayid = b.objid 
-	inner join propertyclassification pc on rl.classification_objid = pc.objid 
-	left join cashreceipt_void v on cr.objid = v.receiptid
+  inner join remittance rem on cv.objid = rem.collectionvoucherid
+  inner join cashreceipt cr on rem.objid = cr.remittanceid
+  inner join rptpayment rp on cr.objid = rp.receiptid 
+  inner join rptpayment_item rpi on rp.objid = rpi.parentid 
+  inner join rptledger rl on rp.refid = rl.objid 
+  inner join barangay b on rl.barangayid = b.objid 
+  inner join propertyclassification pc on rl.classification_objid = pc.objid 
+  left join cashreceipt_void v on cr.objid = v.receiptid
 ;
 
 drop view if exists vw_rptledger_cancelled_faas 
@@ -753,40 +753,40 @@ drop view if exists vw_rptledger_cancelled_faas
 create view vw_rptledger_cancelled_faas 
 as 
 select 
-	rl.objid,
-	rl.state,
-	rl.faasid,
-	rl.lastyearpaid,
-	rl.lastqtrpaid,
-	rl.barangayid,
-	rl.taxpayer_objid,
-	rl.fullpin,
-	rl.tdno,
-	rl.cadastrallotno,
-	rl.rputype,
-	rl.txntype_objid,
-	rl.classification_objid,
-	rl.classcode,
-	rl.totalav,
-	rl.totalmv,
-	rl.totalareaha,
-	rl.taxable,
-	rl.owner_name,
-	rl.prevtdno,
-	rl.titleno,
-	rl.administrator_name,
-	rl.blockno,
-	rl.lguid,
-	rl.beneficiary_objid,
-	pc.name as classification,
-	b.name as barangay,
-	o.name as lgu
+  rl.objid,
+  rl.state,
+  rl.faasid,
+  rl.lastyearpaid,
+  rl.lastqtrpaid,
+  rl.barangayid,
+  rl.taxpayer_objid,
+  rl.fullpin,
+  rl.tdno,
+  rl.cadastrallotno,
+  rl.rputype,
+  rl.txntype_objid,
+  rl.classification_objid,
+  rl.classcode,
+  rl.totalav,
+  rl.totalmv,
+  rl.totalareaha,
+  rl.taxable,
+  rl.owner_name,
+  rl.prevtdno,
+  rl.titleno,
+  rl.administrator_name,
+  rl.blockno,
+  rl.lguid,
+  rl.beneficiary_objid,
+  pc.name as classification,
+  b.name as barangay,
+  o.name as lgu
 from rptledger rl 
-	inner join faas f on rl.faasid = f.objid 
-	left join barangay b on rl.barangayid = b.objid 
-	left join sys_org o on rl.lguid = o.objid 
-	left join propertyclassification pc on rl.classification_objid = pc.objid 
-	inner join entity e on rl.taxpayer_objid = e.objid 
+  inner join faas f on rl.faasid = f.objid 
+  left join barangay b on rl.barangayid = b.objid 
+  left join sys_org o on rl.lguid = o.objid 
+  left join propertyclassification pc on rl.classification_objid = pc.objid 
+  inner join entity e on rl.taxpayer_objid = e.objid 
 where rl.state = 'APPROVED' 
 and f.state = 'CANCELLED' 
 ;
@@ -798,17 +798,17 @@ drop view if exists vw_certification_landdetail
 create view vw_certification_landdetail 
 as 
 select 
-	f.objid as faasid,
-	ld.areaha,
-	ld.areasqm,
-	ld.assessedvalue,
-	ld.marketvalue,
-	ld.basemarketvalue,
-	ld.unitvalue,
-	lspc.name as specificclass_name
+  f.objid as faasid,
+  ld.areaha,
+  ld.areasqm,
+  ld.assessedvalue,
+  ld.marketvalue,
+  ld.basemarketvalue,
+  ld.unitvalue,
+  lspc.name as specificclass_name
 from faas f 
-	inner join landdetail ld on f.rpuid = ld.landrpuid
-	inner join landspecificclass lspc on ld.landspecificclass_objid = lspc.objid 
+  inner join landdetail ld on f.rpuid = ld.landrpuid
+  inner join landspecificclass lspc on ld.landspecificclass_objid = lspc.objid 
 ;
 
 
@@ -818,18 +818,18 @@ drop view if exists vw_certification_land_improvement
 create view vw_certification_land_improvement
 as 
 select 
-	f.objid as faasid,
-	pt.name as improvement,
-	ptd.areacovered,
-	ptd.productive,
-	ptd.nonproductive,
-	ptd.basemarketvalue,
-	ptd.marketvalue,
-	ptd.unitvalue,
-	ptd.assessedvalue
+  f.objid as faasid,
+  pt.name as improvement,
+  ptd.areacovered,
+  ptd.productive,
+  ptd.nonproductive,
+  ptd.basemarketvalue,
+  ptd.marketvalue,
+  ptd.unitvalue,
+  ptd.assessedvalue
 from faas f 
-	inner join planttreedetail ptd on f.rpuid = ptd.landrpuid
-	inner join planttree pt on ptd.planttree_objid = pt.objid
+  inner join planttreedetail ptd on f.rpuid = ptd.landrpuid
+  inner join planttree pt on ptd.planttree_objid = pt.objid
 ;
 
 
@@ -993,56 +993,56 @@ drop view if exists vw_building
 
 create view vw_building as 
 select 
-	f.objid,
-	f.state,
-	f.rpuid,
-	f.realpropertyid,
-	f.tdno, 
-	f.fullpin, 
-	f.taxpayer_objid, 
-	f.owner_name, 
-	f.owner_address,
-	f.administrator_name,
-	f.administrator_address,
-	f.lguid as lgu_objid,
-	o.name as lgu_name,
-	b.objid as barangay_objid,
-	b.name as barangay_name,
-	r.classification_objid,
-	pc.name as classification_name,
-	rp.pin,
-	rp.section,
-	rp.ry, 
-	rp.cadastrallotno, 
-	rp.blockno, 
-	rp.surveyno,
-	bt.objid as bldgtype_objid,
-	bt.name as bldgtype_name,
-	bk.objid as bldgkind_objid,
-	bk.name as bldgkind_name,
-	bu.basemarketvalue,
-	bu.adjustment,
-	bu.depreciationvalue,
-	bu.marketvalue,
-	bu.assessedvalue,
-	al.objid as actualuse_objid,
-	al.name as actualuse_name,
-	r.totalareaha,
-	r.totalareasqm,
-	r.totalmv, 
-	r.totalav
+  f.objid,
+  f.state,
+  f.rpuid,
+  f.realpropertyid,
+  f.tdno, 
+  f.fullpin, 
+  f.taxpayer_objid, 
+  f.owner_name, 
+  f.owner_address,
+  f.administrator_name,
+  f.administrator_address,
+  f.lguid as lgu_objid,
+  o.name as lgu_name,
+  b.objid as barangay_objid,
+  b.name as barangay_name,
+  r.classification_objid,
+  pc.name as classification_name,
+  rp.pin,
+  rp.section,
+  rp.ry, 
+  rp.cadastrallotno, 
+  rp.blockno, 
+  rp.surveyno,
+  bt.objid as bldgtype_objid,
+  bt.name as bldgtype_name,
+  bk.objid as bldgkind_objid,
+  bk.name as bldgkind_name,
+  bu.basemarketvalue,
+  bu.adjustment,
+  bu.depreciationvalue,
+  bu.marketvalue,
+  bu.assessedvalue,
+  al.objid as actualuse_objid,
+  al.name as actualuse_name,
+  r.totalareaha,
+  r.totalareasqm,
+  r.totalmv, 
+  r.totalav
 from faas f
-	inner join rpu r on f.rpuid = r.objid 
-	inner join propertyclassification pc on r.classification_objid = pc.objid
-	inner join realproperty rp on f.realpropertyid = rp.objid 
-	inner join barangay b on rp.barangayid = b.objid 
-	inner join sys_org o on f.lguid = o.objid 
-	inner join bldgrpu_structuraltype bst on r.objid = bst.bldgrpuid 
-	inner join bldgtype bt on bst.bldgtype_objid = bt.objid 
-	inner join bldgkindbucc bucc on bst.bldgkindbucc_objid = bucc.objid 
-	inner join bldgkind bk on bucc.bldgkind_objid = bk.objid 
-	inner join bldguse bu on bst.objid = bu.structuraltype_objid
-	inner join bldgassesslevel al on bu.actualuse_objid = al.objid 
+  inner join rpu r on f.rpuid = r.objid 
+  inner join propertyclassification pc on r.classification_objid = pc.objid
+  inner join realproperty rp on f.realpropertyid = rp.objid 
+  inner join barangay b on rp.barangayid = b.objid 
+  inner join sys_org o on f.lguid = o.objid 
+  inner join bldgrpu_structuraltype bst on r.objid = bst.bldgrpuid 
+  inner join bldgtype bt on bst.bldgtype_objid = bt.objid 
+  inner join bldgkindbucc bucc on bst.bldgkindbucc_objid = bucc.objid 
+  inner join bldgkind bk on bucc.bldgkind_objid = bk.objid 
+  inner join bldguse bu on bst.objid = bu.structuraltype_objid
+  inner join bldgassesslevel al on bu.actualuse_objid = al.objid 
 ;
 
 
@@ -1051,50 +1051,50 @@ drop view if exists vw_machinery
 
 create view vw_machinery as 
 select 
-	f.objid,
-	f.state,
-	f.rpuid,
-	f.realpropertyid,
-	f.tdno, 
-	f.fullpin, 
-	f.taxpayer_objid, 
-	f.owner_name, 
-	f.owner_address,
-	f.administrator_name,
-	f.administrator_address,
-	f.lguid as lgu_objid,
-	o.name as lgu_name,
-	b.objid as barangay_objid,
-	b.name as barangay_name,
-	r.classification_objid,
-	pc.name as classification_name,
-	rp.pin,
-	rp.section,
-	rp.ry, 
-	rp.cadastrallotno, 
-	rp.blockno, 
-	rp.surveyno,
-	m.objid as machine_objid,
-	m.name as machine_name,
-	mu.basemarketvalue,
-	mu.marketvalue,
-	mu.assessedvalue,
-	al.objid as actualuse_objid,
-	al.name as actualuse_name,
-	r.totalareaha,
-	r.totalareasqm,
-	r.totalmv, 
-	r.totalav
+  f.objid,
+  f.state,
+  f.rpuid,
+  f.realpropertyid,
+  f.tdno, 
+  f.fullpin, 
+  f.taxpayer_objid, 
+  f.owner_name, 
+  f.owner_address,
+  f.administrator_name,
+  f.administrator_address,
+  f.lguid as lgu_objid,
+  o.name as lgu_name,
+  b.objid as barangay_objid,
+  b.name as barangay_name,
+  r.classification_objid,
+  pc.name as classification_name,
+  rp.pin,
+  rp.section,
+  rp.ry, 
+  rp.cadastrallotno, 
+  rp.blockno, 
+  rp.surveyno,
+  m.objid as machine_objid,
+  m.name as machine_name,
+  mu.basemarketvalue,
+  mu.marketvalue,
+  mu.assessedvalue,
+  al.objid as actualuse_objid,
+  al.name as actualuse_name,
+  r.totalareaha,
+  r.totalareasqm,
+  r.totalmv, 
+  r.totalav
 from faas f
-	inner join rpu r on f.rpuid = r.objid 
-	inner join propertyclassification pc on r.classification_objid = pc.objid
-	inner join realproperty rp on f.realpropertyid = rp.objid 
-	inner join barangay b on rp.barangayid = b.objid 
-	inner join sys_org o on f.lguid = o.objid 
-	inner join machuse mu on r.objid = mu.machrpuid
-	inner join machdetail md on mu.objid = md.machuseid
-	inner join machine m on md.machine_objid = m.objid 
-	inner join machassesslevel al on mu.actualuse_objid = al.objid 
+  inner join rpu r on f.rpuid = r.objid 
+  inner join propertyclassification pc on r.classification_objid = pc.objid
+  inner join realproperty rp on f.realpropertyid = rp.objid 
+  inner join barangay b on rp.barangayid = b.objid 
+  inner join sys_org o on f.lguid = o.objid 
+  inner join machuse mu on r.objid = mu.machrpuid
+  inner join machdetail md on mu.objid = md.machuseid
+  inner join machine m on md.machine_objid = m.objid 
+  inner join machassesslevel al on mu.actualuse_objid = al.objid 
 ;
 
 
@@ -1158,29 +1158,29 @@ drop view if exists vw_report_orc
 
 create view vw_report_orc as 
 select 
-	f.objid,
-	f.state,
-	e.objid as taxpayerid,
-	e.name as taxpayer_name,
-	e.address_text as taxpayer_address,
-  	o.name as lgu_name,
-	o.code as lgu_indexno,
-	f.dtapproved,
-	r.rputype,
-	pc.code as classcode,
-	pc.name as classification,
-	f.fullpin as pin,
-	f.titleno,
-	rp.cadastrallotno,
-	f.tdno,
-	'' as arpno,
-	f.prevowner,
-	b.name as location,
-	r.totalareaha,
-	r.totalareasqm,
-	r.totalmv, 
-	r.totalav,
-	case when f.state = 'CURRENT' then '' else 'CANCELLED' end as remarks
+  f.objid,
+  f.state,
+  e.objid as taxpayerid,
+  e.name as taxpayer_name,
+  e.address_text as taxpayer_address,
+    o.name as lgu_name,
+  o.code as lgu_indexno,
+  f.dtapproved,
+  r.rputype,
+  pc.code as classcode,
+  pc.name as classification,
+  f.fullpin as pin,
+  f.titleno,
+  rp.cadastrallotno,
+  f.tdno,
+  '' as arpno,
+  f.prevowner,
+  b.name as location,
+  r.totalareaha,
+  r.totalareasqm,
+  r.totalmv, 
+  r.totalav,
+  case when f.state = 'CURRENT' then '' else 'CANCELLED' end as remarks
 from faas f
 inner join rpu r on f.rpuid = r.objid 
 inner join realproperty rp on f.realpropertyid = rp.objid 
@@ -1454,8 +1454,8 @@ alter table machuse add taxable int
 ;
 update machuse set taxable = 1 where taxable is null
 ;
-create unique index ux_actualuseid_taxable on machuse(machrpuid, actualuse_objid, taxable)
-;
+-- create unique index ux_actualuseid_taxable on machuse(machrpuid, actualuse_objid, taxable)
+-- ;
 
 
 /* SYNCDATA: pre-download file */
@@ -1935,7 +1935,7 @@ create index ix_objid on zzztmp_examiner_finding (objid)
 ;
 
 update examiner_finding f, zzztmp_examiner_finding z set 
-	f.txnno = concat('S', lpad(z.oid, 6, '0'))
+  f.txnno = concat('S', lpad(z.oid, 6, '0'))
 where f.objid = z.objid 
 ;
 
@@ -1952,7 +1952,7 @@ drop view if exists vw_ocular_inspection
 create view vw_ocular_inspection 
 as 
 SELECT 
-	ef.objid,
+  ef.objid,
   ef.findings,
   ef.parent_objid,
   ef.dtinspected,
@@ -1966,34 +1966,34 @@ SELECT
   ef.inspectedby_title,
   ef.doctype,
   ef.txnno,  
-	f.owner_name, 
+  f.owner_name, 
   f.owner_address,
-	f.titleno, 
-	f.fullpin,
-	rp.blockno,
-	rp.cadastrallotno, 
-	r.totalareaha,
-	r.totalareasqm,
-	r.totalmv,
-	r.totalav,
+  f.titleno, 
+  f.fullpin,
+  rp.blockno,
+  rp.cadastrallotno, 
+  r.totalareaha,
+  r.totalareasqm,
+  r.totalmv,
+  r.totalav,
   f.lguid,
   o.name as lgu_name,
-	rp.barangayid, 
-	b.name as barangay_name, 
-	b.objid as barangay_parentid, 
-	rp.purok, 
-	rp.street
+  rp.barangayid, 
+  b.name as barangay_name, 
+  b.objid as barangay_parentid, 
+  rp.purok, 
+  rp.street
 FROM examiner_finding ef 
-	INNER JOIN faas f ON ef.parent_objid = f.objid 
-	INNER JOIN rpu r ON f.rpuid = r.objid 
-	INNER JOIN realproperty rp ON f.realpropertyid = rp.objid 
-	INNER JOIN sys_org b ON rp.barangayid = b.objid 
+  INNER JOIN faas f ON ef.parent_objid = f.objid 
+  INNER JOIN rpu r ON f.rpuid = r.objid 
+  INNER JOIN realproperty rp ON f.realpropertyid = rp.objid 
+  INNER JOIN sys_org b ON rp.barangayid = b.objid 
   INNER JOIN sys_org o on f.lguid = o.objid 
 
 union all 
 
 SELECT 
-	ef.objid,
+  ef.objid,
   ef.findings,
   ef.parent_objid,
   ef.dtinspected,
@@ -2007,35 +2007,35 @@ SELECT
   ef.inspectedby_title,
   ef.doctype,
   ef.txnno,  
-	f.owner_name, 
+  f.owner_name, 
   f.owner_address,
-	f.titleno, 
-	f.fullpin,
-	rp.blockno,
-	rp.cadastrallotno, 
-	r.totalareaha,
-	r.totalareasqm,
-	r.totalmv,
-	r.totalav,
+  f.titleno, 
+  f.fullpin,
+  rp.blockno,
+  rp.cadastrallotno, 
+  r.totalareaha,
+  r.totalareasqm,
+  r.totalmv,
+  r.totalav,
   f.lguid,
   o.name as lgu_name,
-	rp.barangayid, 
-	b.name as barangay_name, 
-	b.parent_objid as barangay_parentid, 
-	rp.purok, 
-	rp.street
+  rp.barangayid, 
+  b.name as barangay_name, 
+  b.parent_objid as barangay_parentid, 
+  rp.purok, 
+  rp.street
 FROM examiner_finding ef 
-	inner join subdivision_motherland sm on ef.parent_objid = sm.subdivisionid
-	INNER JOIN faas f ON sm.landfaasid = f.objid 
-	INNER JOIN rpu r ON f.rpuid = r.objid 
-	INNER JOIN realproperty rp ON f.realpropertyid = rp.objid 
-	INNER JOIN sys_org b ON rp.barangayid = b.objid 
+  inner join subdivision_motherland sm on ef.parent_objid = sm.subdivisionid
+  INNER JOIN faas f ON sm.landfaasid = f.objid 
+  INNER JOIN rpu r ON f.rpuid = r.objid 
+  INNER JOIN realproperty rp ON f.realpropertyid = rp.objid 
+  INNER JOIN sys_org b ON rp.barangayid = b.objid 
   INNER JOIN sys_org o on f.lguid = o.objid 
 
 UNION ALL 
 
 SELECT 
-	ef.objid,
+  ef.objid,
   ef.findings,
   ef.parent_objid,
   ef.dtinspected,
@@ -2049,36 +2049,36 @@ SELECT
   ef.inspectedby_title,
   ef.doctype,
   ef.txnno,  
-	f.owner_name, 
+  f.owner_name, 
   f.owner_address,
-	f.titleno, 
-	f.fullpin,
-	rp.blockno,
-	rp.cadastrallotno, 
-	r.totalareaha,
-	r.totalareasqm,
-	r.totalmv,
-	r.totalav,
+  f.titleno, 
+  f.fullpin,
+  rp.blockno,
+  rp.cadastrallotno, 
+  r.totalareaha,
+  r.totalareasqm,
+  r.totalmv,
+  r.totalav,
   f.lguid,
   o.name as lgu_name,
-	rp.barangayid, 
-	b.name as barangay_name, 
-	b.parent_objid as barangay_parentid, 
-	rp.purok, 
-	rp.street
+  rp.barangayid, 
+  b.name as barangay_name, 
+  b.parent_objid as barangay_parentid, 
+  rp.purok, 
+  rp.street
 FROM examiner_finding ef 
-	inner join consolidation c on ef.parent_objid = c.objid 
-	INNER JOIN faas f ON c.newfaasid = f.objid 
-	INNER JOIN rpu r ON f.rpuid = r.objid 
-	INNER JOIN realproperty rp ON f.realpropertyid = rp.objid 
-	INNER JOIN sys_org b ON rp.barangayid = b.objid 
+  inner join consolidation c on ef.parent_objid = c.objid 
+  INNER JOIN faas f ON c.newfaasid = f.objid 
+  INNER JOIN rpu r ON f.rpuid = r.objid 
+  INNER JOIN realproperty rp ON f.realpropertyid = rp.objid 
+  INNER JOIN sys_org b ON rp.barangayid = b.objid 
   INNER JOIN sys_org o on f.lguid = o.objid 
 
 union all 
 
 
 SELECT 
-	ef.objid,
+  ef.objid,
   ef.findings,
   ef.parent_objid,
   ef.dtinspected,
@@ -2092,26 +2092,26 @@ SELECT
   ef.inspectedby_title,
   ef.doctype,
   ef.txnno,  
-	'' as owner_name, 
+  '' as owner_name, 
   '' as owner_address,
-	'' as titleno, 
-	'' as fullpin,
-	'' as blockno,
-	'' as cadastrallotno, 
-	0 as totalareaha,
-	0 as totalareasqm,
-	0 as totalmv,
-	0 as totalav,
+  '' as titleno, 
+  '' as fullpin,
+  '' as blockno,
+  '' as cadastrallotno, 
+  0 as totalareaha,
+  0 as totalareasqm,
+  0 as totalmv,
+  0 as totalav,
   o.objid as lguid,
   o.name as lgu_name,
-	b.objid as barangayid, 
-	b.name as barangay_name, 
-	b.parent_objid as barangay_parentid, 
-	'' as purok, 
-	'' as street
+  b.objid as barangayid, 
+  b.name as barangay_name, 
+  b.parent_objid as barangay_parentid, 
+  '' as purok, 
+  '' as street
 FROM examiner_finding ef 
-	inner join batchgr bgr on ef.parent_objid = bgr.objid 
-	INNER JOIN sys_org b ON bgr.barangay_objid = b.objid 
+  inner join batchgr bgr on ef.parent_objid = bgr.objid 
+  INNER JOIN sys_org b ON bgr.barangay_objid = b.objid 
   INNER JOIN sys_org o on bgr.lgu_objid = o.objid 
 ;
 

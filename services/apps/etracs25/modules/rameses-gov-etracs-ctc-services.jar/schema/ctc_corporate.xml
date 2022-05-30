@@ -1,0 +1,22 @@
+<schema>
+	<element name="ctc_corporate" tablename="cashreceipt_ctc_corporate">
+		<field name="objid" primary="true" />
+		<field name="payer_tin" />
+		<field name="payer_orgtype" />
+		<field name="payer_nature" />
+		<field name="payer_dtregistered" />
+		<field name="payer_placeregistered" />
+		<field name="additional_remarks" />
+		<field name="realpropertyav" required="true" type="decimal" />
+		<field name="businessgross" required="true" type="decimal" />
+		<field name="basictax" required="true" type="decimal" />
+		<field name="propertyavtax" required="true" type="decimal" />
+		<field name="businessgrosstax" required="true" type="decimal" />
+		<field name="totaltax" required="true" type="decimal" />
+		<field name="interest" required="true" type="decimal" />
+		<field name="amountdue" required="true" type="decimal" />
+	</element>
+</schema>
+
+
+

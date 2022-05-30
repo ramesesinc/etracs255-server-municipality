@@ -1,0 +1,48 @@
+import com.rameses.annotations.*;
+import java.rmi.server.*;
+import com.rameses.rules.common.*;
+import com.rameses.util.*;
+import com.rameses.services.extended.*;
+
+
+public class CorporateCTCService {
+
+	@Service("BillingRuleService")
+	def basicBillingService;
+
+	@ProxyMethod
+	public def getCtcRelatedPayerData(entity){
+		return [newbusiness:false]
+		/*
+		// info fields required:
+		// newbusiness, realpropertyav, businessgross
+		def property = em.findRealPropertyAv(entity)
+		def business = em.findBusinessGross(entity)
+		def info = [
+			newbusiness 	: (business.apptype == 'NEW'),
+			businessgross 	: business.totalgross,
+			realpropertyav  : property.totalav,
+		]
+		return info 
+		*/
+	}
+
+	@ProxyMethod
+	public def calculateTax(ctc){
+		ctc.type = "corporate";
+		
+		def req = [:];
+		req.rulename = "ctcbilling"; 
+		req.params = ctc;
+		req.include_items = true;
+		req.include_billitems = false;
+		def r = basicBillingService.execute( req );
+		if( !r.items ) throw new Exception("Please setup items in rules")
+		return r;
+	}
+
+
+}
+	
+
+

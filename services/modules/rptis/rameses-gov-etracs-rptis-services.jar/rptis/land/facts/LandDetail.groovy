@@ -33,7 +33,7 @@ public class LandDetail {
 
     public LandDetail(rpufact, ld){
         this.rpu = rpufact
-        this.classification = new Classification(ld.specificclass?.classification?.objid)
+        this.classification = new Classification(ld.actualuse?.classification?.objid)
         this.specificclassification = new Classification(ld.specificclass?.classification?.objid)
         this.classificationid = ld.specificclass?.classification?.objid
         this.entity = ld

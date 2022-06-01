@@ -37,9 +37,9 @@ class LandTaxReportStatementOfShareService{
         params.todate = dtsvc.add(dtsvc.parse("yyyy-MM-dd",params.todate),"1d");
 
         def period = 'For the Month of ' + dtsvc.format('MMMMM, yyyy', params.fromdate);
-        params.filter = ' liquidationdate >= $P{fromdate} AND liquidationdate < $P{todate} '
+        params.filter = ' cv.controldate >= $P{fromdate} AND cv.controldate < $P{todate} '
         if (params.postingtype && params.postingtype.code == 'byrem'){
-            params.filter = ' remittancedate >= $P{fromdate} AND remittancedate < $P{todate} '
+            params.filter = ' rem.controldate >= $P{fromdate} AND rem.controldate < $P{todate} '
         }
         
 
@@ -61,9 +61,9 @@ class LandTaxReportStatementOfShareService{
         params.todate = dtsvc.add(dtsvc.parse("yyyy-MM-dd",params.todate),"1d")
 
         def period = 'For the Month of ' + dtsvc.format('MMMMM, yyyy', params.fromdate)
-        params.filter = ' liquidationdate >= $P{fromdate} AND liquidationdate < $P{todate} '
+        params.filter = ' cv.controldate >= $P{fromdate} AND cv.controldate < $P{todate} '
         if (params.postingtype && params.postingtype.code == 'byrem'){
-            params.filter = ' remittancedate >= $P{fromdate} AND remittancedate < $P{todate} '
+            params.filter = ' rem.controldate >= $P{fromdate} AND rem.controldate < $P{todate} '
         }
         
 
@@ -164,7 +164,7 @@ class LandTaxReportStatementOfShareService{
 
     @ProxyMethod
     public def getBarangayAdvanceShares(params) {
-        params.filter = ' year = $P{advanceyear} '
+        params.filter = ' rpi.year = $P{advanceyear} '
         def brgyCollections = em.getAdvanceCollectionsByBrgy( params) 
         if(! brgyCollections )  throw new Exception('Records not found.')
 
@@ -200,7 +200,6 @@ class LandTaxReportStatementOfShareService{
             share.brgyshare += bs.brgyshare
         }
 
-        params.lgutype = env.ORGCLASS.toLowerCase()
         params.filter = ' rps.year = $P{advanceyear} '
         def lguShares = em.getAdvanceLguSharesAnnual(params)
         lguShares.each{ls->
@@ -247,9 +246,9 @@ class LandTaxReportStatementOfShareService{
             params.periodtitle = 'For the Month of ' + dtsvc.format('MMMMM, yyyy', params.fromdate)
         }
 
-        params.filter = ' liquidationdate >= $P{fromdate} AND liquidationdate < $P{todate} '
+        params.filter = ' cv.controldate >= $P{fromdate} AND cv.controldate < $P{todate} '
         if (params.postingtype && params.postingtype.code == 'byrem'){
-            params.filter = ' remittancedate >= $P{fromdate} AND remittancedate < $P{todate} '
+            params.filter = ' rem.controldate >= $P{fromdate} AND rem.controldate < $P{todate} '
         }
     }
 }

@@ -1,8 +1,6 @@
 import com.rameses.annotations.*
 import com.rameses.util.*
 import com.rameses.services.extended.*
-import java.math.RoundingMode
-import java.text.DecimalFormat
 
 class BldgRPUService
 {
@@ -27,17 +25,8 @@ class BldgRPUService
 	@DataContext('bldgrpu_land')
 	def em_bldgrpu_land
 
-	@DataContext('bldgrpu_floor_additional')
-	def em_additional
-
-	@DataContext('bldgrpu_floor_additional_param')
-	def em_additional_param
-
 	@Service('RPTUtil')
 	def util
-
-	@Service('NumberService')
-	def numSvc
 
 	@Service('BldgAssessmentRuleService')
 	def ruleSvc 
@@ -241,14 +230,6 @@ class BldgRPUService
 		em_bldgrpu_land.save(item)
 		return item 
 	}
-
-    @ProxyMethod
-    public def deleteAdditionalItems(items) {
-        items.each {
-            em_additional_param.find([bldgflooradditionalid: it.objid]).delete();
-            em_additional.find([objid: it.objid]).delete();
-        }
-    }
 	
 	/*-------------------------------------------------------------------
 	*
@@ -261,29 +242,6 @@ class BldgRPUService
 		return ruleSvc.execute(rpu)
 	}
 
-    @ProxyMethod
-    public def calcBaseValueByGap(stt) {
-        def defvalue = [basevalue: 0]
-        if (!stt.bldgkindbucc) return defvalue;
-        if (stt.totalfloorarea <= 0) return defvalue;
-
-        def minvalue = stt.bldgkindbucc.minbasevalue;
-        def maxvalue = stt.bldgkindbucc.maxbasevalue;
-        def gap = stt.bldgkindbucc.gapvalue;
-        def minarea = stt.bldgkindbucc.minarea;
-        def maxarea = stt.bldgkindbucc.maxarea;
-
-        def areagap = (maxarea - minarea) / gap;
-        def valuegap = numSvc.round((maxvalue - minvalue) / areagap);
-        def diffareagap = floor((stt.totalfloorarea - minarea) / gap);
-        def computedminarea = minarea + gap * diffareagap;
-        def computredminvalue = numSvc.round(maxvalue - valuegap * diffareagap);
-
-        def gaparea = stt.totalfloorarea - computedminarea;
-        def ratio = gaparea / gap;
-        def basevalue = numSvc.round(computredminvalue - valuegap * ratio);
-        return [basevalue: basevalue];
-    }
 
 	/*-------------------------------------------------------------------
 	*
@@ -381,7 +339,6 @@ class BldgRPUService
 
 	void saveFloorAdditionals(additionals){
 		additionals.each{
-			if (it.issystem == null) it.issytem = false
 			em.save(it, SCHEMA_ADDITIONAL)
 			saveParams(it.params)
 		}
@@ -427,22 +384,18 @@ class BldgRPUService
 				floor.additionals = em.getAdditionalItems([bldgfloorid:floor.objid])
 				floor.additionals.each{ addl -> 
 					addl.params = em.getAdditionalItemParams([bldgflooradditionalid:addl.objid])
-					addl.params.each{ it.issystem = addl.issystem }
 				}
 			}
 		}
 		return bldguses
 	}
 
+
+
 	void saveBldgLands(rpu){
 		rpu.lands?.each{
 			em.save(it, SCHEMA_BLDGLAND)
 		}
 	}
-
-    def floor(value) {
-        return new BigDecimal(value).setScale(2, RoundingMode.FLOOR);
-    }
-
 }
  

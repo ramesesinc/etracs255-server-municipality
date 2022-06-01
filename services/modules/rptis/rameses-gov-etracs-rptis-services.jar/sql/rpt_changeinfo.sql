@@ -46,27 +46,11 @@ where objid = $P{faasid}
 
 
 [updateLedgerInfo]
-update rptledger rl, faas_list f, rpu r set 
-    rl.fullpin = f.displaypin,
-    rl.tdno = f.tdno,
-    rl.cadastrallotno = f.cadastrallotno,
-    rl.taxpayer_objid = f.taxpayer_objid,
-    rl.txntype_objid = f.txntype_objid,
-    rl.classcode = f.classcode,
-    rl.totalav = f.totalav,
-    rl.totalmv = f.totalmv,
-    rl.totalareaha = f.totalareaha,
-    rl.taxable = r.taxable,
-    rl.owner_name = f.owner_name,
-    rl.prevtdno = f.prevtdno,
-    rl.classification_objid = f.classification_objid,
-    rl.titleno = f.titleno,
-    rl.administrator_name = f.administrator_name,
-    rl.blockno = f.blockno
-where rl.faasid = f.objid 
-and f.rpuid = r.objid 
-and f.objid = $P{faasid}
-
+update rptledger set 
+	tdno = $P{tdno},
+	taxable = case when $P{taxable} is null then taxable else $P{taxable} end,
+	titleno = $P{titleno}
+where faasid = $P{faasid}
 
 [updateLedgerFaasInfo]
 update rptledgerfaas set 

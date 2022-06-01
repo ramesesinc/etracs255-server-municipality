@@ -86,11 +86,9 @@ DELETE FROM bldgrpu_structuraltype WHERE bldgrpuid = $P{objid}
 SELECT 
   stt.*,
   pc.code AS classification_code, 
-  pc.name AS classification_name,
-	bs.ry
+  pc.name AS classification_name
 FROM bldgrpu_structuraltype stt
   LEFT JOIN bldgtype bt ON stt.bldgtype_objid = bt.objid 
-	LEFT JOIN bldgrysetting bs on bt.bldgrysettingid = bs.objid 
   LEFT JOIN bldgkindbucc bucc ON stt.bldgkindbucc_objid = bucc.objid 
   LEFT JOIN propertyclassification pc ON stt.classification_objid = pc.objid 
 WHERE stt.bldgrpuid = $P{bldgrpuid}

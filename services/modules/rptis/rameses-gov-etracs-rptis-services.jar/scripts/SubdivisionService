@@ -230,7 +230,6 @@ class SubdivisionService
         em.deleteMotherLandAffectedRpus(motherland)
         em.delete(motherland, SCHEMA_MOTHER_LAND)
         updateMotherLandInfo([objid:motherland.subdivisionid])
-        txnRef.deleteByObjid(motherland.subdivisionid, motherland.landfaasid)
     }
 
 

@@ -1,6 +1,6 @@
 <app>
 <env>
-app.title=ETRACS 2.5 build 2.5.04.03.01 (${lgu_name})
+app.title=ETRACS 2.5 build 2.5.04.05.01 (${lgu_name})
 app.host=${pub_app_server_ip}:8070
 app.cluster=osiris3
 app.context=etracs25

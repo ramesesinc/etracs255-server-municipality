@@ -24,12 +24,7 @@ public class AddAssessmentInfo implements RuleActionHandler {
 		def actualuseid = muentity.actualuse.objid
 		def rputype = 'mach';
 
-		def a = request.assessments.find{
-				it.rputype == rputype && 
-				it.classificationid == classificationid && 
-				it.actualuseid == actualuseid && 
-				it.taxable == mu.taxable
-		}
+		def a = request.assessments.find{it.rputype == rputype && it.classificationid == classificationid && it.actualuseid == actualuseid}
 		if ( ! a){
 			if (rpuentity.assessments == null) 
 				rpuentity.assessments = []

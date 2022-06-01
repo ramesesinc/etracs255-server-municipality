@@ -74,12 +74,6 @@ class FAASWorkflowInterceptor
 		faasSvc.deleteFaas(faas)
 	}
 
-	@After(pattern="FAASWorkflowService.signal", eval="#{args[0].state == 'receiver' && args[0].action == 'canceltxn'}", index=10) 
-	public void cancelTransaction( evt ) {
-		def faas = evt.args[0].data
-		faasSvc.cancelTransaction(faas)
-	}
-
 	@Before(pattern="FAASWorkflowService.signal", eval="#{args[0].state == 'receiver' && args[0].action != 'delete'}", index=10) 
 	public void validateReceiveInfo( evt ) {
 		def faas = evt.args[0].data

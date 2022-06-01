@@ -24,6 +24,9 @@ class RPTLedgerPaymentService
     @DataContext('rptledger')
     def em_rptledger
 
+    @DataContext('rptledger_item')
+    def em_rptledger_item
+
 
 
     @ProxyMethod
@@ -50,6 +53,16 @@ class RPTLedgerPaymentService
         data.shares = em_rptpayment_share.find([parentid:payment.objid]).orderBy('sharetype,revperiod,revtype').list()
         return data 
     }    
+
+    @ProxyMethod
+    public void deletePayment(payment) {
+        if (payment.receiptid) throw new Exception('Online issued reecipt cannot be deleted.')
+
+        em_rptpayment_item.find([parentid: payment.objid]).delete();
+        em_rptpayment_share.find([parentid: payment.objid]).delete();
+        em_rptpayment.find([objid: payment.objid]).delete();
+        em_rptledger_item.find([parentid: payment.refid]).delete();
+    }
 }
 
 

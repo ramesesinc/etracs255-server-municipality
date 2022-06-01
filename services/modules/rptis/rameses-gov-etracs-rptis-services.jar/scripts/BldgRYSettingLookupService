@@ -17,7 +17,7 @@ public class BldgRYSettingLookupService
 
     @Service('RPTParameterService')
     def paramSvc
-	
+
 
     @ProxyMethod
     public def findByLguIdRy( params ) {
@@ -124,12 +124,10 @@ public class BldgRYSettingLookupService
 
     @ProxyMethod
     public def lookupAdditionalItems( params ) {
-        if (!params.searchtext) 
-            params.searchtext = ''
+        if (!params.searchtext) params.searchtext = ''
         params.searchtext += '%'
         
-        if (! params.type ) 
-            params.type = '%'
+        if ( !params.type ) params.type = '%'
 
         def list = em.sqlContext.createNamedQuery('bldgrysettinglookup:lookupAdditionalItems')
                 .setParameters(params)
@@ -144,9 +142,28 @@ public class BldgRYSettingLookupService
                 .setParameter('previd', previd).singleResult
     }
 
+    @ProxyMethod 
+    public def getMultiStoreyAdjustmentItem(params) {
+        params.searchtext = 'BMSA'
+        def items = lookupAdditionalItems(params);
+        return items ? items[0] : null;
+    }
+
     @ProxyMethod
     public def getVariables() {
         return paramSvc.getRPTParameters([:])    
+    }
+
+    @ProxyMethod
+    public def getMultiStoreyRateParameter() {
+        def paramname = 'MULTI_STOREY_RATE'
+        def params = paramSvc.getRPTParameters([searchtext: paramname])
+        return params ? params[0] : null
+    }
+
+    @ProxyMethod
+    public def getMultiStoreyAdjustmentSetting(param) {
+        return adb.findMultiStoreyAdjustmentSetting(param)
     }
 
     def filterByBarangay(params, list){

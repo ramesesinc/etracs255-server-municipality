@@ -19,6 +19,9 @@ class RPTReceiptProvincePostShareService
 	@DataContext('cashreceipt_share')
 	def em_receipt_share
 
+	@ActiveDB(value='landtax_repost_shares_eor', adapter="eor")
+  def em_eor;
+
 	@DataContext('rptpayment_share')
 	def em_rptpayment_share
 
@@ -36,7 +39,7 @@ class RPTReceiptProvincePostShareService
 		[sharetype: 'municipality', revtype: 'basic', revperiod: 'advance', rate: 0.40],
 		[sharetype: 'municipality', revtype: 'basic', revperiod: 'current', rate: 0.40],
 		[sharetype: 'municipality', revtype: 'basic', revperiod: 'previous', rate: 0.40],
-		[sharetype: 'municipality', revtype: 'basic', revperiod: 'prior', rate: 0.45],
+		[sharetype: 'municipality', revtype: 'basic', revperiod: 'prior', rate: 0.40],
 
 		[sharetype: 'municipality', revtype: 'sef', revperiod: 'advance', rate: 0.50],
 		[sharetype: 'municipality', revtype: 'sef', revperiod: 'current', rate: 0.50],
@@ -46,7 +49,7 @@ class RPTReceiptProvincePostShareService
 		[sharetype: 'barangay', revtype: 'basic', revperiod: 'advance', rate: 0.25],
 		[sharetype: 'barangay', revtype: 'basic', revperiod: 'current', rate: 0.25],
 		[sharetype: 'barangay', revtype: 'basic', revperiod: 'previous', rate: 0.25],
-		[sharetype: 'barangay', revtype: 'basic', revperiod: 'prior', rate: 0.10],
+		[sharetype: 'barangay', revtype: 'basic', revperiod: 'prior', rate: 0.25],
 	]
 
 
@@ -55,6 +58,7 @@ class RPTReceiptProvincePostShareService
 		def ledger = em.findPaidLedger(receipt)
 		if (!ledger) ledger = em.findPaidCompromise(receipt)
 		if (!ledger) throw new Exception('Unable to load ledger. Check cashreceipt_rpt_share_forposting entry.')
+		ledger.receipttype = receipt.receipttype
 		buildShares(ledger)
 		saveShares(ledger)
 	}
@@ -105,15 +109,48 @@ class RPTReceiptProvincePostShareService
 
 		ledger.munishares.each {ms ->
 			ms.payableitem = [objid: ms.item.objid]
-			em_receipt_share.create(ms)
 			em_rptpayment_share.create(ms)
+			if ('EOR'.equalsIgnoreCase(ledger.receipttype)) {
+				def eorshare = createEorShare(ms);
+				em_eor.insertEorShare(eorshare)
+			} else {
+				em_receipt_share.create(ms)
+			}
 		}
 
 		ledger.brgyshares.each {bs ->
 			bs.payableitem = [objid: bs.item.objid]
-			em_receipt_share.create(bs)
 			em_rptpayment_share.create(bs)
+			if ('EOR'.equalsIgnoreCase(ledger.receipttype)) {
+				def eorshare = createEorShare(bs);
+				em_eor.insertEorShare(eorshare)
+			} else {
+				em_receipt_share.create(bs)
+			}
 		}
+	}
+
+	def createEorShare(share) {
+		def eorshare = [:]
+		eorshare.objid = 'EOI' + new java.rmi.server.UID();
+		eorshare.parentid = share.receiptid;
+
+		def refitem = em_mapping.find([item_objid: share.item.objid]).first()?.item;
+		eorshare.refitemid = refitem.objid;
+		eorshare.refitemcode = refitem.code;
+		eorshare.refitemtitle = refitem.title;
+		eorshare.refitemfundid = refitem.fund.objid;
+		
+		def payableitem = em_mapping.find([item_objid: share.payableitem.objid]).first()?.item;
+		eorshare.payableitemid = payableitem.objid;
+		eorshare.payableitemcode = payableitem.code;
+		eorshare.payableitemtitle = payableitem.title;
+		eorshare.payableitemfundid = payableitem.fund.objid;
+
+		eorshare.amount = share.amount;
+		eorshare.share = share.amount;
+		eorshare.receiptitemid = share.refitem.objid;
+		return eorshare;
 	}
 
 	def buildLedgerShare(ledger, item, mappings) {

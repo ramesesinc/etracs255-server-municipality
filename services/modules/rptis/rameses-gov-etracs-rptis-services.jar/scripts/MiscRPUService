@@ -7,6 +7,9 @@ class MiscRPUService
     @ActiveDB('miscrpu')
     def em
 
+    @DataContext('miscrpu')
+    def em_rpu
+
     @Env
     def env
     
@@ -58,10 +61,14 @@ class MiscRPUService
 
     @ProxyMethod
     public def updateMiscRpu(rpu) { 
-        em.updateImmediate(rpu)
-        saveItems(rpu.items)
-        removeDeletedItems(rpu)
-        return rpu
+        if (em_rpu.find([objid: rpu.objid]).first() == null) {
+            return createMiscRpu(rpu);
+        } else {
+            em.updateImmediate(rpu)
+            saveItems(rpu.items)
+            removeDeletedItems(rpu)
+            return rpu
+        }
     }
 
 

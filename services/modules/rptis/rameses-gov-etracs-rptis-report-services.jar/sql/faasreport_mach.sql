@@ -18,15 +18,7 @@ and f.state <> 'CANCELLED'
 [getMachDetails]
 select
 	m.name as machinename,
-	md.brand,
-	md.model, 
-	md.capacity,
-	md.yearacquired,
-	md.estimatedlife,
-	md.remaininglife,
-	md.yearinstalled,
-	md.operationyear,
-	md.params
+	md.*
 from machdetail md 	
 	inner join machine m on md.machine_objid = m.objid 
 where md.machrpuid = $P{objid}

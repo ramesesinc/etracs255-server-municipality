@@ -19,9 +19,9 @@ public class MachineActualUse {
 
     public MachineActualUse(rpufact, mu){
         this.rpu = rpufact
-        this.actualuseid  = mu.actualuse.objid 
-        this.entity       = mu 
-        this.taxable = true
+        this.actualuseid = mu.actualuse.objid 
+        this.taxable = mu.taxable
+        this.entity = mu 
 
         setBasemarketvalue(mu.basemarketvalue)
         setMarketvalue(mu.marketvalue)

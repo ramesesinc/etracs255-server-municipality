@@ -73,10 +73,13 @@ class RPTCertificationLandBirService
 	void loadFaasInfo(cert){
 		def faas = certSvc.getFaasInfo(cert.faasid)
 		if (faas) {
+			def certid = cert.objid
 			faas.street = (faas.street ? faas.street : faas.barangay.name)
 			cert.putAll( faas )
-			if (!cert.items)
+			cert.objid = certid
+			if (!cert.items) {
 				cert.items = []
+			}
 		}
 		certSvc.makeHtmlSafe(cert)
 	}

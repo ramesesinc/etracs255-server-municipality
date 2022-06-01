@@ -14,8 +14,8 @@
 		<field name="newfaas_parcel"  />
 		<field name="newfaas_claimno" type="integer"  />
 		<field name="newfaas_suffix"  type="integer"  />
-		<field name="newfaas_tdno"  />
-		<field name="newfaas_fullpin"  />
+		<field name="newfaas_tdno"  searchable="true" />
+		<field name="newfaas_fullpin" searchable="true" indexed="true"  />
 
 		<complex name="faas" ref="faas" jointype="many-to-one"
 			includefields="tdno,fullpin,owner.name">

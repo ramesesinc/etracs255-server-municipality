@@ -10,7 +10,7 @@
 		<field name="orno" required="true" caption="Receipt No."/>
 		<field name="ordate" required="true" caption="Receipt Date"/>
 		<field name="oramount" type="decimal" required="true" caption="Amount"/>
-		<field name="amount" type="decimal" required="true" caption="Amount"/>
+		<field name="amount" type="" required="true" caption="Amount"/>
 		<field name="mode" required="true" caption="Mode"/>
 		<field name="paidby" required="true" caption="Paid By" />
 		<field name="paidbyaddress" required="true" caption="Address" />

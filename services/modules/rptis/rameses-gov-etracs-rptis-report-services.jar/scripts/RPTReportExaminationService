@@ -46,6 +46,7 @@ class RPTReportExaminationService
 		parameters.PERIOD = params.period
 		parameters.ORGCLASS = env.ORGCLASS 
 		parameters.EXAMINER = params.user 
+		parameters.LGU = (params.lgu ? params.lgu.name : 'ALL')
 		return [reportdata:list, parameters:parameters]
 	}
 

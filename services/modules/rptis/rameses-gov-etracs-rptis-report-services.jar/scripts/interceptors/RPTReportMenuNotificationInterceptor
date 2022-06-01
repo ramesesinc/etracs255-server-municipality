@@ -1,0 +1,31 @@
+import com.rameses.annotations.*; 
+
+class RPTReportMenuNotificationInterceptor {
+	
+	@Service("WorkflowTaskCountService")
+	def taskCountSvc;
+
+	@DataContext("sys_wf")
+	def wfEm;
+
+	@Env
+	def env;
+
+	/************************************************************************************************************
+	* THIS IS THE COUNT FOR MAIN MENU
+	************************************************************************************************************/
+	// @After(pattern="MenuNotificationService.getCount", eval="#{ args[0].notificationid == 'rptcertification' }")
+	@After(pattern="MenuNotificationService.getCount")
+	public void getDomainCount( def evt ) {
+		def p = evt.args[0];
+		def result = evt.result;
+
+		println 'MenuNotificationService => ' + p
+
+		def orgid = (env.ORGROOT ==1 ) ? "root" : env.ORGID;
+
+		def count = 10;
+		result.count = count;
+	}	
+
+}

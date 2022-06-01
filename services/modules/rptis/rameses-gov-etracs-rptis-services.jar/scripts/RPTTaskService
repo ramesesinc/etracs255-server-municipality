@@ -78,17 +78,18 @@ class RPTTaskService
 		//close current task
 		currenttask.enddate = dtSvc.serverDate
 		currenttask.actor = [objid: env.USERID, name: env.NAME, title: env.JOBTITLE ]
-		currenttask.message = 'Reassign task to ' + entity.assignee.name 
+		currenttask.message = 'Reassigned task to ' + entity.assignee.name 
 		persistenceSvc.update(currenttask)
 
 		//insert new assignee task
-		newtask.objid = 'TSk' + new java.rmi.server.UID()
+		newtask.objid = 'TSK' + new java.rmi.server.UID()
 		newtask.processname = entity.processname
+		newtask.startdate = dtSvc.serverDate
 		newtask.state = entity.newstate.name 
 		newtask.assignee = entity.assignee 
 		newtask.enddate = null 
 		newtask.actor = null 
-		newtask.message = 'Transaction ' + entity.processname + ' is reassgined to you by ' + currenttask.actor.name 
+		newtask.message = 'Task is reassgined to you by ' + currenttask.actor.name 
 		newtask.signature = null 
 		persistenceSvc.create(newtask)
 		updateTaskInfoReference(entity, newtask)

@@ -66,6 +66,16 @@ class FAASRestrictionInterceptor
 		}
 	}
 
-
+	@After(pattern="FAASService.openFaas", index=10000) 
+	public void addActiveRestrictionMessage(evt) {
+        def faas = evt.result;
+        def restriction = em_restriction
+                            .select('objid')
+                            .find([parent_objid: faas.objid, state: 'ACTIVE'])
+                            .first()
+        if (restriction) {
+            faas.messagelist << 'FAAS has active restriction.'
+        }
+	}
 }
 

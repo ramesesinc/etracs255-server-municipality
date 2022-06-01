@@ -13,7 +13,7 @@
 		<field name="error" />
 		<field name="modified" expr="case when newfaasid is null then 0 when fullpin = newfaas.fullpin then 0 else 1 end" />
 		<complex name="faas" ref="faas_list" jointype="many-to-one" 
-			required="false" includefields="state,totalmv,totalav" >
+			required="false" includefields="state,totalmv,totalav,effectivityyear" >
 				<key field="objid" target="objid" />
 		</complex>
 		<complex name="newfaas" ref="faas" jointype="many-to-one" 

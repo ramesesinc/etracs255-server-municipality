@@ -28,6 +28,9 @@ class PlantTreeRPUService
     @Service('PlantTreeAssessmentRuleService')
     def ruleSvc 
 
+    @DataContext('planttreerpu')
+    def em_rpu;
+
     
     def SCHEMA_DETAIL  = 'planttreedetail'
     
@@ -54,10 +57,15 @@ class PlantTreeRPUService
 
     @ProxyMethod
     public def updatePlantTreeRpu(rpu) { 
-        em.updateImmediate(rpu)
-        savePlantTrees(rpu.planttrees)
-        removeDeletedItems(rpu)
-        return rpu
+        def exists = em_rpu.select('objid').find([objid: rpu.objid]).first()
+        if (!exists) {
+            return createPlantTreeRpu(rpu)
+        } else {
+            em.updateImmediate(rpu)
+            savePlantTrees(rpu.planttrees)
+            removeDeletedItems(rpu)
+            return rpu
+        }
     }
 
 

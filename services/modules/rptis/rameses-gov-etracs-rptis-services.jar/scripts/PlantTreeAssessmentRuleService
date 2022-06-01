@@ -105,7 +105,11 @@ public class PlantAssessmentRuleService
 		def adjustmentrate = 0.0
 	    
 		// get total basemarketvalue for agrilands only 
-		def agrilands 		  = landdetails.findAll{ it.specificclass.classification.code.matches('A|AA|AGR') || it.specificclass.classification.name.matches('AGRICULTURAL')}
+		def agrilands 		  = landdetails.findAll{ 
+															(it.specificclass.classification.code.matches('A|AA|AGR') || 
+															it.specificclass.classification.name.matches('AGRICULTURAL')) &&
+															it.adjustment != 0
+													}
 		def totallandbmv 	  = agrilands.basemarketvalue.sum()
 		def totalvalueadj     = 0.0 
 		def totalactualuseadj = 0.0 

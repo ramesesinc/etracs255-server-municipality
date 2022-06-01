@@ -31,6 +31,7 @@ class RPTReportLandSpecificClassService
 		params.classificationid = (params.classification ? params.classification.objid : '%')
 		params.section = (params.section ? params.section : '%')
 		params.landspecificclassid = params.specificclass.objid 
+		params.taxpayerid = (params.taxpayer ? params.taxpayer.objid : '%')
 
 		def list = em.getLandSpecificClasses(params)
 		if (!list)

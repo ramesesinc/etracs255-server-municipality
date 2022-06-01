@@ -17,20 +17,19 @@ class RPTReportStatementOfValuationService
     @Async
 	@ProxyMethod
 	public Map buildReport( params ) {
-		util.required('LGU', params.lgu)
 		util.required('Month', params.month)
 
-		params.lguid = params.lgu.objid 
-
+		params.lguid = (params.lgu ? params.lgu.objid : '%')
+		params.lguname = (params.lgu ? params.lgu.fullname : 'ALL MUNICIPALITIES')
 		util.buildStartEndDateFilter(params)
 		
 		def p = [
 			TITLE 		: 'STATEMENT OF VALUATION ',
 			SUBTITLE	: 'For the Month of ' + params.month.caption + ', ' + params.year,
-			FORLGUNAME  : (params.lguid != env.ORGID ? params.lgu.fullname : ''),
+			FORLGUNAME  : (params.lguid != env.ORGID ? params.lguname : ''),
 		]
 
-		def items = em.getList(params).each{ 
+		def items = em.getList(params).each { 
 			it.title = it.title.toUpperCase()
 			if (it.isitem == 1) it.title = '     ' + it.title 
 		}

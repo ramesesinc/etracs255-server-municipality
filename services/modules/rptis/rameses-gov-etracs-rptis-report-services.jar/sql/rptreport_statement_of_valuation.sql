@@ -41,7 +41,7 @@ from (
 	from faas f 
 		inner join rpu r on f.rpuid = r.objid
 		inner join realproperty rp on f.realpropertyid = rp.objid 
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and f.txntype_objid = 'ND' 
 		and f.dtapproved >= $P{startdate} and f.dtapproved < $P{enddate}
 
@@ -57,7 +57,7 @@ from (
 	from faas f 
 		inner join rpu r on f.rpuid = r.objid
 		inner join realproperty rp on f.realpropertyid = rp.objid 
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and f.txntype_objid = 'SD'
 		and f.dtapproved >= $P{startdate} and f.dtapproved < $P{enddate}
 		
@@ -73,7 +73,7 @@ from (
 	from faas f 
 		inner join rpu r on f.rpuid = r.objid
 		inner join realproperty rp on f.realpropertyid = rp.objid 
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and f.txntype_objid in ('TR') 
 		and f.dtapproved >= $P{startdate} and f.dtapproved < $P{enddate}
 
@@ -89,7 +89,7 @@ from (
 	from faas f 
 		inner join rpu r on f.rpuid = r.objid
 		inner join realproperty rp on f.realpropertyid = rp.objid 
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and f.txntype_objid in ('TRE') 
 		and f.dtapproved >= $P{startdate} and f.dtapproved < $P{enddate}
 
@@ -105,7 +105,7 @@ from (
 	from faas f 
 		inner join rpu r on f.rpuid = r.objid
 		inner join realproperty rp on f.realpropertyid = rp.objid 
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and f.txntype_objid in ('TRC') 
 		and f.dtapproved >= $P{startdate} and f.dtapproved < $P{enddate}
 
@@ -123,7 +123,7 @@ from (
 		inner join faas f on c.newfaasid = f.objid 
 		inner join rpu r on f.rpuid = r.objid
 		inner join realproperty rp on f.realpropertyid = rp.objid 
-	where c.lguid = $P{lguid}
+	where c.lguid LIKE $P{lguid}
 		and c.state = 'APPROVED' 
 		and f.dtapproved >= $P{startdate} and f.dtapproved < $P{enddate}
 
@@ -150,7 +150,7 @@ from (
 		inner join rpu r on f.rpuid = r.objid
 		inner join realproperty rp on f.realpropertyid = rp.objid 
 		inner join faas_txntype ft on f.txntype_objid = ft.objid 
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and f.txntype_objid not in ('ND', 'TR', 'TRC', 'TRE', 'SD', 'CS', 'GR', 'DC')
 		and f.dtapproved >= $P{startdate} and f.dtapproved < $P{enddate}
 
@@ -168,7 +168,7 @@ from (
 		inner join rpu r on f.rpuid = r.objid
 		inner join realproperty rp on f.realpropertyid = rp.objid 
 		inner join faas_txntype ft on f.txntype_objid = ft.objid 
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and f.txntype_objid in ('GR')
 		and f.dtapproved >= $P{startdate} and f.dtapproved < $P{enddate}
 
@@ -186,7 +186,7 @@ from (
 		inner join rpu r on f.rpuid = r.objid
 		inner join realproperty rp on f.realpropertyid = rp.objid 
 		inner join faas_txntype ft on f.txntype_objid = ft.objid 
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and f.txntype_objid in ('DC')
 		and f.dtapproved >= $P{startdate} and f.dtapproved < $P{enddate}
 
@@ -214,9 +214,9 @@ from (
 		inner join realproperty rp on f.realpropertyid = rp.objid 
 		left join faas_txntype ft on f.cancelreason = ft.objid 
 		left join canceltdreason ctd on f.cancelreason = ctd.code
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 	 	and not (ft.objid = 'SD' or ctd.code = 'SD')
-		and f.canceldate >= $P{startdate} and f.dtapproved < $P{enddate}		
+		and f.canceldate >= $P{startdate} and f.canceldate < $P{enddate}		
 
 	union all 
 
@@ -232,10 +232,10 @@ from (
 		inner join realproperty rp on f.realpropertyid = rp.objid 
 		left join faas_txntype ft on f.cancelreason = ft.objid 
 		left join canceltdreason ctd on f.cancelreason = ctd.code
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and (ft.objid = 'SD' or ctd.code = 'SD')
 		and r.rputype = 'land'
-		and f.canceldate >= $P{startdate} and f.dtapproved < $P{enddate}		
+		and f.canceldate >= $P{startdate} and f.canceldate < $P{enddate}		
 
 	union all
 
@@ -251,10 +251,10 @@ from (
 		inner join realproperty rp on f.realpropertyid = rp.objid 
 		left join faas_txntype ft on f.cancelreason = ft.objid 
 		left join canceltdreason ctd on f.cancelreason = ctd.code
-	where f.lguid = $P{lguid}
+	where f.lguid LIKE $P{lguid}
 		and (ft.objid = 'SD' or ctd.code = 'SD')
 		and r.rputype <> 'land'
-		and f.canceldate >= $P{startdate} and f.dtapproved < $P{enddate}	
+		and f.canceldate >= $P{startdate} and f.canceldate < $P{enddate}	
 ) x 
 group by x.isitem, x.idx, x.title 
 order by x.idx 

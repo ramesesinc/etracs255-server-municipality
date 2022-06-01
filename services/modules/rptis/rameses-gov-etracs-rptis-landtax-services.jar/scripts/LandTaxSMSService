@@ -19,9 +19,6 @@ class LandTaxSMSService
 	@Service('RPTBillingService')
 	def billSvc
 
-	@Service('RPTBillingReportService')
-	def billReportSvc
-
 	@Service('NumberService')
 	def numSvc
 
@@ -41,26 +38,24 @@ class LandTaxSMSService
 	public void sendTaxDueInfo(ledger){
 		println 'sendTaxDueInfo -> ' + ledger.phoneno  
 
-		billSvc.generateBillByLedger(ledger)
-		def bill = em.findLatestBillByLedger(ledger)
-		if (!bill) return
-		bill = billReportSvc.getBilledLedger( bill )
-		def discount = bill.basicdp + bill.sefdp 
+		def bill = billSvc.generateBillByLedger(ledger)
+		def discount = bill.totals.basicdisc + bill.totals.sefdisc
 
 		def msg = 'ADVISORY: Balance of your property TD No. ' + ledger.tdno + ' ' 
 		
-		if (discount < 0.0){
-			discount = discount * (-1.0)
-			def total = bill.basic + bill.sef + bill.firecode + bill.basicidle 
-			msg += 'is P' + numSvc.format('#,##0.00', total) + '. '
+		def total = bill.totals.total
+		if (discount > 0.0){
+			msg += 'is P' + numSvc.format('#,##0.00', (total + discount)) + '. '
 			msg += 'Discount of P' + numSvc.format('#,##0.00', discount) + ' is availed '
 			msg += 'if payment is made on or before ' + dtSvc.format('MMMM dd, yyyy', bill.validuntil) + '. '
 		}
 		else {
-			msg += 'is P' + numSvc.format('#,##0.00', bill.total) + '. '
+			msg += 'is P' + numSvc.format('#,##0.00', total) + '. '
 			msg += 'This is valid until ' + dtSvc.format('MMMM dd, yyyy', bill.validuntil) + '. '
 			msg += 'Please pay ontime to avoid extra penalty.'
 		}
+
+		msg += '\nLGU - ' + env.ORGNAME
 
 
 		def smstext = [

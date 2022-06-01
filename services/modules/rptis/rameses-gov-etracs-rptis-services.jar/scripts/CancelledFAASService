@@ -10,7 +10,7 @@ class CancelledFAASService
     
 	@Env
 	def env
-	
+
 	@Service('TxnRefService')
     def txnRef
 
@@ -88,7 +88,7 @@ class CancelledFAASService
         if (!entity.originlguid)
             entity.originlguid = env.ORGID 
         if (!entity.txnno)
-            entity.txnno = getNextSeries(entity)
+            entity.txnno = getNextTempSeries(entity)
         if (!entity.txndate)
             entity.txndate = dateSvc.serverDate
         if (!entity.state ) {
@@ -150,6 +150,10 @@ class CancelledFAASService
     @ProxyMethod
     public def approve( entity ) {
         entity.state = STATE_APPROVED
+        if (entity.txnno.startsWith('TMP')) {
+            entity.txnno = getNextSeries(entity)
+            entity.txndate = dateSvc.serverDate
+        }
         em.update(entity)
 
         cancelFaas(entity)
@@ -323,6 +327,12 @@ class CancelledFAASService
         return lguid + seqSvc.getNextFormattedSeries(key)
     }
 
+    def getNextTempSeries(entity){
+        def lguid =  entity.lguid.replaceAll('-','')
+        def key = 'CANCELLEDFAAS-TMP-' + lguid 
+        return 'TMP'+ lguid + seqSvc.getNextFormattedSeries(key)
+    }
+
     /*========================================
     * Rules:
     *   - cancel the ledger if fullypaid as of txndate
@@ -334,6 +344,7 @@ class CancelledFAASService
         if (!ledger) 
             return 
 
+        def txndate = entity.txndate ? entity.txndate : dateSvc.serverDate
         def txnyear = dateSvc.getYear(dateSvc.parse('yyyy-MM-dd', entity.txndate))
         if (entity.lasttaxyear && entity.lasttaxyear > 0) {
             txnyear = entity.lasttaxyear

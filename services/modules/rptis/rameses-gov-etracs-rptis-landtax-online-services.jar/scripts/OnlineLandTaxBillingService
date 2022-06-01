@@ -9,6 +9,9 @@ class OnlineLandTaxBillingService
 	@Service('RPTBillingService')
     def billSvc
 
+	@Service('RPTReceiptService')
+    def receiptSvc
+
     @Service('RPTLedgerPostPaymentService')
     def postPaymentSvc
 
@@ -19,17 +22,26 @@ class OnlineLandTaxBillingService
 
 	@ProxyMethod
 	public def verifyPayment( eor ) {
-        def data = eor.info.data;
-        def bill = generateBill([refno: data.billno])
-        eor.ledgers = [bill.rptledger]
-        eor.rptledger = bill.rptledger 
+        def data = eor.info.data
+        def billparam = [:]
+        billparam._txntype = "FILIPIZEN"
+        billparam.refno = data.billno
+        billparam.billdate = eor.tracedate
+        billparam.billtoyear = data.billtoyear
+        billparam.billtoqtr = data.billtoqtr
+        def bill = generateBill(billparam)
+
+        if (eor.amount != bill.rptledger.total) {
+            //apply as partial payment
+            bill.partial = [amount: eor.amount];
+            bill.rptledger = receiptSvc.applyPartialPayment(bill);
+        }
+        
         return [
-            sharing: true, 
-            ledgers: [bill.rptledger],
             rptledger: bill.rptledger,
             amount: eor.amount,
-            items: bill.rptledger.billitems 
-        ];
+            items: bill.rptledger.billitems,
+        ]
 	}
 
 	@ProxyMethod
@@ -61,6 +73,9 @@ class OnlineLandTaxBillingService
         if (params.refno.startsWith(BARCODE_PREFIX)){
             params.barcodeid = params.refno 
             bill = billSvc.getBillByBarcode(params)
+            if (params.billdate) bill.billdate = params.billdate
+            if (params.billtoyear) bill.billtoyear = toInt(params.billtoyear)
+            if (params.billtoqtr) bill.billtoqtr = toInt(params.billtoqtr)
             bill._forpayment = true
             bill = billSvc.generateBill(bill)
         }

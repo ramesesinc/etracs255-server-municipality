@@ -39,8 +39,8 @@ class ResectionService
 	@DataContext('resection_task')
 	def em_task
 
-	@DataContext('faas')
-	def em_faas 
+	@DataContext('faas_list')
+	def em_faas_list 
 
 	@DataContext('rptledger')
 	def em_rptledger 
@@ -177,7 +177,26 @@ class ResectionService
     	else 
     		throw new Exception('Suffix must be between ' + suffixes[0].from + ' and ' + suffixes[0].to + '.')
     }
+		
+		@ProxyMethod
+		public void validateNewTdNo(newfaas) {
+			if (!newfaas.tdno) throw new Exception('New TD No. must be specified')
+			faasSvc.checkDuplicateTdNo( newfaas.objid, newfaas.tdno )
+		}
 
+		@ProxyMethod
+		public void validateNewPin(resectionitem) {
+			def faas = em_faas_list.select('objid,state,ry').find([objid: resectionitem.faas.objid]).first();
+			if (!faas) throw new Exception('Referenced FAAS does not exist or has already been deleted');
+
+			def newfaas = resectionitem.newfaas;
+			if (!newfaas.fullpin) throw new Exception('New PIN must be specified');
+
+			def duplicatePin = em_faas_list.find([pin: newfaas.fullpin, ry: faas.ry, rputype: 'land'])
+												.where('objid <> :objid', [objid: newfaas.objid])
+												.first();
+			if (duplicatePin) throw new Exception('Duplicate PIN ' + newfaas.fullpin + ' is not allowed');
+		}
 
     @ProxyMethod
     public def createNewFaas(item) {
@@ -351,12 +370,14 @@ class ResectionService
 		throw new Exception('There are no current FAAS for this section.')
 
 		faases.each{faas ->
-			def ledger = em_rptledger.select('state,tdno').find([faasid: faas.objid]).first()
-			if ('PENDING'.equalsIgnoreCase(ledger.state)){
-				throw new Exception('Ledger for TD No. ' + ledger.tdno + ' is still pending.')
-			}
-			if ('CANCELLED'.equalsIgnoreCase(ledger.state)){
-				throw new Exception('Ledger for TD No. ' + ledger.tdno + ' has already been cancelled.')
+			if (!'PROVINCE'.equalsIgnoreCase(env.ORGCLASS)) {
+				def ledger = em_rptledger.select('state,tdno').find([faasid: faas.objid]).first()
+				if ('PENDING'.equalsIgnoreCase(ledger.state)){
+					throw new Exception('Ledger for TD No. ' + ledger.tdno + ' is still pending.')
+				}
+				if ('CANCELLED'.equalsIgnoreCase(ledger.state)){
+					throw new Exception('Ledger for TD No. ' + ledger.tdno + ' has already been cancelled.')
+				}
 			}
 
 			txnRefSvc.checkReference(faas.objid)

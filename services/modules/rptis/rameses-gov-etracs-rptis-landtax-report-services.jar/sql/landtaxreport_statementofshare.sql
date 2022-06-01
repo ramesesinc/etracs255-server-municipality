@@ -1,5 +1,6 @@
 [getIdleLandSharesAbstract]
 select 
+    o.name as lgu,
     b.name as barangay,
     sum(case when cra.revperiod = 'current' and cra.revtype = 'basicidle' then cra.amount else 0 end) as brgycurr,
     sum(case when cra.revperiod = 'current' and cra.revtype = 'basicidleint' then cra.amount else 0 end) as brgycurrpenalty,
@@ -34,12 +35,14 @@ from remittance rem
     inner join rptpayment rp on cr.objid = rp.receiptid 
     inner join rptpayment_share cra on rp.objid = cra.parentid
     left join rptledger rl on rp.refid = rl.objid
+    left join sys_org o on rl.lguid = o.objid 
     left join barangay b on rl.barangayid = b.objid 
+    left join cashreceipt_void crv on cr.objid = crv.receiptid 
 where ${filter}   
-    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
     and cra.revtype in  ('basicidle', 'basicidleint') 
     and cra.amount > 0
-group by b.name 
+    and crv.objid is null 
+group by o.name, b.name 
 
 
 [getIdleLandShares]
@@ -63,48 +66,88 @@ from remittance rem
     inner join cashreceipt cr on cr.remittanceid = rem.objid 
     inner join rptpayment rp on cr.objid = rp.receiptid 
     inner join rptpayment_share cra on rp.objid = cra.parentid
+    left join cashreceipt_void crv on cr.objid = crv.receiptid 
 where ${filter} 
-    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
+    and crv.objid is null 
 
 
 [getBasicSharesAbstract]
 select 
-    b.objid as barangayid,
-    b.name as barangay, 
-    sum(case when cra.revperiod = 'current' and cra.revtype = 'basic' then cra.amount else 0 end) as brgycurr,
-    sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' then cra.amount else 0 end) as brgyprev,
-    sum(case when cra.revtype = 'basicint' then cra.amount else 0 end) as brgypenalty,
-    
-    sum(case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype = 'barangay' then cra.amount else 0 end) as brgycurrshare,
-    sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype = 'barangay' then cra.amount else 0 end) as brgyprevshare,
-    sum(case when cra.revtype = 'basicint' and cra.sharetype = 'barangay' then cra.amount else 0 end) as brgypenaltyshare,
+  t.lgu,
+  t.barangayid,
+  t.barangay, 
+  sum(t.brgycurr) as brgycurr,
+  sum(t.brgyprev) as brgyprev,
+  sum(t.brgypenalty) as brgypenalty,
+  sum(t.brgycurrshare) as brgycurrshare,
+  sum(t.brgyprevshare) as brgyprevshare,
+  sum(t.brgypenaltyshare) as brgypenaltyshare,
+  sum(t.citycurrshare) as citycurrshare,
+  sum(t.cityprevshare) as cityprevshare,
+  sum(t.citypenaltyshare) as citypenaltyshare,
+  sum(t.provmunicurrshare) as provmunicurrshare,
+  sum(t.provmuniprevshare) as provmuniprevshare,
+  sum(t.provmunipenaltyshare) as provmunipenaltyshare
+from (
+  select 
+      lgu,
+      barangayid,
+      barangay, 
+      (case when revperiod = 'current' and revtype = 'basic' then amount else 0 end) as brgycurr,
+      (case when revperiod in ('previous', 'prior') and revtype = 'basic' then amount else 0 end) as brgyprev,
+      (case when revtype = 'basicint' then amount else 0 end) as brgypenalty,
+      (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'barangay' then amount else 0 end) as brgycurrshare,
+      (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'barangay' then amount else 0 end) as brgyprevshare,
+      (case when revtype = 'basicint' and sharetype = 'barangay' then amount else 0 end) as brgypenaltyshare,
+      (case when revperiod = 'current' and revtype = 'basic' and sharetype in ('city') then amount else 0 end) as citycurrshare,
+      (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype in ('city') then amount else 0 end) as cityprevshare,
+      (case when revtype = 'basicint' and sharetype in ('city') then amount else 0 end) as citypenaltyshare,
+      (case when revperiod = 'current' and revtype = 'basic' and sharetype in ('province', 'municipality') then amount else 0 end) as provmunicurrshare,
+      (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype in ('province', 'municipality') then amount else 0 end) as provmuniprevshare,
+      (case when revtype = 'basicint' and sharetype in ('province', 'municipality') then amount else 0 end) as provmunipenaltyshare
+  from vw_landtax_collection_share_detail
+  where ${filter} 
+      and revperiod <> 'advance' 
+      and revtype in ('basic', 'basicint')
+      and voided = 0
 
-    sum(case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype in ('city') then cra.amount else 0 end) as citycurrshare,
-    sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype in ('city') then cra.amount else 0 end) as cityprevshare,
-    sum(case when cra.revtype = 'basicint' and cra.sharetype in ('city') then cra.amount else 0 end) as citypenaltyshare,
+    union all 
 
-    sum(case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype in ('province', 'municipality') then cra.amount else 0 end) as provmunicurrshare,
-    sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype in ('province', 'municipality') then cra.amount else 0 end) as provmuniprevshare,
-    sum(case when cra.revtype = 'basicint' and cra.sharetype in ('province', 'municipality') then cra.amount else 0 end) as provmunipenaltyshare
-from remittance rem 
-    inner join collectionvoucher cv on cv.objid = rem.collectionvoucherid 
-    inner join cashreceipt cr on cr.remittanceid = rem.objid 
-    inner join rptpayment rp on cr.objid = rp.receiptid 
-    inner join rptpayment_share cra on rp.objid = cra.parentid
-    left join rptledger rl on rp.refid = rl.objid
-    left join barangay b on rl.barangayid = b.objid 
-where ${filter} 
-    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
-    and cra.revperiod <> 'advance' 
-    and cra.revtype in ('basic', 'basicint')
-group by b.objid, b.name
-order by b.name 
+    select 
+        lgu,
+        barangayid,
+        barangay, 
+        (case when revperiod = 'current' and revtype = 'basic' then amount else 0 end) as brgycurr,
+        (case when revperiod in ('previous', 'prior') and revtype = 'basic' then amount else 0 end) as brgyprev,
+        (case when revtype = 'basicint' then amount else 0 end) as brgypenalty,
+        (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'barangay' then amount else 0 end) as brgycurrshare,
+        (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'barangay' then amount else 0 end) as brgyprevshare,
+        (case when revtype = 'basicint' and sharetype = 'barangay' then amount else 0 end) as brgypenaltyshare,
+        (case when revperiod = 'current' and revtype = 'basic' and sharetype in ('city') then amount else 0 end) as citycurrshare,
+        (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype in ('city') then amount else 0 end) as cityprevshare,
+        (case when revtype = 'basicint' and sharetype in ('city') then amount else 0 end) as citypenaltyshare,
+        (case when revperiod = 'current' and revtype = 'basic' and sharetype in ('province', 'municipality') then amount else 0 end) as provmunicurrshare,
+        (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype in ('province', 'municipality') then amount else 0 end) as provmuniprevshare,
+        (case when revtype = 'basicint' and sharetype in ('province', 'municipality') then amount else 0 end) as provmunipenaltyshare
+    from vw_landtax_collection_share_detail_eor
+    where ${filter} 
+        and revperiod <> 'advance' 
+        and revtype in ('basic', 'basicint')
+) t
+group by 
+  t.lgu,
+  t.barangayid,
+  t.barangay
+order by 
+  t.lgu, 
+  t.barangay
 
 
 
 [getBasicShares]
 select
-    b.name as barangay,
+    t.lgu,
+    t.barangay,
     sum(t.brgytotalshare) as brgytotalshare,
     sum(t.citycurrshare) as citycurrshare,
     sum(t.cityprevshare) as cityprevshare,
@@ -121,124 +164,232 @@ select
     ) as grandtotal
 from (
     select 
-        b.objid as barangayid,
-        case when cra.sharetype = 'barangay' then cra.amount else 0 end as brgytotalshare,
+        lgu, 
+        barangay,
+        barangayid,
+        case when sharetype = 'barangay' then amount else 0 end as brgytotalshare,
 
-        case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype = 'city' then cra.amount else 0 end as citycurrshare,
-        case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype = 'city' then cra.amount else 0 end as cityprevshare,
-        case when cra.revtype = 'basicint' and cra.sharetype = 'city' then cra.amount else 0 end as citypenaltyshare,
+        case when revperiod = 'current' and revtype = 'basic' and sharetype = 'city' then amount else 0 end as citycurrshare,
+        case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'city' then amount else 0 end as cityprevshare,
+        case when revtype = 'basicint' and sharetype = 'city' then amount else 0 end as citypenaltyshare,
 
-        case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype = 'municipality' then cra.amount else 0 end as municurrshare,
-        case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype = 'municipality' then cra.amount else 0 end as muniprevshare,
-        case when cra.revtype = 'basicint' and cra.sharetype = 'municipality' then cra.amount else 0 end as munipenaltyshare,
+        case when revperiod = 'current' and revtype = 'basic' and sharetype = 'municipality' then amount else 0 end as municurrshare,
+        case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'municipality' then amount else 0 end as muniprevshare,
+        case when revtype = 'basicint' and sharetype = 'municipality' then amount else 0 end as munipenaltyshare,
 
-        case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype = 'province' then cra.amount else 0 end as provcurrshare,
-        case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype = 'province' then cra.amount else 0 end as provprevshare,
-        case when cra.revtype = 'basicint' and cra.sharetype = 'province' then cra.amount else 0 end as provpenaltyshare
-    from remittance rem 
-        inner join collectionvoucher cv on cv.objid = rem.collectionvoucherid 
-        inner join cashreceipt cr on cr.remittanceid = rem.objid 
-        inner join rptpayment rp on cr.objid = rp.receiptid 
-        inner join rptpayment_share cra on rp.objid = cra.parentid
-        left join rptledger rl on rp.refid = rl.objid
-        left join barangay b on rl.barangayid = b.objid 
+        case when revperiod = 'current' and revtype = 'basic' and sharetype = 'province' then amount else 0 end as provcurrshare,
+        case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'province' then amount else 0 end as provprevshare,
+        case when revtype = 'basicint' and sharetype = 'province' then amount else 0 end as provpenaltyshare
+    from vw_landtax_collection_share_detail
     where ${filter} 
-        and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
-        and cra.revperiod <> 'advance' 
-        and cra.revtype in ('basic', 'basicint')
+        and revperiod <> 'advance' 
+        and revtype in ('basic', 'basicint')
+        and voided = 0
+
+    union all 
+
+    select 
+        lgu, 
+        barangay,
+        barangayid,
+        case when sharetype = 'barangay' then amount else 0 end as brgytotalshare,
+
+        case when revperiod = 'current' and revtype = 'basic' and sharetype = 'city' then amount else 0 end as citycurrshare,
+        case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'city' then amount else 0 end as cityprevshare,
+        case when revtype = 'basicint' and sharetype = 'city' then amount else 0 end as citypenaltyshare,
+
+        case when revperiod = 'current' and revtype = 'basic' and sharetype = 'municipality' then amount else 0 end as municurrshare,
+        case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'municipality' then amount else 0 end as muniprevshare,
+        case when revtype = 'basicint' and sharetype = 'municipality' then amount else 0 end as munipenaltyshare,
+
+        case when revperiod = 'current' and revtype = 'basic' and sharetype = 'province' then amount else 0 end as provcurrshare,
+        case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'province' then amount else 0 end as provprevshare,
+        case when revtype = 'basicint' and sharetype = 'province' then amount else 0 end as provpenaltyshare
+    from vw_landtax_collection_share_detail_eor
+    where ${filter} 
+        and revperiod <> 'advance' 
+        and revtype in ('basic', 'basicint')
+        
 ) t
-left join barangay b on t.barangayid = b.objid 
-group by b.name 
+group by t.lgu, t.barangay 
 
 
 [getBasicSharesSummary]   
-select xx.*, 
+select tt.*, 
     (brgytotalshare + munitotalshare + provtotalshare + citytotalshare) as totalshare 
 from ( 
     select 
-        sum(case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype = 'barangay' then cra.amount else 0 end) as brgycurrshare,
-        sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype = 'barangay' then cra.amount else 0 end) as brgyprevshare,
-        sum(case when cra.revtype = 'basicint' and cra.sharetype = 'barangay' then cra.amount else 0 end) as  brgypenaltyshare,
-        sum(case when cra.sharetype = 'barangay' then cra.amount else 0 end) as  brgytotalshare,
+        sum(t.brgycurrshare) as brgycurrshare,
+        sum(t.brgyprevshare) as brgyprevshare,
+        sum(t.brgypenaltyshare) as brgypenaltyshare,
+        sum(t.brgytotalshare) as brgytotalshare,
+        sum(t.citycurrshare) as citycurrshare,
+        sum(t.cityprevshare) as cityprevshare,
+        sum(t.citypenaltyshare) as citypenaltyshare,
+        sum(t.citytotalshare) as citytotalshare,
+        sum(t.municurrshare) as municurrshare,
+        sum(t.muniprevshare) as muniprevshare,
+        sum(t.munipenaltyshare) as munipenaltyshare,
+        sum(t.munitotalshare) as munitotalshare,
+        sum(t.provcurrshare) as provcurrshare,
+        sum(t.provprevshare) as provprevshare,
+        sum(t.provpenaltyshare) as provpenaltyshare,
+        sum(t.provtotalshare) as provtotalshare
+    from (
+        select 
+            (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'barangay' then amount else 0 end) as brgycurrshare,
+            (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'barangay' then amount else 0 end) as brgyprevshare,
+            (case when revtype = 'basicint' and sharetype = 'barangay' then amount else 0 end) as  brgypenaltyshare,
+            (case when sharetype = 'barangay' then amount else 0 end) as  brgytotalshare,
+            (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'city' then amount else 0 end) as  citycurrshare,
+            (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'city' then amount else 0 end) as  cityprevshare,
+            (case when revtype = 'basicint' and sharetype = 'city' then amount else 0 end) as  citypenaltyshare,
+            (case when sharetype = 'city' then amount else 0 end) as  citytotalshare,
+            (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'municipality' then amount else 0 end) as  municurrshare,
+            (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'municipality' then amount else 0 end) as  muniprevshare,
+            (case when revtype = 'basicint' and sharetype = 'municipality' then amount else 0 end) as  munipenaltyshare,
+            (case when sharetype = 'municipality' then amount else 0 end) as  munitotalshare,
+            (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'province' then amount else 0 end) as  provcurrshare,
+            (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'province' then amount else 0 end) as  provprevshare,
+            (case when revtype = 'basicint' and sharetype = 'province' then amount else 0 end) as  provpenaltyshare,
+            (case when sharetype = 'province' then amount else 0 end) as  provtotalshare 
+        from vw_landtax_collection_share_detail
+        where ${filter}   
+            and revperiod <> 'advance' 
+            and revtype in ('basic', 'basicint')
+            and voided = 0
 
-        sum(case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype = 'city' then cra.amount else 0 end) as  citycurrshare,
-        sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype = 'city' then cra.amount else 0 end) as  cityprevshare,
-        sum(case when cra.revtype = 'basicint' and cra.sharetype = 'city' then cra.amount else 0 end) as  citypenaltyshare,
-        sum(case when cra.sharetype = 'city' then cra.amount else 0 end) as  citytotalshare,
+        union all 
 
-        sum(case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype = 'municipality' then cra.amount else 0 end) as  municurrshare,
-        sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype = 'municipality' then cra.amount else 0 end) as  muniprevshare,
-        sum(case when cra.revtype = 'basicint' and cra.sharetype = 'municipality' then cra.amount else 0 end) as  munipenaltyshare,
-        sum(case when cra.sharetype = 'municipality' then cra.amount else 0 end) as  munitotalshare,
-
-        sum(case when cra.revperiod = 'current' and cra.revtype = 'basic' and cra.sharetype = 'province' then cra.amount else 0 end) as  provcurrshare,
-        sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'basic' and cra.sharetype = 'province' then cra.amount else 0 end) as  provprevshare,
-        sum(case when cra.revtype = 'basicint' and cra.sharetype = 'province' then cra.amount else 0 end) as  provpenaltyshare,
-        sum(case when cra.sharetype = 'province' then cra.amount else 0 end) as  provtotalshare 
-    from remittance rem 
-        inner join collectionvoucher cv on cv.objid = rem.collectionvoucherid 
-        inner join cashreceipt cr on cr.remittanceid = rem.objid 
-        inner join rptpayment rp on cr.objid = rp.receiptid 
-        inner join rptpayment_share cra on rp.objid = cra.parentid
-    where ${filter}   
-        and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
-        and cra.revperiod <> 'advance' 
-        and cra.revtype in ('basic', 'basicint')
-)xx 
+        select 
+            (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'barangay' then amount else 0 end) as brgycurrshare,
+            (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'barangay' then amount else 0 end) as brgyprevshare,
+            (case when revtype = 'basicint' and sharetype = 'barangay' then amount else 0 end) as  brgypenaltyshare,
+            (case when sharetype = 'barangay' then amount else 0 end) as  brgytotalshare,
+            (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'city' then amount else 0 end) as  citycurrshare,
+            (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'city' then amount else 0 end) as  cityprevshare,
+            (case when revtype = 'basicint' and sharetype = 'city' then amount else 0 end) as  citypenaltyshare,
+            (case when sharetype = 'city' then amount else 0 end) as  citytotalshare,
+            (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'municipality' then amount else 0 end) as  municurrshare,
+            (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'municipality' then amount else 0 end) as  muniprevshare,
+            (case when revtype = 'basicint' and sharetype = 'municipality' then amount else 0 end) as  munipenaltyshare,
+            (case when sharetype = 'municipality' then amount else 0 end) as  munitotalshare,
+            (case when revperiod = 'current' and revtype = 'basic' and sharetype = 'province' then amount else 0 end) as  provcurrshare,
+            (case when revperiod in ('previous', 'prior') and revtype = 'basic' and sharetype = 'province' then amount else 0 end) as  provprevshare,
+            (case when revtype = 'basicint' and sharetype = 'province' then amount else 0 end) as  provpenaltyshare,
+            (case when sharetype = 'province' then amount else 0 end) as  provtotalshare 
+        from vw_landtax_collection_share_detail_eor
+        where ${filter}   
+            and revperiod <> 'advance' 
+            and revtype in ('basic', 'basicint')
+    ) t
+)tt
 
 
 [getSefShares]
 select 
-    sum(case when cra.revperiod = 'current' and cra.revtype = 'sef' and cra.sharetype = 'city' then cra.amount else 0 end) as citycurrshare,
-    sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'sef' and cra.sharetype = 'city' then cra.amount else 0 end) as cityprevshare,
-    sum(case when cra.revtype = 'sefint' and cra.sharetype = 'city' then cra.amount else 0 end) as citypenaltyshare,
-    sum(case when cra.revtype in ('sef', 'sefint') and cra.sharetype = 'city' then cra.amount else 0 end) as citysharetotal,
+  sum(t.citycurrshare) as citycurrshare,
+  sum(t.cityprevshare) as cityprevshare,
+  sum(t.citypenaltyshare) as citypenaltyshare,
+  sum(t.citysharetotal) as citysharetotal,
+  sum(t.municurrshare) as municurrshare,
+  sum(t.muniprevshare) as muniprevshare,
+  sum(t.munipenaltyshare) as munipenaltyshare,
+  sum(t.munisharetotal) as munisharetotal,
+  sum(t.provcurrshare) as provcurrshare,
+  sum(t.provprevshare) as provprevshare,
+  sum(t.provpenaltyshare) as provpenaltyshare,
+  sum(t.provsharetotal) as provsharetotal
+from (
+  select 
+      (case when revperiod = 'current' and revtype = 'sef' and sharetype = 'city' then amount else 0 end) as citycurrshare,
+      (case when revperiod in ('previous', 'prior') and revtype = 'sef' and sharetype = 'city' then amount else 0 end) as cityprevshare,
+      (case when revtype = 'sefint' and sharetype = 'city' then amount else 0 end) as citypenaltyshare,
+      (case when revtype in ('sef', 'sefint') and sharetype = 'city' then amount else 0 end) as citysharetotal,
+      (case when revperiod = 'current' and revtype = 'sef' and sharetype = 'municipality' then amount else 0 end) as municurrshare,
+      (case when revperiod in ('previous', 'prior') and revtype = 'sef' and sharetype = 'municipality' then amount else 0 end) as muniprevshare,
+      (case when revtype = 'sefint' and sharetype = 'municipality' then amount else 0 end) as munipenaltyshare,
+      (case when revtype in ('sef', 'sefint') and sharetype = 'municipality' then amount else 0 end) as munisharetotal,
+      (case when revperiod = 'current' and revtype = 'sef' and sharetype = 'province' then amount else 0 end) as provcurrshare,
+      (case when revperiod in ('previous', 'prior') and revtype = 'sef' and sharetype = 'province' then amount else 0 end) as provprevshare,
+      (case when revtype = 'sefint' and sharetype = 'province' then amount else 0 end) as provpenaltyshare,
+      (case when revtype in ('sef', 'sefint') and sharetype = 'province' then amount else 0 end) as provsharetotal
+  from vw_landtax_collection_share_detail
+  where ${filter} 
+      and revperiod <> 'advance'
+      and revtype in ('sef', 'sefint')
+      and voided = 0
 
-    sum(case when cra.revperiod = 'current' and cra.revtype = 'sef' and cra.sharetype = 'municipality' then cra.amount else 0 end) as municurrshare,
-    sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'sef' and cra.sharetype = 'municipality' then cra.amount else 0 end) as muniprevshare,
-    sum(case when cra.revtype = 'sefint' and cra.sharetype = 'municipality' then cra.amount else 0 end) as munipenaltyshare,
-    sum(case when cra.revtype in ('sef', 'sefint') and cra.sharetype = 'municipality' then cra.amount else 0 end) as munisharetotal,
+    union all 
 
-    sum(case when cra.revperiod = 'current' and cra.revtype = 'sef' and cra.sharetype = 'province' then cra.amount else 0 end) as provcurrshare,
-    sum(case when cra.revperiod in ('previous', 'prior') and cra.revtype = 'sef' and cra.sharetype = 'province' then cra.amount else 0 end) as provprevshare,
-    sum(case when cra.revtype = 'sefint' and cra.sharetype = 'province' then cra.amount else 0 end) as provpenaltyshare,
-    sum(case when cra.revtype in ('sef', 'sefint') and cra.sharetype = 'province' then cra.amount else 0 end) as provsharetotal
-from remittance rem 
-    inner join collectionvoucher cv on cv.objid = rem.collectionvoucherid 
-    inner join cashreceipt cr on cr.remittanceid = rem.objid 
-    inner join rptpayment rp on cr.objid = rp.receiptid 
-    inner join rptpayment_share cra on rp.objid = cra.parentid
-where ${filter} 
-    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
-    and cra.revperiod <> 'advance'
-    and cra.revtype in ('sef', 'sefint')
+  select 
+      (case when revperiod = 'current' and revtype = 'sef' and sharetype = 'city' then amount else 0 end) as citycurrshare,
+      (case when revperiod in ('previous', 'prior') and revtype = 'sef' and sharetype = 'city' then amount else 0 end) as cityprevshare,
+      (case when revtype = 'sefint' and sharetype = 'city' then amount else 0 end) as citypenaltyshare,
+      (case when revtype in ('sef', 'sefint') and sharetype = 'city' then amount else 0 end) as citysharetotal,
+      (case when revperiod = 'current' and revtype = 'sef' and sharetype = 'municipality' then amount else 0 end) as municurrshare,
+      (case when revperiod in ('previous', 'prior') and revtype = 'sef' and sharetype = 'municipality' then amount else 0 end) as muniprevshare,
+      (case when revtype = 'sefint' and sharetype = 'municipality' then amount else 0 end) as munipenaltyshare,
+      (case when revtype in ('sef', 'sefint') and sharetype = 'municipality' then amount else 0 end) as munisharetotal,
+      (case when revperiod = 'current' and revtype = 'sef' and sharetype = 'province' then amount else 0 end) as provcurrshare,
+      (case when revperiod in ('previous', 'prior') and revtype = 'sef' and sharetype = 'province' then amount else 0 end) as provprevshare,
+      (case when revtype = 'sefint' and sharetype = 'province' then amount else 0 end) as provpenaltyshare,
+      (case when revtype in ('sef', 'sefint') and sharetype = 'province' then amount else 0 end) as provsharetotal
+  from vw_landtax_collection_share_detail_eor
+  where ${filter} 
+      and revperiod <> 'advance'
+      and revtype in ('sef', 'sefint')
+) t
 
 
 [getBrgyShares]
-select  
-    b.name as brgyname, 
-    sum(case when cra.revperiod='current' and revtype='basic' then cra.amount + cra.discount else 0.0 end )as basiccurrentamt,     
-    sum(case when cra.revperiod='current' and revtype='basic' then cra.discount else 0.0 end )as basiccurrentdiscamt,     
-    sum(case when cra.revperiod = 'current' and revtype ='basicint' then cra.amount else 0.0 end) as basiccurrentintamt,
-    sum(case when cra.revperiod in ('previous', 'prior') and revtype ='basic' then cra.amount else 0.0 end) as basicprevamt,    
-    sum(case when cra.revperiod in ('previous', 'prior') and revtype ='basicint' then cra.amount else 0.0 end) as basicprevintamt,
-    sum(case when revtype like 'basic%' then cra.amount else 0.0 end) as total
-from remittance rem 
-    inner join collectionvoucher cv on cv.objid = rem.collectionvoucherid 
-    inner join cashreceipt cr on cr.remittanceid = rem.objid 
-    inner join rptpayment rp on cr.objid = rp.receiptid 
-    inner join rptpayment_share cra on rp.objid = cra.parentid
-    inner join itemaccount ia on cra.item_objid = ia.objid 
-    left join barangay b on ia.org_objid = b.objid
-where ${filter} 
-    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
-    and cra.sharetype ='barangay'
-    and cra.revperiod <> 'advance'
-group by b.name
+select
+  t.lgu,
+  t.barangay as brgyname,
+  sum(t.basiccurrentamt) as basiccurrentamt,
+  sum(t.basiccurrentdiscamt) as basiccurrentdiscamt,
+  sum(t.basiccurrentintamt) as basiccurrentintamt,
+  sum(t.basicprevamt) as basicprevamt,
+  sum(t.basicprevintamt) as basicprevintamt,
+  sum(t.total  ) as total
+from (
+  select  
+      lgu,
+      barangay, 
+      (case when revperiod='current' and revtype='basic' then amount + discount else 0.0 end ) as basiccurrentamt,     
+      (case when revperiod='current' and revtype='basic' then discount else 0.0 end ) as basiccurrentdiscamt,     
+      (case when revperiod = 'current' and revtype ='basicint' then amount else 0.0 end)  as basiccurrentintamt,
+      (case when revperiod in ('previous', 'prior') and revtype ='basic' then amount else 0.0 end)  as basicprevamt,    
+      (case when revperiod in ('previous', 'prior') and revtype ='basicint' then amount else 0.0 end)  as basicprevintamt,
+      (case when revtype like 'basic%' then amount else 0.0 end)  as total
+  from vw_landtax_collection_share_detail
+  where ${filter} 
+      and sharetype ='barangay'
+      and revperiod <> 'advance'
+      and voided = 0
+
+    union all 
+
+    select  
+        lgu,
+        barangay, 
+        (case when revperiod='current' and revtype='basic' then amount + discount else 0.0 end ) as basiccurrentamt,     
+        (case when revperiod='current' and revtype='basic' then discount else 0.0 end ) as basiccurrentdiscamt,     
+        (case when revperiod = 'current' and revtype ='basicint' then amount else 0.0 end)  as basiccurrentintamt,
+        (case when revperiod in ('previous', 'prior') and revtype ='basic' then amount else 0.0 end)  as basicprevamt,    
+        (case when revperiod in ('previous', 'prior') and revtype ='basicint' then amount else 0.0 end)  as basicprevintamt,
+        (case when revtype like 'basic%' then amount else 0.0 end)  as total
+    from vw_landtax_collection_share_detail_eor
+    where ${filter} 
+        and sharetype ='barangay'
+        and revperiod <> 'advance'
+) t
+group by t.lgu, t.barangay
 
 [getBrgySharesAdvance]
 select  
-    min(b.name) as brgyname, 
+    o.name as lgu,
+    b.name as brgyname, 
     sum(case when cra.revperiod='advance' and revtype='basic' then cra.amount else 0.0 end )as basiccurrentamt,     
     sum(case when cra.revperiod = 'advance' and revtype ='basicint' then cra.amount else 0.0 end) as basiccurrentintamt
 from cashreceipt cr 
@@ -246,37 +397,53 @@ from cashreceipt cr
     inner join rptpayment_share cra on rp.objid = cra.parentid
     left join cashreceipt_void cv on cr.objid = cv.receiptid 
     left join rptledger rl on rp.refid = rl.objid
+    left join sys_org o on rl.lguid = o.objid  
     left join barangay b on rl.barangayid = b.objid 
     inner join remittance r on r.objid = cr.remittanceid 
 where cr.receiptdate >= $P{fromdate} and cr.receiptdate < $P{todate}
     and cra.sharetype ='barangay'
      and cv.objid is null  
      and cra.revperiod = 'advance'
-group by b.objid  
+group by o.name, b.name   
 
 
 
 
 
 [getAdvanceCollectionsByBrgy]
-select  
-    rpi.year, 
-    b.objid as brgyid,
-    sum(rpi.amount) as basic,     
-    sum(rpi.discount) as disc,     
-    sum(rpi.amount - rpi.discount) as total
-from remittance rem 
-    inner join collectionvoucher cv on cv.objid = rem.collectionvoucherid 
-    inner join cashreceipt cr on cr.remittanceid = rem.objid 
-    inner join rptpayment rp on cr.objid = rp.receiptid 
-    inner join rptpayment_item rpi on rp.objid = rpi.parentid 
-    inner join rptledger rl on rp.refid = rl.objid 
-    inner join barangay b on rl.barangayid = b.objid 
-where ${filter} 
-    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
-    and rpi.revperiod = 'advance'
-    and rpi.revtype like 'basic' 
-group by rpi.year, b.objid
+select
+  t.year,
+  t.brgyid,
+  sum(t.basic) as basic,     
+  sum(t.disc) as disc,     
+  sum(t.total) as total  
+from (
+  select  
+      year, 
+      barangayid as brgyid,
+      (amount) as basic,     
+      (discount) as disc,     
+      (amount - discount) as total
+  from vw_landtax_collection_detail
+  where ${filter} 
+      and revperiod = 'advance'
+      and revtype like 'basic' 
+      and voided = 0
+
+    union all 
+
+  select  
+      year, 
+      barangayid as brgyid,
+      (amount) as basic,     
+      (discount) as disc,     
+      (amount - discount) as total
+  from vw_landtax_collection_detail_eor
+  where ${filter} 
+      and revperiod = 'advance'
+      and revtype like 'basic' 
+) t 
+group by t.year, t.brgyid
 
 [getAdvanceBrgySharesAnnual]
 select  
@@ -292,11 +459,12 @@ from remittance rem
     inner join rptpayment_share rps on rp.objid = rps.parentid
     inner join itemaccount ia on rps.item_objid = ia.objid 
     inner join barangay b on ia.org_objid = b.objid 
+    left join cashreceipt_void crv on cr.objid = crv.receiptid 
 where ${filter} 
-    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
     and rps.revperiod = 'advance'
     and rps.revtype in ('basic', 'basicint')
     and rps.sharetype = 'barangay'
+    and crv.objid is null 
 group by rps.year, b.objid 
 
 [getAdvanceLguSharesAnnual]
@@ -313,10 +481,11 @@ from remittance rem
     inner join rptpayment_share rps on rp.objid = rps.parentid
     inner join rptledger rl on rp.refid = rl.objid 
     inner join barangay b on rl.barangayid = b.objid 
+    left join cashreceipt_void crv on cr.objid = crv.receiptid 
 where ${filter} 
-    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
     and rps.revperiod = 'advance'
     and rps.revtype in ('basic', 'basicint')
-    and rps.sharetype <> 'barangay'
+    and rps.sharetype = $P{lgutype}
+    and crv.objid is null 
 group by rps.year, b.objid 
 

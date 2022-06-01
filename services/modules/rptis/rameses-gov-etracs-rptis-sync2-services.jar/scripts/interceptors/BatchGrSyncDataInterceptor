@@ -12,6 +12,9 @@ class BatchGrSyncDataInterceptor
     @Env
     def env
 
+    @DataContext('batchgr')
+    def em_batchgr;
+
     @Service('RPTMainSyncDataService')
     def mainSyncSvc    
 
@@ -36,7 +39,6 @@ class BatchGrSyncDataInterceptor
     @After(pattern="MunicipalityBatchGrSupportService.resendToProvince", index=10000) 
     public void scheduleResendToProvince( evt ) {
         def batchgr = evt.result;
-        println 'MunicipalityBatchGrSupportService.resendToProvince => ' + batchgr 
         mainSyncSvc.createDataForSync(getDataForSync(batchgr, 'BATCHGR-FORAPPROVAL'))
     }
 
@@ -56,6 +58,16 @@ class BatchGrSyncDataInterceptor
     public void resendToMunicipality( evt ) {
         def batchgr = evt.result;
         mainSyncSvc.createDataForSync(getDataForSync(batchgr, 'BATCHGR-APPROVED'))
+    }
+
+    @After(pattern="BatchGRService.excludeItem", index=10000) 
+    public void excludeItem( evt ) {
+        def batchgritem = evt.args[0];
+        def batchgr = em_batchgr.find([objid: batchgritem.parent.objid]).first();
+        if (!batchgr) throw new Exception('Batch GR ' + batchgritem.parent.objid + ' does not exist or has already been deleted.');
+        def syncdata = getDataForSync(batchgr, 'BATCHGR-EXCLUDE-ITEM');
+        syncdata.info.batchgritem = [objid: batchgritem.objid];
+        mainSyncSvc.createDataForSync(syncdata);
     }
     
     /* scheduler */

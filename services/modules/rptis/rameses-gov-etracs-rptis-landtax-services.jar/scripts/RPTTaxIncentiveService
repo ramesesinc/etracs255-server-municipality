@@ -38,11 +38,11 @@ class RPTTaxIncentiveService extends ActiveCrudListService
 	@ProxyMethod
 	public def getColumns( params ) {
 		return [
-            [name:"state", caption:"State", width:100],
+			[name:"state", caption:"State", width:100],
 			[name:"txnno", caption:"Txn No.", width:80],
-            [name:"txndate", caption:"Txn Date", width:100],
-            [name:"taxpayer.name", caption:"Taxpayer", width:250],
-            [name:"remarks", caption:"Remarks", width:200],
+			[name:"txndate", caption:"Txn Date", width:100],
+			[name:"taxpayer.name", caption:"Taxpayer", width:250],
+			[name:"remarks", caption:"Remarks", width:200],
 		]	
 	}
 

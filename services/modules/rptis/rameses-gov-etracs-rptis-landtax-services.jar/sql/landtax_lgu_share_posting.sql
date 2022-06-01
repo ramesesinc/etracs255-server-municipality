@@ -1,9 +1,8 @@
 [findPaidLedger]
-select rl.objid, c.objid as receiptid, rp.objid as paymentid, rp.amount 
-from cashreceipt c 
-inner join rptpayment rp on c.objid = rp.receiptid 
+select rl.objid, rp.receiptid, rp.objid as paymentid, rp.amount 
+from rptpayment rp 
 inner join rptledger rl on rp.refid = rl.objid 
-where c.objid = $P{receiptid}
+where rp.receiptid = $P{receiptid}
 and rl.objid = $P{rptledgerid}
 
 [findPaidLedgerByReceipt]
@@ -13,12 +12,11 @@ from rptpayment rp
 where rp.receiptid = $P{receiptid}
 
 [findPaidCompromise]
-select rl.objid, c.objid as receiptid, rp.objid as paymentid, rp.amount 
-from cashreceipt c 
-inner join rptpayment rp on c.objid = rp.receiptid 
+select rl.objid, rp.receiptid, rp.objid as paymentid, rp.amount 
+from rptpayment rp
 inner join rptcompromise rc on rp.refid = rc.objid 
 inner join rptledger rl on rc.rptledgerid = rl.objid 
-where c.objid = $P{receiptid}
+where rp.receiptid = $P{receiptid}
 and rc.objid = $P{rptledgerid}
 
 [findPaidCompromiseByReceipt]

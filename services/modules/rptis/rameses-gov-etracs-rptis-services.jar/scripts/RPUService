@@ -312,7 +312,10 @@ class RPUService
 
     void deleteRpuMaster(rpu){
         try{
-            em.deleteRpuMaster([objid:rpu.rpumasterid])
+            def master = em.findRpuMasterById([objid: rpu.rpumasterid])
+            if (master) {
+                em.deleteRpuMaster(master)
+            }
         }
         catch(e){
             e.printStackTrace()

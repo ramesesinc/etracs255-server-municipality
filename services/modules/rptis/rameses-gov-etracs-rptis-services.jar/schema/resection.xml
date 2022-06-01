@@ -2,8 +2,8 @@
 	<element tablename="resection">
 		<field name="objid" primary="true" prefix="R" />
 		<field name="state" required="true" defaultState="DRAFT" caption="State" searchable="true" indexed="true" />
-		<field name="txnno" required="true" />
-		<field name="txndate" required="true" />
+		<field name="txnno" required="true" caption="Txn No." searchable="true" />
+		<field name="txndate" required="true" caption="Txn Date" />
 		<field name="lgu_objid" required="true" />
 		<field name="barangay_objid" required="true" />
 		<field name="pintype" required="true" caption="PIN Type" />

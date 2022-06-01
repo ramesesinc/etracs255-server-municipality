@@ -24,7 +24,9 @@ FROM (
 		SUM(sef - sefdisc + sefint) AS sefnet,
 		SUM(basic - basicdisc + basicint  + sef - sefdisc + sefint ) AS total
 	FROM vw_landtax_report_rptdelinquency_detail r
-	WHERE barangayid LIKE $P{barangayid} 
+	INNER JOIN rptledger rl on r.rptledgerid = rl.objid 
+	WHERE r.barangayid LIKE $P{barangayid} 
+	AND rl.taxpayer_objid LIKE $P{taxpayerid}
 	AND NOT EXISTS(select * from faas_restriction where ledger_objid = r.rptledgerid and state='ACTIVE')
 	AND NOT EXISTS(select * from rptledger_subledger where objid = r.rptledgerid)
 	${filter} 
@@ -64,9 +66,11 @@ FROM (
 		SUM(basicdisc) as basicdisc, SUM(sefdisc) as sefdisc,
 		SUM(basic - basicdisc + basicint  + sef - sefdisc + sefint ) AS total
 	FROM vw_landtax_report_rptdelinquency_detail r
-	WHERE barangayid LIKE $P{barangayid} 
+	INNER JOIN rptledger rl on r.rptledgerid = rl.objid 
+	WHERE r.barangayid LIKE $P{barangayid} 
 	AND NOT EXISTS(select * from faas_restriction where ledger_objid = r.rptledgerid and state='ACTIVE')
 	AND NOT EXISTS(select * from rptledger_subledger where objid = r.rptledgerid)
+	AND rl.taxpayer_objid like $P{taxpayerid}
 	${filter} 
 	GROUP BY rptledgerid, case when year = $P{year} then 'A. CURRENT' else 'B. PREVIOUS' end
 )x 
@@ -111,6 +115,7 @@ from (
 	 and (rd.year <= rlf.toyear or rlf.toyear = 0 )
 	 and rlf.state = 'APPROVED' 
 	 and rl.classification_objid like $P{classificationid}
+	 and rl.taxpayer_objid like $P{taxpayerid}
 	 ${filter} 
 	group by 
 		rd.dtgenerated,

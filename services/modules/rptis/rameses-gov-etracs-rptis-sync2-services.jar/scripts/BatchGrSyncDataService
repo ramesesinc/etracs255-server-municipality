@@ -53,7 +53,7 @@ class BatchGrSyncDataService
     @DataContext('cancelledfaas_signatory')
     def em_cancelledfaas_signatory
 
-	def TXNTYPE_GR = 'GR';
+    def TXNTYPE_GR = 'GR';
 
 
     def getActions(){
@@ -63,6 +63,8 @@ class BatchGrSyncDataService
 	    	'BATCHGR-FAAS-APPROVED': [send: sendApprovedFaas, receive: postApprovedFaas, schedule: {}],
 	    	'BATCHGR-APPROVED': [send: sendApprovedBatchGr, receive: postApprovedBatchGr, schedule: scheduleBatchGrApproval],
 	    	'BATCHGR-DISAPPROVAL': [send: sendDisapprovedBatchGr, receive: postDisapprovedBatchGr, schedule: scheduleBatchGrDisapproval],
+	    	'BATCHGR-DISAPPROVAL': [send: sendDisapprovedBatchGr, receive: postDisapprovedBatchGr, schedule: scheduleBatchGrDisapproval],
+	    	'BATCHGR-EXCLUDE-ITEM': [send: sendExcludedBatchGrItem, receive: postExcludedBatchGrItem, schedule: scheduleExcludedBatchGrItem],
 	    ]
 	}
 
@@ -74,7 +76,6 @@ class BatchGrSyncDataService
 	---------------------------------------------------------*/
 	@ProxyMethod
 	public void schedule(data) {
-		println 'schedule => ' + data;
 		def action= getActions()[data.action]
 		if (!action) throw new Exception('Scheduler not found for action ' + data.action)
 
@@ -136,6 +137,10 @@ class BatchGrSyncDataService
 
 	def scheduleBatchGrDisapproval = {syncdata, batchgr ->
 		createSyncItem(batchgr, syncdata, 'BATCHGR-DISAPPROVAL')
+	}
+
+	def scheduleExcludedBatchGrItem = {syncdata, batchgr ->
+		createSyncItem(batchgr, syncdata, 'BATCHGR-EXCLUDE-ITEM')
 	}
 
 	
@@ -202,6 +207,15 @@ class BatchGrSyncDataService
 		def batchgr = syncdata.data 
 		supportSvc.postDisapprovedBatchGr(batchgr)
 
+	}
+
+	def sendExcludedBatchGrItem = {syncdata ->
+        return syncdata.parent.info.batchgritem
+	}
+
+	def postExcludedBatchGrItem = {syncdata ->
+        def batchgritem = syncdata.data;
+        supportSvc.postExcludedBatchGrItem(batchgritem);
 	}
 
 	void startWorkflow(syncdata, batchgr){

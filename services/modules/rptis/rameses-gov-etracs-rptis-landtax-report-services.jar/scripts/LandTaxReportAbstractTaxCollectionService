@@ -147,14 +147,14 @@ class LandTaxReportAbstractTaxCollectionService {
 
         params.pdate = dtsvc.parseDate(params.fromdate, null)
 
-        params.filter = ' liq.controldate >= $P{fromdate} AND liq.controldate < $P{todate} '
+        params.filter = ' liquidationdate >= $P{fromdate} AND liquidationdate < $P{todate} '
         if (params.postingtype && params.postingtype.code == 'byrem'){
-            params.filter = ' rem.controldate >= $P{fromdate} AND rem.controldate < $P{todate} '
+            params.filter = ' remittancedate >= $P{fromdate} AND remittancedate < $P{todate} '
         }
 
         def items = [];
         def advitems = [];
-
+        
         if (!params.collectiontype) {
             items = em.getAbstractOfRPTCollection(params).each{buildPeriod(it)};
             advitems = em.getAbstractOfRPTCollectionAdvance(params).each{buildPeriod(it)};

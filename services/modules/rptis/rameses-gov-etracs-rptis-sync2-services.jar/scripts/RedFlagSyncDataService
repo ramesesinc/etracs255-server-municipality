@@ -25,6 +25,9 @@ class RedFlagSyncDataService
 	@Service('RPTUtil')
     def util
 
+	@DataContext('rpt_redflag')
+    def em_redflag;
+
 
 	def getActions(){
 		return  [
@@ -101,7 +104,7 @@ class RedFlagSyncDataService
 
 	def postDataToResolve = {syncdata ->
 		def redflag = syncdata.data 
-		svc.postDataToResolve(redflag)
+        redflag = svc.postDataToResolve(redflag)
 		notifyRecommender(syncdata, redflag)
 	}
 
@@ -118,32 +121,44 @@ class RedFlagSyncDataService
 
 
 	void notifyRecommender(syncdata, redflag){
-		def currtask = svc.getCurrentTask(redflag)
-		def msg = util.capitalize(currtask.filetype) + ' ' + redflag.refno + ' Red Flag #' + redflag.caseno 
+        def currtask = svc.getCurrentTask(redflag);
+        def filetype = currtask?.filetype;
+        if (redflag.info.parentschema) filetype = redflag.info.parentschema;
+        def msg = util.capitalize(filetype) + ' ' + redflag.refno + ' Red Flag #' + redflag.caseno 
 		msg += ' was submitted by ' + redflag.filedby.name 
 
         def param = [:]
-        param.objid = currtask.objid 
+        param.objid = 'N' + new java.rmi.server.UID();
         param.sender = syncdata.sender
-        param.recipientid = (currtask.assignee.objid ? currtask.assignee.objid : '-')
+        param.recipientid = (currtask?.assignee?.objid ? currtask.assignee.objid : '-')
         param.recipienttype = 'user'
-        param.filetype = (currtask?.filetype ? currtask.filetype : '-')
-        param.msg = msg
-        param.taskid = currtask.objid 
+        param.filetype = filetype;
+		param.msg = msg;
+        if (redflag.info.parentschema) {
+            param.taskid = svc.getCurrentParentTask(redflag).objid;
+        } else {
+            param.taskid = currtask.objid 
+        }
         support.notifyGroup(param)
 	}
 
 	void notifyFiledBy(syncdata, redflag){
 		def currtask = svc.getCurrentTask(redflag)
-		def msg = util.capitalize(currtask.filetype) + ' ' + redflag.refno + ' Red Flag #' + redflag.caseno + ' resolved.'
+        def filetype = currtask?.filetype;
+        if (redflag.info.parentschema) filetype = redflag.info.parentschema;
+		def msg = util.capitalize(filetype) + ' ' + redflag.refno + ' Red Flag #' + redflag.caseno + ' resolved.'
 		def param = [:]
         param.objid = redflag.refid
         param.sender = syncdata.sender
         param.recipientid = redflag.filedby.objid
         param.recipienttype = 'user'
-        param.filetype = (currtask?.filetype ? currtask.filetype : '-')
+        param.filetype = filetype;
         param.msg = msg
-        param.taskid = currtask.objid 
+        if (redflag.info.parentschema) {
+            param.taskid = svc.getCurrentParentTask(redflag).objid;
+        } else {
+            param.taskid = currtask.objid 
+        }
         support.notifyGroup(param)
 	}
 }

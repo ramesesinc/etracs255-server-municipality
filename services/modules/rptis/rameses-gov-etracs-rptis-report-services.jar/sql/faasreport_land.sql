@@ -10,6 +10,7 @@ SELECT
 	sub.name AS subname, 
 	al.code AS actualusecode,
 	al.name AS actualusename,
+	st.striplevel,
 	ld.areasqm, 
 	ld.areaha,
 	ld.taxable, 

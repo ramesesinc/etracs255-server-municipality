@@ -1,0 +1,33 @@
+2.5.04.05.01
+==========================================================
+LANDTAX:
+  - Report: List of Real Property Payment
+  - Report: List of Newly Assessed Properties
+  - Ledger: update based on FAAS changeinfo
+  - Report: shares: index tables and update statements
+  - Collection: repost shares facility
+  - Billing: misspayment flag update
+  - Repost Share: support eor
+  - Ledger: Limit last year paid when fixed    
+  - RPTLedger: municipality: sync with province (initial)
+  - REPORT: RPTC: daily period option
+  - REPORT: Delinquency: taxpayer filter support  
+
+ASSESSOR:
+  - Subdivision: clear txnref when deleting mother land    
+  - Report: faas: machinery: display condition when acquired
+  - Report: Ownership Record Card
+  - Report: TMCR (Modified): dislay "X" for mach column
+  - Report: FAAS: display stripping info in appraisal
+  - CancelFAAS: assign final sequenceno when approve
+  - RPU: machinery: update actual use taxability support
+  - RPU: bldg: support gap base value computation
+  - SYNC2: download to local support
+  - BATCHGR: exclude item (province)
+  - REDFLAG: sync update for complex txn
+  - REDFLAG: management list  
+  - Certification: workflow issuance update
+  - Building: Multi-storey support
+  - Viewer: Support pdf and other file formats (open by default app)
+  - Resection: Editable TDNo and various improvements
+  - Restriction: Display on FAAS restriction tab      

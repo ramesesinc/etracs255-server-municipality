@@ -71,11 +71,11 @@ public class RPTLedgerRuleService
 		def ledgerfact = new RPTLedgerFact(ledger)
 		facts << ledgerfact 
 
-		def faases = em_ledger_faas.select('faasid,tdno,fromyear,fromqtr,toyear,toqtr,idleland,txntype.objid,assessedvalue,classification.objid,actualuse.objid,faas.totalmv')
-						.find([rptledgerid: ledger.objid, state:'APPROVED'])
-						.list()
-
+		def faases = [];
 		if (util.isTrue(var.rptledger_rule_include_ledger_faases)) {
+			faases = em_ledger_faas.select('faasid,tdno,fromyear,fromqtr,toyear,toqtr,idleland,txntype.objid,assessedvalue,classification.objid,actualuse.objid,faas.totalmv')
+							.find([rptledgerid: ledger.objid, state:'APPROVED'])
+							.list()
 			faases.each {
 				facts << new RPTLedgerFaasFact(it)
 			}

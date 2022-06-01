@@ -5,10 +5,7 @@
 		<field name="rptledgerid" required="true" />
 		<field name="fromyear" required="true" type="integer"/>
 		<field name="toyear" required="true" type="integer"/>
-		<field name="basicrate" required="true" type="integer" />
-		<field name="sefrate" required="true" type="integer" />
+		<field name="basicrate" required="true" type="decimal" />
+		<field name="sefrate" required="true" type="decimal" />
 	</element>
 </schema>
-
-
-

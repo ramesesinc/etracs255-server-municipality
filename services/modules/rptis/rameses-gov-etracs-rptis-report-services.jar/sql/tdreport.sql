@@ -277,6 +277,7 @@ SELECT
 	r.assessedvalue AS assessedvalue,
 	r.areasqm AS areasqm,
 	r.areaha AS areaha,
+	r.taxable,
 	xr.rputype 
 FROM faas f
 	INNER JOIN rpu_assessment r ON f.rpuid = r.rpuid
@@ -305,7 +306,8 @@ SELECT
 	md.operationyear,
 	md.replacementcost,
 	md.brand,
-	md.model
+	md.model,
+	mu.taxable
 FROM faas f
 	INNER JOIN rpu r ON f.rpuid = r.objid 
 	INNER JOIN propertyclassification pc ON r.classification_objid = pc.objid 
@@ -331,7 +333,8 @@ SELECT
 	bra.assessedvalue,
 	r.totalareasqm AS area,
 	'SQM' AS areatyp,
-	r.rputype
+	r.rputype,
+	bra.taxable
 FROM faas f
 	INNER JOIN rpu r ON f.rpuid = r.objid 
 	INNER JOIN propertyclassification pc ON r.classification_objid = pc.objid 
@@ -365,7 +368,8 @@ SELECT
 	bra.assessedvalue,
 	r.totalareasqm AS area,
 	'SQM' AS areatype,
-	r.rputype 
+	r.rputype,
+	bra.taxable
 FROM faas f
 	INNER JOIN rpu r ON f.rpuid = r.objid 
 	INNER JOIN propertyclassification pc ON r.classification_objid = pc.objid 

@@ -41,6 +41,12 @@ public class BldgRYSettingService
     @DataContext('bldgkind')
     def em_bldgkind 
 
+    @DataContext('rysetting_bldgtype_storeyadjustment')
+    def em_storeyadjustment 
+
+    @DataContext('rysetting_bldgtype_storeyadjustment_bldgkind')
+    def em_storeyadjustment_bldgkind
+
     @Service('RPTUtil')
     def util    
 
@@ -110,6 +116,8 @@ public class BldgRYSettingService
         em_additionalitem.find(params).delete()
         em_depreciation.find(params).delete()
         em_bucc.find(params).delete()
+        em_storeyadjustment_bldgkind.find(params).delete()
+        em_storeyadjustment.find(params).delete()
         em_bldgtype.find(params).delete()
         em_rysettinglgu.find([rysettingid:entity.objid]).delete()
         em_bldg.delete(entity)
@@ -271,6 +279,73 @@ public class BldgRYSettingService
 
 
     /*----------------------------------------------------------
+    * Storey Adjustments
+    ----------------------------------------------------------*/
+    @ProxyMethod
+    public def saveStoreyAdjustment(adjustment) {
+        return em_storeyadjustment.save(adjustment)
+    }
+
+    @ProxyMethod
+    public void deleteStoreyAdjustment(adjustment) {
+        em_storeyadjustment_bldgkind.find([parentid: adjustment.objid]).delete()
+        em_storeyadjustment.find([objid: adjustment.objid]).delete()
+    }
+
+    @ProxyMethod
+    public def getStoreyAdjustments(bldgtype) {
+        if (!bldgtype) return []
+
+        return em_storeyadjustment
+                .find([bldgtypeid: bldgtype.objid])
+                .orderBy('floorno,rate')
+                .list()
+    }
+
+    @ProxyMethod
+    public void clearStoreyAdjustments(bldgtype) {
+        saveBldgType(bldgtype);
+        em_storeyadjustment_bldgkind.find([bldgtypeid: bldgtype.objid]).delete();
+        em_storeyadjustment.find([bldgtypeid: bldgtype.objid]).delete();
+    }
+
+    @ProxyMethod
+    public def getStoreyAdjustmentBldgKinds(storeyadj) {
+        if (!storeyadj) return []
+
+        return em_storeyadjustment_bldgkind
+                .find([parentid: storeyadj.objid])
+                .orderBy('bldgkind.name')
+                .list()
+    }
+
+    @ProxyMethod
+    public def saveStoreyAdjustmentBldgKind(bldgkind) {
+        def item = em_storeyadjustment_bldgkind
+                .where(['bldgtypeid = :bldgtypeid and floorno = :floorno and bldgkindid = :bldgkindid', bldgkind]).first()
+        if (item) {
+            throw new Exception('Building has already been added to Floor ' + bldgkind.floorno + ' with Rate ' + item.parent.rate  )
+        }
+        return em_storeyadjustment_bldgkind.save(bldgkind)
+    }
+
+    @ProxyMethod
+    public def deleteStoreyAdjustmentBldgKind(bldgkind) {
+        return em_storeyadjustment_bldgkind.find([objid: bldgkind.objid]).delete()
+    }
+
+    void deleteInvalidStoreyAdjustmentBldgKinds(entity) {
+        em_bldgtype
+            .find([bldgrysettingid: entity.objid, storeyadjtype: 'bytype'])
+            .list()
+            .each{
+                em_storeyadjustment_bldgkind.find([bldgtypeid: it.objid]).delete()
+            }
+
+    }
+
+
+    /*----------------------------------------------------------
     * Copy and Revision Support
     ----------------------------------------------------------*/
 
@@ -373,6 +448,23 @@ public class BldgRYSettingService
                 it.bldgtypeid       = bt.objid 
                 saveDepreciation(it)
             }
+
+            def storeyadjustments = getStoreyAdjustments(oldbt);
+            storeyadjustments.each{ storeyadj ->
+                storeyadj.previd             = storeyadj.objid 
+                storeyadj.objid            = util.generateId('BTM')
+                storeyadj.bldgrysettingid  = newsetting.objid 
+                storeyadj.bldgtypeid       = bt.objid 
+                saveStoreyAdjustment(storeyadj)
+
+                getStoreyAdjustmentBldgKinds([objid: storeyadj.previd]).each {adjbldgkind ->
+                    adjbldgkind.objid            = util.generateId('BTMB')
+                    adjbldgkind.bldgrysettingid  = newsetting.objid 
+                    adjbldgkind.bldgtypeid       = bt.objid 
+                    adjbldgkind.parentid       = storeyadj.objid 
+                    saveStoreyAdjustmentBldgKind(adjbldgkind)
+                }
+            }
        }
     }
 
@@ -405,9 +497,16 @@ public class BldgRYSettingService
         setting.bldgtypes = getBldgTypes(setting);
         setting.bldgkindbuccs = [];
         setting.depreciations = [];
+        setting.storeyadjustments = [];
+        setting.storeyadjbldgkinds = [];
         setting.bldgtypes.each{
             setting.bldgkindbuccs += getBldgKindBuccs(it);
             setting.depreciations += getDepreciations(it);
+            def storeyadjustments = getStoreyAdjustments(it);
+            setting.storeyadjustments = storeyadjustments;
+            storeyadjustments.each{storeyadj ->
+                setting.storeyadjbldgkinds += getStoreyAdjustmentBldgKinds(storeyadj)
+            }
         }
         setting.lgus = em_rysettinglgu.find([rysettingid:setting.objid]).list()
         return setting
@@ -431,10 +530,10 @@ public class BldgRYSettingService
         }
         setting.depreciations.each{ saveDepreciation(it) }
         setting.storeyadjustments.each{ saveStoreyAdjustment(it) }
+        setting.storeyadjbldgkinds.each{ saveStoreyAdjustmentBldgKind(it) }
         setting.lgus.each{em_rysettinglgu.save(it)}
         return [:]
     }
-
 
 
     /*----------------------------------------------------------
@@ -477,6 +576,7 @@ public class BldgRYSettingService
                 }
                 bt.depreciations.each{ saveDepreciation(it) }
                 bt.storeyadjustments.each{ saveStoreyAdjustment(it) }
+                bt.storeyadjbldgkinds.each{ saveStoreyAdjustmentBldgKind(it) }
             }
 
             setting.additionalitems.each{

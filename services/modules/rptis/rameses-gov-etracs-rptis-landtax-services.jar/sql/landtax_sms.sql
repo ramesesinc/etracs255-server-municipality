@@ -11,7 +11,7 @@ where rl.state = 'APPROVED'
   and (rl.lastyearpaid < $P{cy} or (rl.lastyearpaid = $P{cy} and rl.lastqtrpaid < 4))
   and e.mobileno is not null
 
-UNION ALL 
+UNION 
 
 select 
 	rl.objid, 

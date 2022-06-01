@@ -19,9 +19,7 @@ class RPTCertificationNoEncumbranceService
 		certSvc.validateFaas(cert)
 		validateAnnotated(cert)
 		certSvc.createCertification(cert)
-		cert.putAll(certSvc.getFaasInfo(cert.faasid))
-		certSvc.makeHtmlSafe(cert)
-		return cert 
+		return openCertification(cert.objid)
 	}
 
 	@ProxyMethod
@@ -29,7 +27,10 @@ class RPTCertificationNoEncumbranceService
 		def cert = certSvc.openCertification(objid)
 		if (! cert ) 
 			throw new Exception('Certification does not exist or has already been deleted.')
+		def certid = cert.objid
 		cert.putAll(certSvc.getFaasInfo(cert.faasid))
+		certSvc.makeHtmlSafe(cert)
+		cert.objid = certid
 		return cert 
 	}
 

@@ -93,12 +93,6 @@ class TDReportService
 
 		td.display_recommendedby = var.td_report_display_recommendedby ? var.td_report_display_recommendedby : '1'
 
-		/*
-		if(td.claimno) {
-			td.fullpin += ' M' + td.claimno
-		}
-		*/
-
 		td.address = concatHousenoStreetPurok( td ) 
 
 		td.annotations =  em.sqlContext.createNamedQuery('tdreport:getAnnotationMemoranda')
@@ -304,8 +298,6 @@ class TDReportService
 		}
 
 		padExtraItems(td.buildings, 4)
-
-
 	}
 
 	void buildMachRpuAssessment(td){
@@ -322,6 +314,8 @@ class TDReportService
 			td.machines = em.sqlContext.createNamedQuery('tdreport:getMachineAssessment')
 							.setParameter('faasid', td.faasid).resultList
 
+		td.machines.each{it.taxable = util.toBoolean(it.taxable, true)}
+
 		padExtraItems(td.machines, 4)
 	}
 
@@ -329,6 +323,9 @@ class TDReportService
 		if (td.rputype != 'planttree') return 
 		td.plants = em.sqlContext.createNamedQuery('tdreport:getPlantTreeAssessment')
 							.setParameter('faasid', td.faasid).resultList
+
+		td.plants.each{it.taxable = util.toBoolean(it.taxable, true)}
+
 		padExtraItems(td.plants, 4)
 	}
 
@@ -340,6 +337,8 @@ class TDReportService
 
 		td.miscitems = em.sqlContext.createNamedQuery('tdreport:getMiscAssessment')
 							.setParameter('faasid', td.faasid).resultList
+
+		td.miscitems.each{it.taxable = util.toBoolean(it.taxable, true)}
 
 		padExtraItems(td.miscitems, 4)
 	}

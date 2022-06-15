@@ -15,17 +15,17 @@ class LandTaxReportStatementOfShareInterceptor{
     }
 
     def getReportData(tag, params) {
-        def handlers = [:]
-        handlers['statement_of_share_basic'] = { svc.generateBasicShares(it) }
-        handlers['statement_of_share_basic_abstract'] = { svc.generateBasicSharesAbstract(it) }
-        handlers['statement_of_share_basic_summary'] = { svc.generateBasicSharesSummary(it) }
-        handlers['statement_of_share_brgy'] = { svc.getBarangayShares(it) }
-        handlers['statement_of_share_brgy_advance'] = { svc.getBarangayAdvanceShares(it) }
-        handlers['statement_of_share_sef'] = { svc.generateSefShares(it) }
+        def actions = [:]
+        actions['statement_of_share_basic'] = { svc.generateBasicShares(it) }
+        actions['statement_of_share_basic_abstract'] = { svc.generateBasicSharesAbstract(it) }
+        actions['statement_of_share_basic_summary'] = { svc.generateBasicSharesSummary(it) }
+        actions['statement_of_share_brgy'] = { svc.getBarangayShares(it) }
+        actions['statement_of_share_brgy_advance'] = { svc.getBarangayAdvanceShares(it) }
+        actions['statement_of_share_sef'] = { svc.generateSefShares(it) }
 
-        def handler = handlers[tag]
-        if (!handler) throw new Exception('Report handler ' + tag + ' is not registered')
+        def action = actions[tag]
+        if (!action) throw new Exception('Report action ' + tag + ' is not registered')
 
-        return handler(params)
+        return action(params)
     }
 }

@@ -1,42 +1,3 @@
-[getNodes]
-select n.name, n.title as caption
-from sys_wf_node n
-where n.processname = 'batchgr'
-and n.name not like 'assign%'
-and n.name not in ('start', 'provapprover')
-and n.name not like 'for%'
-and exists(select * from sys_wf_transition where processname='batchgr' and parentid = n.name)
-order by n.idx
-
-
-[getList]
-SELECT 
-	bgr.*,
-	(select trackingno from rpttracking where objid = bgr.objid) as trackingno,
-	tsk.objid AS taskid,
-	tsk.state AS taskstate,
-	tsk.assignee_objid,
-  b.name as barangay_name,
-  b.pin as barangay_pin,
-  o.name as lgu_name,
-  pc.name as classification_name
-FROM batchgr bgr
-  INNER JOIN barangay b on bgr.barangay_objid = b.objid 
-  INNER JOIN sys_org o on bgr.lgu_objid = o.objid 
-  LEFT JOIN propertyclassification pc on bgr.classification_objid = pc.objid 
-	LEFT JOIN batchgr_task tsk ON bgr.objid = tsk.refid AND tsk.enddate IS NULL
-WHERE bgr.lgu_objid LIKE $P{lguid} 
-  and bgr.barangay_objid like $P{barangayid}
-   and bgr.state LIKE $P{state}
-   and bgr.objid in (
-   		select objid from batchgr where txnno LIKE $P{searchtext}
-   		union
-   		select objid from batchgr where section LIKE $P{searchtext}
-   	)
-   ${filters}
-order by bgr.txnno desc 	
-
-
 [insertItems]
 insert into batchgr_item(
   objid,
@@ -64,7 +25,6 @@ from faas f
     inner join barangay b on rp.barangayid = b.objid 
 where rp.barangayid = $P{barangayid}
   and r.ry < $P{ry}
-  and r.ry = $P{prevry}
   and f.state = 'CURRENT'
   and r.rputype like $P{rputype}
   and r.classification_objid like $P{classificationid}

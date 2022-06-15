@@ -21,7 +21,7 @@ WHERE bal.previd = $P{previd}
 
 
 [lookupBldgTypes]
-SELECT bt.*, l.barangayid, rs.ry
+SELECT bt.*, l.barangayid
 FROM bldgrysetting rs
 	INNER JOIN rysetting_lgu l ON rs.objid = l.rysettingid 
 	INNER JOIN bldgtype bt ON rs.objid = bt.bldgrysettingid
@@ -136,17 +136,3 @@ FROM bldgrysetting bs
 	INNER JOIN rysetting_lgu bl ON bs.objid = bl.rysettingid
 WHERE bs.ry = $P{ry}
   AND bl.lguid = $P{lguid}
-
-
-[findMultiStoreyAdjustmentSetting]
-select sa.*
-from bldgrysetting rs
-	inner join rysetting_lgu l on rs.objid = l.rysettingid
-	inner join bldgtype_storeyadjustment sa on rs.objid = sa.bldgrysettingid
-	left join bldgtype_storeyadjustment_bldgkind sab on sa.objid = sab.parentid
-where l.lguid = $P{lguid}
-and rs.ry = $P{ry}
-and sa.bldgtypeid = $P{bldgtypeid}
-and sa.floorno = $P{floorno}
-and (sab.objid is null or sab.bldgkindid = $P{bldgkindid})
-

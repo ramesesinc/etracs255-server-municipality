@@ -7,7 +7,6 @@
 		<field name="amount" required="true" type="decimal" />
 		<field name="expr" required="true" />
 		<field name="depreciate" required="true" type="boolean" />
-		<field name="issystem" required="true" type="boolean" />
 		<complex name="additionalitem" 
 			ref="rysetting_bldg_additionalitem" 
 			jointype="many-to-one" 

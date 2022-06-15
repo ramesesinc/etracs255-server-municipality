@@ -13,7 +13,6 @@
         <field name="assesslevel" required="true" type="decimal" />
         <field name="assessedvalue" required="true" type="decimal" />
         <field name="actualuse_objid" required="true" />
-        <field name="taxable" required="true" type="boolean" default="true" />
 	</element>
     
     <element name="machdetail" tablename="machdetail">

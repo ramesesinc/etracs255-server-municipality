@@ -7,9 +7,6 @@ class SubdivisionRedFlagInterceptor
 	@Service('SubdivisionService')
 	def svc 
 
-	@DataContext('subdivision_task')
-	def em_task;
-
 	@After(pattern="RPTRedFlagService.getEntity", index=2)
 	public void afterGetEntity(evt){
 		def redflag = evt.args[0]
@@ -44,21 +41,7 @@ class SubdivisionRedFlagInterceptor
 			}
 			
 		}
+
 	}	
-
-	@After(pattern="RPTRedFlagService.getCurrentParentTask", index=1, eval="#{args[0]?.info?.parentschema =='subdivision'}")
-	public void afterGetCurrentParentTask(evt){
-		def redflag = evt.args[0]
-		def task = evt.result 
-		if (!task.objid){
-            def opentask = em_task.find([refid: redflag.parentid]).where('enddate is null').first();
-            if (opentask) {
-                opentask.filetype = 'subdivision'
-				task.putAll(opentask)
-            }
-		}
-	}	
-
-
 }
 

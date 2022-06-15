@@ -103,11 +103,6 @@ public class RPTRedFlagService
 		return [:]
 	}
 
-	@ProxyMethod
-	public def getCurrentParentTask(redflag) {
-		return [:]
-	}
-
 
 	@ProxyMethod
 	public def resolveRedFlag(entity){
@@ -161,8 +156,8 @@ public class RPTRedFlagService
 	}
 
 	@ProxyMethod
-	public def postDataToResolve(redflag) {
-		return save(redflag)
+	public void postDataToResolve(redflag) {
+		save(redflag)
 	}
 
 	

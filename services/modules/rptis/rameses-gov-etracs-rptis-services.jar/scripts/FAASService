@@ -57,11 +57,8 @@ class FAASService
 	@DataContext('faas_txntype')
 	def em_txntype 
 
-	@DataContext('txnlog')
-	def em_txnlog 
-
-	@DataContext('rpt_examination')
-	def em_examination
+    @DataContext('txnlog')
+    def em_txnlog 
 
 	@Service('Var')
 	def var 
@@ -212,14 +209,10 @@ class FAASService
 	@ProxyMethod
 	public void savePreviousFaases( faas ) {
 		//handle old data 
-		if (!faas.previousfaases) {
+		if (!faas.previousfaases) 
 			faas.previousfaases = []
-		}
 			
 		faas.previousfaases.each{
-			if (it.prevfaasid == it.faasid) {
-				it.prevfaasid = null;
-			}
 			em_faas_previous.save(it)
 		}			
 		faas._previousfaases?.each{
@@ -288,20 +281,6 @@ class FAASService
 	}
 
 	@ProxyMethod
-	public def cancelTransaction(faas) {
-		//move any findings to current faas
-		faas.previousfaases.each{ pf ->
-			em_examination.debug =true
-			
-			em_examination
-					.where('parent_objid = :faasid', [faasid: pf.faasid])
-					.update([parent_objid: pf.prevfaasid])
-		}
-
-		return self.deleteFaas(faas)
-	}
-
-	@ProxyMethod
 	public def deleteFaas( faas ) {
 		if (!faas.allowdelete){
 			def currentstate = getState(faas.objid)
@@ -328,7 +307,6 @@ class FAASService
 		em_faas_previous.find([faasid:faas.objid]).delete()
 		em_faas_backtax.find([faasid:faas.objid]).delete()
 		em_restriction.find([parent_objid:faas.objid]).delete()
-		em_faas_list.find([objid: faas.objid]).delete()
 		em_faas.delete(faas)
 
 		if (faas.txntype.newrpu){
@@ -362,13 +340,6 @@ class FAASService
 	public void deleteFaasById( faasid ) {
 		if (faasid) {
 			self.deleteFaas(self.openFaas([objid:faasid]))
-		}
-	}	
-
-	@ProxyMethod
-	public void onlineDeleteFaasById( faasid ) {
-		if (faasid) {
-			deleteFaas(self.openFaas([objid:faasid]))
 		}
 	}	
 
@@ -576,8 +547,10 @@ class FAASService
     @ProxyMethod
     public void saveSignatory( signatory ) {
     	if (signatory) {
-				def param = paramSvc.getStandardParameter()
-				signatory.assessor = [name: param?.ASSESSORNAME, title: param?.ASSESSORTITLE]
+    		if (!signatory.assessor) {
+	    		def param = paramSvc.getStandardParameter()
+	    		signatory.assessor = [name: param?.ASSESSORNAME, title: param?.ASSESSORTITLE]
+    		}
     		em_faas_signatory.save(signatory)
     	}
     }
@@ -753,12 +726,9 @@ class FAASService
 		def ntdno = tdno
 		if (isHyphenateTdNo()) {
 			ntdno += '-'
-		} else {
-            ntdno = ntdno.replace('-', '')
-        }
-        def key = 'TDNO-' + tdno
-        ntdno += seqSvc.getNextFormattedSeriesA( key, seqcount )
-        return ntdno
+		}
+        ntdno += seqSvc.getNextFormattedSeriesA( tdno, seqcount )
+        return ntdno 
     }    	
 
     def isHyphenateTdNo() {

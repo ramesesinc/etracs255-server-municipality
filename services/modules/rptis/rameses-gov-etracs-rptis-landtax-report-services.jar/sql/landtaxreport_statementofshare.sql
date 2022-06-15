@@ -1,6 +1,5 @@
 [getIdleLandSharesAbstract]
 select 
-    o.name as lgu,
     b.name as barangay,
     sum(case when cra.revperiod = 'current' and cra.revtype = 'basicidle' then cra.amount else 0 end) as brgycurr,
     sum(case when cra.revperiod = 'current' and cra.revtype = 'basicidleint' then cra.amount else 0 end) as brgycurrpenalty,
@@ -35,14 +34,12 @@ from remittance rem
     inner join rptpayment rp on cr.objid = rp.receiptid 
     inner join rptpayment_share cra on rp.objid = cra.parentid
     left join rptledger rl on rp.refid = rl.objid
-    left join sys_org o on rl.lguid = o.objid 
     left join barangay b on rl.barangayid = b.objid 
-    left join cashreceipt_void crv on cr.objid = crv.receiptid 
 where ${filter}   
+    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
     and cra.revtype in  ('basicidle', 'basicidleint') 
     and cra.amount > 0
-    and crv.objid is null 
-group by o.name, b.name 
+group by b.name 
 
 
 [getIdleLandShares]
@@ -66,9 +63,8 @@ from remittance rem
     inner join cashreceipt cr on cr.remittanceid = rem.objid 
     inner join rptpayment rp on cr.objid = rp.receiptid 
     inner join rptpayment_share cra on rp.objid = cra.parentid
-    left join cashreceipt_void crv on cr.objid = crv.receiptid 
 where ${filter} 
-    and crv.objid is null 
+    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
 
 
 [getBasicSharesAbstract]
@@ -146,8 +142,7 @@ order by
 
 [getBasicShares]
 select
-    t.lgu,
-    t.barangay,
+    b.name as barangay,
     sum(t.brgytotalshare) as brgytotalshare,
     sum(t.citycurrshare) as citycurrshare,
     sum(t.cityprevshare) as cityprevshare,
@@ -207,15 +202,16 @@ from (
         case when revtype = 'basicint' and sharetype = 'province' then amount else 0 end as provpenaltyshare
     from vw_landtax_collection_share_detail_eor
     where ${filter} 
-        and revperiod <> 'advance' 
-        and revtype in ('basic', 'basicint')
-        
+        and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
+        and cra.revperiod <> 'advance' 
+        and cra.revtype in ('basic', 'basicint')
 ) t
-group by t.lgu, t.barangay 
+left join barangay b on t.barangayid = b.objid 
+group by b.name 
 
 
 [getBasicSharesSummary]   
-select tt.*, 
+select xx.*, 
     (brgytotalshare + munitotalshare + provtotalshare + citytotalshare) as totalshare 
 from ( 
     select 
@@ -388,8 +384,7 @@ group by t.lgu, t.barangay
 
 [getBrgySharesAdvance]
 select  
-    o.name as lgu,
-    b.name as brgyname, 
+    min(b.name) as brgyname, 
     sum(case when cra.revperiod='advance' and revtype='basic' then cra.amount else 0.0 end )as basiccurrentamt,     
     sum(case when cra.revperiod = 'advance' and revtype ='basicint' then cra.amount else 0.0 end) as basiccurrentintamt
 from cashreceipt cr 
@@ -397,14 +392,13 @@ from cashreceipt cr
     inner join rptpayment_share cra on rp.objid = cra.parentid
     left join cashreceipt_void cv on cr.objid = cv.receiptid 
     left join rptledger rl on rp.refid = rl.objid
-    left join sys_org o on rl.lguid = o.objid  
     left join barangay b on rl.barangayid = b.objid 
     inner join remittance r on r.objid = cr.remittanceid 
 where cr.receiptdate >= $P{fromdate} and cr.receiptdate < $P{todate}
     and cra.sharetype ='barangay'
      and cv.objid is null  
      and cra.revperiod = 'advance'
-group by o.name, b.name   
+group by b.objid  
 
 
 
@@ -459,12 +453,11 @@ from remittance rem
     inner join rptpayment_share rps on rp.objid = rps.parentid
     inner join itemaccount ia on rps.item_objid = ia.objid 
     inner join barangay b on ia.org_objid = b.objid 
-    left join cashreceipt_void crv on cr.objid = crv.receiptid 
 where ${filter} 
+    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
     and rps.revperiod = 'advance'
     and rps.revtype in ('basic', 'basicint')
     and rps.sharetype = 'barangay'
-    and crv.objid is null 
 group by rps.year, b.objid 
 
 [getAdvanceLguSharesAnnual]
@@ -481,11 +474,10 @@ from remittance rem
     inner join rptpayment_share rps on rp.objid = rps.parentid
     inner join rptledger rl on rp.refid = rl.objid 
     inner join barangay b on rl.barangayid = b.objid 
-    left join cashreceipt_void crv on cr.objid = crv.receiptid 
 where ${filter} 
+    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid) 
     and rps.revperiod = 'advance'
     and rps.revtype in ('basic', 'basicint')
-    and rps.sharetype = $P{lgutype}
-    and crv.objid is null 
+    and rps.sharetype <> 'barangay'
 group by rps.year, b.objid 
 

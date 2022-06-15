@@ -220,14 +220,6 @@ class BatchGRSupportService
         } 
     }
 
-    @ProxyMethod
-    public def postExcludedBatchGrItem(item) {
-        def batchgritem = em_batchgr_item.find([objid: item.objid]).first();
-        if (batchgritem) {
-            batchSvc.postOnlineExcludeItem(batchgritem);
-        }
-    }
-
     void saveImageData(image){
         if (!image) return
         

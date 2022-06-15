@@ -179,14 +179,18 @@ select
   sum( munisefshare ) as munisefshare, 
   sum( brgysefshare ) as brgysefshare 
 from ( 
-  select
-    provcitybasicshare,
-    munibasicshare,
-    brgybasicshare,
-    provcitysefshare,
-    munisefshare,
-    brgysefshare
-  from vw_landtax_collection_disposition_detail
+  select   
+    case when ri.revtype in ('basic', 'basicint', 'basicidle', 'basicidleint') and ri.sharetype in ('province', 'city') then ri.amount else 0.0 end as provcitybasicshare,
+    case when ri.revtype in ('basic', 'basicint', 'basicidle', 'basicidleint') and ri.sharetype in ('municipality') then ri.amount else 0.0 end as munibasicshare,
+    case when ri.revtype in ('basic', 'basicint') and ri.sharetype in ('barangay') then ri.amount else 0.0 end as brgybasicshare,
+    case when ri.revtype in ('sef', 'sefint') and ri.sharetype in ('province', 'city') then ri.amount else 0.0 end as provcitysefshare,
+    case when ri.revtype in ('sef', 'sefint') and ri.sharetype in ('municipality') then ri.amount else 0.0 end as munisefshare,
+    0.0 as brgysefshare 
+  from remittance rem 
+    inner join collectionvoucher cv on cv.objid = rem.collectionvoucherid 
+    inner join cashreceipt cr on cr.remittanceid = rem.objid 
+    inner join rptpayment rp on cr.objid = rp.receiptid 
+    inner join rptpayment_share ri on rp.objid = ri.parentid
   where ${filter}  
     and revperiod <> 'advance' 
     and voided = 0
@@ -208,12 +212,12 @@ from (
 
 [findAdvanceDispositionReport]
 select 
-  sum( provcitybasicshare ) as provcitybasicshare, 
-  sum( munibasicshare ) as munibasicshare, 
-  sum( brgybasicshare ) as brgybasicshare, 
-  sum( provcitysefshare ) as provcitysefshare, 
-  sum( munisefshare ) as munisefshare, 
-  sum( brgysefshare ) as brgysefshare 
+  sum( provcitybasicshare ) as provcitybasicshare,
+  sum( munibasicshare ) as munibasicshare,
+  sum( brgybasicshare ) as brgybasicshare,
+  sum( provcitysefshare ) as provcitysefshare,
+  sum( munisefshare ) as munisefshare,
+  sum( brgysefshare ) as brgysefshare
 from ( 
   select
     provcitybasicshare,
@@ -238,8 +242,9 @@ from (
     brgysefshare
   from vw_landtax_collection_disposition_detail_eor
   where ${filter}  
-    and revperiod = 'advance' 
-)t
+    and cr.objid not in (select receiptid from cashreceipt_void where receiptid=cr.objid)
+    and ri.revperiod = 'advance' 
+)t 
 
 
 
@@ -297,35 +302,29 @@ select
   sum(x.gross) as gross
 from (
   select 
-    revtype, 
-    month(receiptdate) as imon, 
+    rpi.revtype, 
+    month(cr.receiptdate) as imon, 
     case 
-      when month(receiptdate) = 1 then 'JANUARY'
-      when month(receiptdate) = 2 then 'FEBRUARY'
-      when month(receiptdate) = 3 then 'MARCH'
-      when month(receiptdate) = 4 then 'APRIL'
-      when month(receiptdate) = 5 then 'MAY'
-      when month(receiptdate) = 6 then 'JUNE'
-      when month(receiptdate) = 7 then 'JULY'
-      when month(receiptdate) = 8 then 'AUGUST'
-      when month(receiptdate) = 9 then 'SEPTEMBER'
-      when month(receiptdate) = 10 then 'OCTOBER'
-      when month(receiptdate) = 11 then 'NOVEMBER'
+      when month(cr.receiptdate) = 1 then 'JANUARY'
+      when month(cr.receiptdate) = 2 then 'FEBRUARY'
+      when month(cr.receiptdate) = 3 then 'MARCH'
+      when month(cr.receiptdate) = 4 then 'APRIL'
+      when month(cr.receiptdate) = 5 then 'MAY'
+      when month(cr.receiptdate) = 6 then 'JUNE'
+      when month(cr.receiptdate) = 7 then 'JULY'
+      when month(cr.receiptdate) = 8 then 'AUGUST'
+      when month(cr.receiptdate) = 9 then 'SEPTEMBER'
+      when month(cr.receiptdate) = 10 then 'OCTOBER'
+      when month(cr.receiptdate) = 11 then 'NOVEMBER'
       else 'DECEMBER' 
     end as mon, 
-    case when $P{year} = year then amount else 0 end as cytax,
-    case when $P{year} = year then discount else 0 end as cydisc,
-    case when $P{year} = year then amount - discount else 0 end as cynet,
-    case when $P{year} = year then interest else 0 end as cyint,
+    case when $P{year} = rpi.year then rpi.amount else 0 end as cytax,
+    case when $P{year} = rpi.year then rpi.discount else 0 end as cydisc,
+    case when $P{year} = rpi.year then rpi.amount - rpi.discount else 0 end as cynet,
+    case when $P{year} = rpi.year then rpi.interest else 0 end as cyint,
 
-    case when $P{year} - 1 = year then amount else 0 end as immediatetax,
-    case when $P{year} - 1 = year then interest else 0 end as immediateint,
-    
-    case when $P{year} > year then amount else 0 end as subtotaltax,
-    case when $P{year} > year then interest else 0 end as subtotalint,
-
-    case when $P{year} - 1 > year then amount else 0 end as priortax,
-    case when $P{year} - 1 > year then interest else 0 end as priorint,
+    case when $P{year} - 1 = rpi.year then rpi.amount else 0 end as immediatetax,
+    case when $P{year} - 1 = rpi.year then rpi.interest else 0 end as immediateint,
     
     amount - discount + interest as total,
     amount + interest as gross
@@ -359,21 +358,23 @@ from (
     case when $P{year} = year then amount - discount else 0 end as cynet,
     case when $P{year} = year then interest else 0 end as cyint,
 
-    case when $P{year} - 1 = year then amount else 0 end as immediatetax,
-    case when $P{year} - 1 = year then interest else 0 end as immediateint,
+    case when $P{year} - 1 > rpi.year then rpi.amount else 0 end as priortax,
+    case when $P{year} - 1 > rpi.year then rpi.interest else 0 end as priorint,
     
-    case when $P{year} > year then amount else 0 end as subtotaltax,
-    case when $P{year} > year then interest else 0 end as subtotalint,
+    rpi.amount - rpi.discount + rpi.interest as total,
+    rpi.amount + rpi.interest as gross
 
-    case when $P{year} - 1 > year then amount else 0 end as priortax,
-    case when $P{year} - 1 > year then interest else 0 end as priorint,
-    
-    amount - discount + interest as total,
-    amount + interest as gross
-
-  from vw_landtax_collection_detail_eor
-  where ${filter} 
-    and revperiod <> 'advance'
+  from collectionvoucher cv
+    inner join remittance rem on cv.objid = rem.collectionvoucherid 
+    inner join cashreceipt cr on rem.objid = cr.remittanceid 
+    inner join rptpayment p on cr.objid = p.receiptid 
+    inner join rptledger rl on p.refid = rl.objid 
+    inner join barangay b on rl.barangayid = b.objid 
+    inner join rptpayment_item rpi on p.objid = rpi.parentid
+    left join cashreceipt_void v on cr.objid = v.receiptid 
+    where ${filter} 
+      and rpi.revperiod <> 'advance'
+      and v.objid is null
 ) x 
 group by 
   x.revtype,
@@ -427,26 +428,23 @@ from (
 
   union all 
 
-  select 
-    brgyindex, 
-    barangay,
-    revtype, 
-    case when $P{year} = year then amount else 0 end as cytax,
-    case when $P{year} = year then discount else 0 end as cydisc,
-    case when $P{year} = year then amount - discount else 0 end as cynet,
-    case when $P{year} = year then interest else 0 end as cyint,
-    case when $P{year} - 1 = year then amount else 0 end as immediatetax,
-    case when $P{year} - 1 = year then interest else 0 end as immediateint,
-    case when $P{year} > year then amount else 0 end as subtotaltax,
-    case when $P{year} > year then interest else 0 end as subtotalint,
-    case when $P{year} - 1 > year then amount else 0 end as priortax,
-    case when $P{year} - 1 > year then interest else 0 end as priorint,
+    case when $P{year} - 1 > rpi.year then rpi.amount else 0 end as priortax,
+    case when $P{year} - 1 > rpi.year then rpi.interest else 0 end as priorint,
+    
     0 as prevtotal,
-    amount - discount + interest as total
+    rpi.amount - rpi.discount + rpi.interest as total
 
-  from vw_landtax_collection_detail_eor
-  where ${filter} 
-      and revperiod <> 'advance'
+  from collectionvoucher cv
+    inner join remittance rem on cv.objid = rem.collectionvoucherid 
+    inner join cashreceipt cr on rem.objid = cr.remittanceid 
+    inner join rptpayment p on cr.objid = p.receiptid 
+    inner join rptledger rl on p.refid = rl.objid 
+    inner join barangay b on rl.barangayid = b.objid 
+    inner join rptpayment_item rpi on p.objid = rpi.parentid
+    left join cashreceipt_void v on cr.objid = v.receiptid 
+    where ${filter} 
+      and rpi.revperiod <> 'advance'
+      and v.objid is null
 ) x 
 group by 
   x.brgyindex,
@@ -484,7 +482,8 @@ from (
     amount - discount + interest as total
   from vw_landtax_collection_detail_eor
     where ${filter}
-      and revperiod <> 'advance'
+      and rpi.revperiod <> 'advance'
+      and v.objid is null
 ) x 
 group by 
   x.brgyindex,

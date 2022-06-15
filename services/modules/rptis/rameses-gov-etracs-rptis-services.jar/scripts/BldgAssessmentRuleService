@@ -163,6 +163,7 @@ public class BldgAssessmentRuleService
 		actions.addCommand( "recalc-rpu-totalmv", new CalcTotalRPUMarketValue( request:request, NS:numSvc));
 		actions.addCommand( "recalc-rpu-totalav", new CalcTotalRPUAssessValue( request:request, NS:numSvc));
 		actions.addCommand( "recalc-rpuassessment", new CalcRPUAssessValue( request:request, NS:numSvc));
+		actions.addCommand( "recalc-rpuassessment-mv", new CalcRPUMarketValue( request:request, NS:numSvc));
 		return actions;
 	}
 

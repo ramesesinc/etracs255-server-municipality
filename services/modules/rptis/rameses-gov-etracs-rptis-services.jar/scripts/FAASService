@@ -166,7 +166,6 @@ class FAASService
 			}
 
 			rpuSvc.validateSuffix( info.rputype, info.suffix )
-			info.fullpin = info.rp.pin + '-' + info.suffix 
 		}
 
 		def faas = initCapture(info)
@@ -659,10 +658,27 @@ class FAASService
 
 	@ProxyMethod
 	public def findSignatory( faas ) {
-		def sig = em_faas_signatory.read(faas)
-		if (!sig) 
-			sig = [appraiser:[:], taxmapper:[:], recommender:[:], approver:[]]
-		return sig
+		def signatories = [appraiser:[:], taxmapper:[:], recommender:[:], approver:[]]
+		def faassignatory = em_faas_signatory.read(faas)
+		if (faassignatory) signatories.putAll(faassignatory)
+		if (!signatories.approver) {
+			def tasks = em_faas_task
+					.select('objid as taskid, state, actor_objid,actor_name,actor_title')
+					.find([refid: faas.objid])
+					.where("state NOT LIKE 'assign%'")
+					.orderBy('startdate')
+					.list()
+			
+			tasks.each{
+				signatories[it.state] = [
+					objid: it.actor.objid,
+					name: it.actor.name,
+					title: it.actor.title,
+					taskid: it.taskid,
+				]
+			}
+		}
+		return signatories
 	}
 
 	@ProxyMethod

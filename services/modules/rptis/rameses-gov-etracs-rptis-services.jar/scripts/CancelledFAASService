@@ -10,7 +10,7 @@ class CancelledFAASService
     
 	@Env
 	def env
-	
+
 	@Service('TxnRefService')
     def txnRef
 
@@ -344,6 +344,7 @@ class CancelledFAASService
         if (!ledger) 
             return 
 
+        entity.txndate = entity.txndate ? entity.txndate : dateSvc.serverDate
         def txnyear = dateSvc.getYear(dateSvc.parse('yyyy-MM-dd', entity.txndate))
         if (entity.lasttaxyear && entity.lasttaxyear > 0) {
             txnyear = entity.lasttaxyear

@@ -127,9 +127,15 @@ class LandTaxReportService
 			params.todate  =  dateSvc.getQtrEndDate( params.qtr, params.year ) + 1;
 			period = (periodcode == 'asofqtr' ? '1ST QUARTER - ' : 'FOR THE ') + util.getQuarterName( params.qtr ) + ' OF ' + params.year 
 		} else if ( periodcode == 'asofday' ) {
+            if ( !params.date ) throw new Exception('date parameter is required');
 			params.fromdate = dateSvc.parse('yyyy-MM-dd', params.year + '-01-01');
 			params.todate   = dateSvc.parse('yyyy-MM-dd', params.date) + 1;
 			period = 'As of ' + dateSvc.format('MMMMM dd, yyyy', params.date);
+		} else if ( periodcode == 'daily' ) {
+            if ( !params.date ) throw new Exception('date parameter is required');
+			params.fromdate = dateSvc.parse('yyyy-MM-dd', params.date);
+			params.todate   = dateSvc.parse('yyyy-MM-dd', params.date) + 1;
+			period = 'For ' + dateSvc.format('MMMMM dd, yyyy', params.date);
 		} else {
 			if ( !params.month ) throw new Exception('month parameter is required ')
 			params.fromdate = dateSvc.parse('yyyy-MM-dd', params.year + '-' + (periodcode == 'asofmon' ? '01' : params.month.index) + '-01');
@@ -155,6 +161,7 @@ class LandTaxReportService
 
 		data.title = "REPORT ON REAL PROPERTY TAX COLLECTIONS"; 
 		data.period = period; 
+        println 'params => ' + params
 		return [reportdata : data]; 
 	} 
 

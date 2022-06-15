@@ -402,7 +402,7 @@ select
 		where f.objid = $P{faasid}
 	) x 
 where r.objid = x.landrpuid 
-  and f.state <> 'CANCELLED' 
+order by f.dtapproved desc
 
 
 

@@ -59,6 +59,7 @@ from (
   from vw_landtax_collection_detail
   where ${filter} 
     and revperiod <> 'advance'
+    and voided = 0
 
   union all 
 
@@ -137,6 +138,7 @@ from (
   from vw_landtax_collection_detail
   where ${filter} 
     and revperiod = 'advance'
+    and voided = 0
 
   union all 
 
@@ -187,6 +189,7 @@ from (
   from vw_landtax_collection_disposition_detail
   where ${filter}  
     and revperiod <> 'advance' 
+    and voided = 0
 
   union all
 
@@ -222,6 +225,7 @@ from (
   from vw_landtax_collection_disposition_detail
   where ${filter}  
     and revperiod = 'advance' 
+    and voided = 0
 
   union all
 
@@ -258,6 +262,7 @@ from (
   from vw_landtax_collection_detail
   where ${filter}  
     and revperiod = 'advance' 
+    and voided = 0
 
   union all 
   select 
@@ -328,6 +333,7 @@ from (
   from vw_landtax_collection_detail
   where ${filter} 
     and revperiod <> 'advance'
+    and voided = 0
 
   union all 
 
@@ -417,6 +423,7 @@ from (
   from vw_landtax_collection_detail
   where ${filter} 
       and revperiod <> 'advance'
+      and voided = 0
 
   union all 
 
@@ -466,6 +473,7 @@ from (
   from vw_landtax_collection_detail
     where ${filter}
       and revperiod <> 'advance'
+      and voided = 0
 
   union all 
 

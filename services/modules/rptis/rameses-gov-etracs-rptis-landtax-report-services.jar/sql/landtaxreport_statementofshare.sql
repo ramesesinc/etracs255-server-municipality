@@ -109,6 +109,7 @@ from (
   where ${filter} 
       and revperiod <> 'advance' 
       and revtype in ('basic', 'basicint')
+      and voided = 0
 
     union all 
 
@@ -183,6 +184,7 @@ from (
     where ${filter} 
         and revperiod <> 'advance' 
         and revtype in ('basic', 'basicint')
+        and voided = 0
 
     union all 
 
@@ -255,6 +257,7 @@ from (
         where ${filter}   
             and revperiod <> 'advance' 
             and revtype in ('basic', 'basicint')
+            and voided = 0
 
         union all 
 
@@ -315,6 +318,7 @@ from (
   where ${filter} 
       and revperiod <> 'advance'
       and revtype in ('sef', 'sefint')
+      and voided = 0
 
     union all 
 
@@ -362,6 +366,7 @@ from (
   where ${filter} 
       and sharetype ='barangay'
       and revperiod <> 'advance'
+      and voided = 0
 
     union all 
 
@@ -423,6 +428,7 @@ from (
   where ${filter} 
       and revperiod = 'advance'
       and revtype like 'basic' 
+      and voided = 0
 
     union all 
 

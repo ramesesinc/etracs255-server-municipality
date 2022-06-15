@@ -64,6 +64,7 @@ class LandTaxReportDelinquencyService
 		} 
 
 		params.classificationid = (params.classification ? params.classification.objid : '%')
+		params.taxpayerid = params.taxpayer ? params.taxpayer.objid : '%' 
 
 		params.barangayid = params.barangay?.objid; 
 		if ( !params.barangayid ) params.barangayid='%'; 

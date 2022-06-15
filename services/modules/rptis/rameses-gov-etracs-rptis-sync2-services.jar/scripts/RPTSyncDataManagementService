@@ -16,6 +16,9 @@ class RPTSyncDataManagementService
 	@DataContext('rpt_syncdata_fordownload')
 	def em_sync_fordownload
 
+	@DataContext('rpt_syncdata_downloaded')
+	def em_sync_downloaded
+
 	@Service("Var")
 	def var
 
@@ -62,14 +65,14 @@ class RPTSyncDataManagementService
 	@ProxyMethod
 	public void rescheduleErrors() {
 		em_sync_error.where('1=1').delete()
-		em_sync_fordownload.where('error = 1').update([error: 0])
+		em_sync_downloaded.where('error = 1').update([error: 0])
 	}
 
 	@ProxyMethod
 	public void deleteError(error) {
 		fu.delete(error.filekey)
 		em_sync_error.find([objid: error.objid]).delete()
-		em_sync_fordownload.find([objid: error.filekey]).delete();
+		em_sync_downloaded.find([objid: error.filekey]).delete();
 	}
 
 	@ProxyMethod

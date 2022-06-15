@@ -991,7 +991,7 @@ class SubdivisionService
 
         def param  = [
             objid : land.assistant.objid,
-            section: land.rp.section,
+            section: land.rp.isection,
             parcel: land.rp.iparcel
         ]
         def assistItem = getAssistItem(param)

@@ -118,6 +118,7 @@ select
 	inner join faas f on f.rpuid = r.objid 
 	inner join realproperty rp on f.realpropertyid = rp.objid
 where r.objid=$P{landrpuid}
+order by f.dtapproved desc
 
 
 [getSignatories]
